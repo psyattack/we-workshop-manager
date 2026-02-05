@@ -2,7 +2,8 @@ import os
 import json
 import shutil
 from pathlib import Path
-from PyQt6.QtCore import Qt, QSize, QTimer, pyqtSignal
+import webbrowser
+from PyQt6.QtCore import Qt, QSize, QTimer
 from PyQt6.QtGui import QPixmap, QMovie, QMouseEvent
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
@@ -12,21 +13,6 @@ from utils.helpers import human_readable_size, format_timestamp
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 from utils.helpers import get_directory_size, get_folder_mtime
-
-class ClickableLabel(QLabel):
-    clicked = pyqtSignal(str)
-    
-    def __init__(self, text="", parent=None):
-        super().__init__(text, parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-    
-    def mousePressEvent(self, event: QMouseEvent):
-        if event.button() == Qt.MouseButton.LeftButton:
-            text = self.text()
-            id_value = text.split("ID: ", 1)[-1].strip()
-            self.clicked.emit(id_value)
-        super().mousePressEvent(event)
 
 class DetailsPanel(QWidget):
     def __init__(self, wallpaper_engine, download_manager, translator, theme_manager, parent=None):
@@ -48,7 +34,7 @@ class DetailsPanel(QWidget):
         self.setMaximumWidth(310)
         
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 10, 0, 0)
+        main_layout.setContentsMargins(0, 10, 0, 20)
         main_layout.setSpacing(14)
 
         self.large_preview = QLabel()
@@ -63,14 +49,9 @@ class DetailsPanel(QWidget):
         main_layout.addWidget(self.large_preview)
         
         self._create_action_buttons(main_layout)
-
-        self._create_id_section(main_layout)
-
         self._create_title_section(main_layout)
-
+        self._create_id_section(main_layout)
         self._create_details_section(main_layout)
-        
-        main_layout.addStretch()
         
         self.setStyleSheet("""
             QWidget {
@@ -179,67 +160,92 @@ class DetailsPanel(QWidget):
         layout.addWidget(self.title_scroll)
     
     def _create_id_section(self, layout):
-        id_widget = QWidget()
-        id_layout = QHBoxLayout(id_widget)
-        id_layout.setContentsMargins(0, 0, 0, 0)
-        
-        self.id_label = ClickableLabel()
+        self.id_label = QLabel()
         self.id_label.setStyleSheet("""
             QLabel {
-                color: #a3a3a3; 
+                color: #a3a3a3;
                 font-size: 14px;
-                background-color: transparent;
+                background-color: #1e1e2f;
                 padding: 4px 8px;
-                border-radius: 4px;
+                border-radius: 8px;
             }
             QLabel:hover {
                 background-color: rgba(78, 140, 255, 0.25);
             }
         """)
-        self.id_label.clicked.connect(self._copy_id)
-        
-        id_layout.addWidget(self.id_label)
-        id_layout.addStretch()
-        
-        id_widget.setStyleSheet("QWidget { background: transparent; border: none; }")
-        layout.addWidget(id_widget)
+        self.id_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.id_label.mousePressEvent = self._on_id_clicked
+
+        layout.addWidget(self.id_label)
     
     def _create_details_section(self, layout):
+        details_container = QWidget()
+        details_container.setObjectName("detailsContainer")
+        details_container.setStyleSheet("""
+            #detailsContainer {
+                background-color: #1e1e2f;
+                border-radius: 8px;
+            }
+            #detailsContainer * {
+                border: none;
+                border-left: none;
+                border-radius: 0px;
+            }
+        """)
+        
+        container_layout = QVBoxLayout(details_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        
         self.details_scroll = QScrollArea()
+        self.details_scroll.setObjectName("detailsScroll")
         self.details_scroll.setWidgetResizable(True)
         self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.details_scroll.setMaximumHeight(280)
         self.details_scroll.setStyleSheet("""
-            QScrollArea {
+            #detailsScroll {
                 border: none;
+                border-left: none;
+                background: transparent;
+            }
+            #detailsScroll > QWidget {
+                border: none;
+                border-left: none;
                 background: transparent;
             }
         """)
         
         details_content = QWidget()
+        details_content.setObjectName("detailsContent")
+        details_content.setStyleSheet("""
+            #detailsContent {
+                background: transparent;
+                border: none;
+                border-left: none;
+            }
+        """)
+        
         details_layout = QVBoxLayout(details_content)
-        details_layout.setContentsMargins(0, 0, 0, 0)
+        details_layout.setContentsMargins(10, 10, 10, 10)
         details_layout.setSpacing(8)
         
         self.size_label = QLabel()
-        self.size_label.setStyleSheet("color: #a3a3a3; font-size: 14px;")
+        self.size_label.setStyleSheet("color: #a3a3a3; font-size: 14px; background: transparent; border: none;")
         details_layout.addWidget(self.size_label)
         
         self.date_label = QLabel()
-        self.date_label.setStyleSheet("color: #a3a3a3; font-size: 14px;")
+        self.date_label.setStyleSheet("color: #a3a3a3; font-size: 14px; background: transparent; border: none;")
         details_layout.addWidget(self.date_label)
 
         separator = QWidget()
         separator.setFixedHeight(1)
-        separator.setStyleSheet("background-color: #3c3f58; margin: 8px 0px;")
+        separator.setStyleSheet("background-color: #3c3f58; border: none;")
         details_layout.addWidget(separator)
 
         desc_title = QLabel(self.tr.t("labels.description"))
-        desc_title.setStyleSheet("font-weight: bold; color: white; font-size: 14px;")
+        desc_title.setStyleSheet("font-weight: bold; color: white; font-size: 14px; background: transparent; border: none;")
         details_layout.addWidget(desc_title)
 
         self.description_text = QLabel()
-        self.description_text.setStyleSheet("color: #dcdcdc; font-size: 13px; line-height: 1.4;")
+        self.description_text.setStyleSheet("color: #dcdcdc; font-size: 13px; line-height: 1.4; background: transparent; border: none;")
         self.description_text.setWordWrap(True)
         self.description_text.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.description_text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -248,7 +254,9 @@ class DetailsPanel(QWidget):
         details_layout.addStretch()
         
         self.details_scroll.setWidget(details_content)
-        layout.addWidget(self.details_scroll)
+        container_layout.addWidget(self.details_scroll)
+        
+        layout.addWidget(details_container)
     
     def set_folder(self, folder_path: str):
         self.folder_path = folder_path
@@ -263,11 +271,11 @@ class DetailsPanel(QWidget):
         self.id_label.setText(self.tr.t("labels.id", id=pubfileid))
 
         size_bytes = get_directory_size(folder_path)
-        self.size_label.setText(self.tr.t("labels.size", size=human_readable_size(size_bytes)))
+        self.size_label.setText("📦 " + self.tr.t("labels.size", size=human_readable_size(size_bytes)))
 
         mtime = get_folder_mtime(folder_path)
         date_str = format_timestamp(mtime)
-        self.date_label.setText(self.tr.t("labels.installed", date=date_str))
+        self.date_label.setText("📅 " + self.tr.t("labels.installed", date=date_str))
         
         description = project_data.get("description", "")
         if description:
@@ -339,15 +347,12 @@ class DetailsPanel(QWidget):
         
         pubfileid = Path(self.folder_path).name
         url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={pubfileid}"
-
-        main_window = self.window()
-        if hasattr(main_window, 'open_in_browser'):
-            main_window.open_in_browser(url)
+        webbrowser.open(url)
     
     def _on_delete(self):
         if not self.folder_path:
             return
-        
+
         if self.we.is_wallpaper_active(Path(self.folder_path)):
             QMessageBox.warning(
                 self,
@@ -355,39 +360,56 @@ class DetailsPanel(QWidget):
                 self.tr.t("messages.cannot_delete_active")
             )
             return
-        
+
         reply = QMessageBox.question(
             self,
             self.tr.t("dialog.confirm_deletion"),
             self.tr.t("messages.confirm_delete"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
-        
+
         if reply != QMessageBox.StandardButton.Yes:
             return
-        
+
+        pubfileid = Path(self.folder_path).name
         main_window = self.window()
+
         if hasattr(main_window, 'wallpapers_tab'):
             main_window.wallpapers_tab.release_resources_for_folder(self.folder_path)
-        
+
+        if hasattr(main_window, 'workshop_tab'):
+            workshop_tab = main_window.workshop_tab
+
+            if (hasattr(workshop_tab.details_panel, 'current_pubfileid') and
+                workshop_tab.details_panel.current_pubfileid == pubfileid):
+                workshop_tab.details_panel.release_resources()
+
+            for item in workshop_tab.grid_items:
+                if hasattr(item, 'pubfileid') and item.pubfileid == pubfileid:
+                    if hasattr(item, 'release_resources'):
+                        item.release_resources()
+
         self.release_resources()
-        
+
         def perform_deletion():
             try:
                 folder = Path(self.folder_path)
                 if folder.exists():
                     shutil.rmtree(folder)
                     self._show_notification(self.tr.t("messages.wallpaper_deleted"))
-                    
+
+                    if hasattr(main_window, 'workshop_tab'):
+                        main_window.workshop_tab._on_page_loaded(main_window.workshop_tab._current_page_data)
+                        main_window.workshop_tab._on_download_completed(pubfileid, True)
+                                            
                     QTimer.singleShot(100, lambda: main_window.refresh_wallpapers())
-            
             except Exception as e:
                 QMessageBox.critical(
                     self,
                     self.tr.t("dialog.error"),
                     f"Failed to delete:\n{str(e)}"
                 )
-        
+
         QTimer.singleShot(200, perform_deletion)
     
     def _on_extract(self):
@@ -428,13 +450,21 @@ class DetailsPanel(QWidget):
         self._on_install()
         self.we.open_wallpaper_engine(show_window=True)
     
-    def _copy_id(self, id_value: str):
+    def _on_id_clicked(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._copy_id()
+    
+    def _copy_id(self):
+        if not self.folder_path:
+            return
+        
+        pubfileid = Path(self.folder_path).name
         clipboard = QApplication.clipboard()
-        clipboard.setText(id_value)
+        clipboard.setText(pubfileid)
         self._show_notification(self.tr.t("messages.id_copied"))
     
     def _show_notification(self, message: str):
-        NotificationLabel.show_notification(self.parent(), message, 55, 5)
+        NotificationLabel.show_notification(self.parent(), message, 55, 15)
     
     def release_resources(self):
         if self.movie:

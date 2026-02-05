@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QTextEdit, QFrame, QGraphicsDropShadowEffect, QWidget, QMessageBox
 )
-from resources.icons import get_icon
+from resources.icons import get_icon,get_pixmap
 import re
 
 class CustomDialog(QDialog):
@@ -97,41 +97,6 @@ class CustomDialog(QDialog):
     
     def mouseReleaseEvent(self, event):
         self.old_pos = None
-
-class CustomMessageBox(CustomDialog):
-    def __init__(self, title="Message", message=None, link_url=None, pubfileid=None, 
-                 we_directory=None, translator=None, parent=None):
-        super().__init__(title, parent)
-        
-        self.setFixedWidth(400)
-        
-        if message:
-            msg_label = QLabel(message)
-            msg_label.setStyleSheet("""
-                color: white;
-                font-size: 14px;
-                background: transparent;
-            """)
-            msg_label.setWordWrap(True)
-            msg_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self.content_layout.addWidget(msg_label)
-        
-        ok_btn = QPushButton("OK")
-        ok_btn.setFixedHeight(40)
-        ok_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4A7FD9;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #5B8FE9;
-            }
-        """)
-        ok_btn.clicked.connect(self.accept)
-        self.content_layout.addWidget(ok_btn)
 
 class BatchDownloadDialog(CustomDialog):
     def __init__(self, translator, parent=None):
@@ -228,11 +193,15 @@ class InfoDialog(CustomDialog):
         self.tr = translator
         self.setFixedSize(400, 280)
         
-        # May be add later
-        # icon = QLabel("🎨")
-        # icon.setStyleSheet("font-size: 48px; background: transparent;")
-        # icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.content_layout.addWidget(icon)
+        icon = QLabel()
+        icon.setPixmap(get_pixmap("ICON_APP", size=128))
+        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon.setStyleSheet("""
+            border: none;
+            margin-bottom: -10px;
+            margin-top: -10px;
+        """)
+        self.content_layout.addWidget(icon)
         
         info_text = QLabel(
             f"{self.tr.t('info.version')}\n\n"

@@ -69,6 +69,7 @@ Cookies/
 # Misc
 config.json
 notes.txt
+.spgignore
 assets/
 
 # Large binaries

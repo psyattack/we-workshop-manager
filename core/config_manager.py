@@ -5,7 +5,7 @@ from typing import Any, Optional
 class ConfigManager:
     DEFAULT_CONFIG = {
         "directory": "",
-        "account_number": 3,
+        "account_number": 1,
         "theme": "dark",
         "language": "en"
     }

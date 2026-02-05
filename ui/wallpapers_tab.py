@@ -188,7 +188,7 @@ class WallpapersTab(QWidget):
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
-        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setContentsMargins(20, 20, 5, 20)
         layout.setSpacing(20)
 
         header = self._create_header()

@@ -1,3 +1,3 @@
-from . import icons, images, scripts
+from . import icons
 
-__all__ = ['icons', 'images', 'scripts']
+__all__ = ['icons']

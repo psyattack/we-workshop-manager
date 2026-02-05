@@ -1,48 +1,9 @@
-from PyQt6.QtCore import Qt, QTimer, QEventLoop
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QLabel, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
-    QComboBox, QFrame, QGraphicsDropShadowEffect, QFileDialog, QApplication, QMessageBox
+    QLabel, QWidget, QVBoxLayout,
+    QComboBox, QFrame, QGraphicsDropShadowEffect, QApplication, QMessageBox
 )
-import base64
-from pathlib import Path
-import traceback
-from resources.images import BG_BASE64
-
-class LoadingLabel(QLabel):
-    def __init__(self, base_text: str = "⏳ Loading", parent=None):
-        super().__init__(parent)
-        
-        self.base_text = base_text
-        self.dots = ""
-        
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet("""
-            QLabel {
-                color: #4A7FD9;
-                font-size: 24px;
-                font-weight: 800;
-                background: transparent;
-                letter-spacing: 2px;
-            }
-        """)
-        
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._update_text)
-        self.timer.start(400)
-        
-        self._update_text()
-    
-    def _update_text(self):
-        if len(self.dots) >= 3:
-            self.dots = ""
-        else:
-            self.dots += "."
-        
-        self.setText(self.base_text + self.dots)
-    
-    def stop(self):
-        self.timer.stop()
 
 class NotificationLabel(QLabel):
     def __init__(self, message: str, parent=None):
@@ -70,7 +31,7 @@ class NotificationLabel(QLabel):
         QTimer.singleShot(2000, self.deleteLater)
     
     @staticmethod
-    def show_notification(parent, message: str, x: int = 5, y: int = 135):
+    def show_notification(parent, message: str, x: int = 935, y: int = 15):
         if not parent or not message:
             return
         
@@ -104,10 +65,10 @@ class ModernSettingsPopup(QWidget):
         self._setup_ui()
     
     def _setup_ui(self):
-        self.setFixedSize(360, 480)
+        self.setFixedSize(360, 340)
 
         container = QFrame(self)
-        container.setGeometry(0, 0, 360, 480)
+        container.setGeometry(0, 0, 360, 340)
         container.setStyleSheet(f"""
             QFrame {{
                 background-color: {self.theme.get_color('bg_elevated')};
@@ -153,11 +114,9 @@ class ModernSettingsPopup(QWidget):
         """)
         layout.addWidget(section_label)
 
-        self._add_section(layout, "👤 Steam Account", self._create_account_combo())
+        self._add_section(layout, "👤 Account", self._create_account_combo())
         
         self._add_section(layout, "🌍 Language", self._create_language_combo())
-
-        self._add_section(layout, "🖼️ Background", self._create_background_controls())
         
         layout.addStretch()
     
@@ -199,41 +158,6 @@ class ModernSettingsPopup(QWidget):
         combo.currentIndexChanged.connect(self._on_language_changed)
         combo.setStyleSheet(self._combo_style())
         return combo
-    
-    def _create_background_controls(self):
-        container = QWidget()
-        container.setStyleSheet("QWidget { background: transparent; border: none; }")
-        
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        
-        self.bg_status = QLabel()
-        self.bg_status.setStyleSheet(f"""
-            color: {self.theme.get_color('text_secondary')};
-            font-size: 12px;
-            background: transparent;
-        """)
-        self._update_bg_status()
-        layout.addWidget(self.bg_status)
-
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(8)
-        
-        select_btn = QPushButton("Select")
-        select_btn.clicked.connect(self._select_background)
-        select_btn.setStyleSheet(self._button_style())
-        
-        remove_btn = QPushButton("Remove")
-        remove_btn.clicked.connect(self._remove_background)
-        remove_btn.setStyleSheet(self._button_style())
-        
-        btn_layout.addWidget(select_btn)
-        btn_layout.addWidget(remove_btn)
-        
-        layout.addLayout(btn_layout)
-        
-        return container
     
     def _combo_style(self):
         return f"""
@@ -295,120 +219,3 @@ class ModernSettingsPopup(QWidget):
             "Language Changed",
             "Please restart the application for language changes to take effect."
         )
-    
-    def _update_bg_status(self):
-        if self.config.get_custom_background():
-            self.bg_status.setText(" Background: Custom")
-        else:
-            self.bg_status.setText(" Background: Default")
-    
-    def _select_background(self):
-        try:
-            parent = self.main_window if self.main_window else None
-            
-            self.hide()
-
-            loop = QEventLoop()
-            QTimer.singleShot(100, loop.quit)
-            loop.exec()
-
-            file_path, _ = QFileDialog.getOpenFileName(
-                parent,
-                "Select Background Image",
-                str(Path.home() / "Pictures"),
-                "Image Files (*.png *.jpg *.jpeg *.bmp);;All Files (*.*)"
-            )
-            
-            self.show()
-            
-            if not file_path:
-                return
-
-            if not Path(file_path).exists():
-                QMessageBox.warning(parent, "Error", "File not found!")
-                return
-
-            with open(file_path, "rb") as f:
-                image_data = f.read()
-
-            base64_data = base64.b64encode(image_data).decode('utf-8')
-            self.config.set_custom_background(base64_data)
-            self._update_bg_status()
-
-            if self.main_window:
-                NotificationLabel.show_notification(self.main_window, "Background updated!")
-
-            self._apply_background_immediately()
-            
-        except Exception as e:
-            traceback.print_exc()
-            
-            self.show()
-
-            QMessageBox.critical(
-                self.main_window if self.main_window else None,
-                "Error",
-                f"Failed to set background:\n{str(e)}"
-            )
-    
-    def _remove_background(self):
-        try:
-            self.config.set_custom_background(None)
-            self._update_bg_status()
-            
-            if self.main_window:
-                NotificationLabel.show_notification(self.main_window, "Background removed!")
-            
-            self._apply_background_immediately()
-            
-        except Exception as e:
-            traceback.print_exc()
-    
-    def _apply_background_immediately(self):
-        try:
-            if not self.main_window:
-                return
-            
-            if not hasattr(self.main_window, 'browser_tab'):
-                return
-            
-            browser_tab = self.main_window.browser_tab
-            
-            if not hasattr(browser_tab, 'webview'):
-                return
-
-            bg_base64 = self.config.get_custom_background()
-            if not bg_base64:
-                bg_base64 = BG_BASE64
-            
-            bg_url = f"data:image/jpeg;base64,{bg_base64}"
-
-            js_code = f"""
-            (function() {{
-                let styleId = 'dynamic-bg-style';
-                let styleEl = document.getElementById(styleId);
-                if (!styleEl) {{
-                    styleEl = document.createElement('style');
-                    styleEl.id = styleId;
-                    document.head.appendChild(styleEl);
-                }}
-                styleEl.textContent = `
-                    body.apphub_blue::before {{
-                        content: "";
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        background: url("{bg_url}") no-repeat center center;
-                        background-size: cover;
-                        z-index: -1;
-                    }}
-                `;
-            }})();
-            """
-            
-            browser_tab.webview.page().runJavaScript(js_code)
-            
-        except Exception as e:
-            traceback.print_exc()

@@ -2,10 +2,17 @@ from .config_manager import ConfigManager
 from .accounts import AccountManager
 from .download_manager import DownloadManager
 from .wallpaper_engine import WallpaperEngine
+from .workshop_filters import FilterConfig, WorkshopFilters
+from .workshop_parser import WorkshopParser, WorkshopItem, WorkshopPage
 
 __all__ = [
     'ConfigManager',
-    'AccountManager',
+    'AccountManager', 
     'DownloadManager',
-    'WallpaperEngine'
+    'WallpaperEngine',
+    'FilterConfig',
+    'WorkshopFilters',
+    'WorkshopParser',
+    'WorkshopItem',
+    'WorkshopPage'
 ]
