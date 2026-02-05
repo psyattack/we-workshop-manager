@@ -1,12 +1,12 @@
 from typing import Optional, List, Dict
 import webbrowser
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint, QByteArray, QBuffer, QIODevice
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QGridLayout, QFrame, QSplitter, QSizePolicy, QLineEdit
 )
 from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QMovie
 
 from core.workshop_parser import WorkshopParser, WorkshopItem, WorkshopPage
 from core.workshop_filters import WorkshopFilters
@@ -15,9 +15,10 @@ from ui.workshop_item import WorkshopGridItem, SkeletonGridItem
 from ui.workshop_details_panel import WorkshopDetailsPanel
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
+from typing import Optional, Dict
 
 class PreviewPopup(QWidget):
-
+    
     def __init__(self, theme_manager, parent=None):
         super().__init__(parent)
         self.theme = theme_manager
@@ -56,11 +57,15 @@ class PreviewPopup(QWidget):
         self._current_reply: Optional[QNetworkReply] = None
         self._current_url: str = ""
         self._pending_url: str = ""
-        
+
         self._pixmap_cache: Dict[str, QPixmap] = {}
-    
+        self._gif_data_cache: Dict[str, QByteArray] = {}
+        self._current_movie: Optional[QMovie] = None
+        self._current_buffer: Optional[QBuffer] = None
+
     def show_preview(self, preview_url: str, global_pos: QPoint):
         if not preview_url:
+            self._stop_current_movie()
             self.preview_label.setText("No preview")
             self.preview_label.setStyleSheet("""
                 background: transparent; 
@@ -86,12 +91,19 @@ class PreviewPopup(QWidget):
         
         if preview_url == self._current_url:
             return
-        
+
+        if preview_url in self._gif_data_cache:
+            self._current_url = preview_url
+            self._play_gif_from_data(self._gif_data_cache[preview_url])
+            return
+
         if preview_url in self._pixmap_cache:
             self._current_url = preview_url
+            self._stop_current_movie()
             self._set_pixmap(self._pixmap_cache[preview_url])
             return
         
+        self._stop_current_movie()
         self.preview_label.setText("Loading...")
         self.preview_label.setStyleSheet("""
             background: transparent; 
@@ -101,7 +113,7 @@ class PreviewPopup(QWidget):
         """)
         
         self._load_image(preview_url)
-    
+
     def _load_image(self, url: str):
         if self._pending_url == url and self._current_reply and self._current_reply.isRunning():
             return
@@ -122,7 +134,7 @@ class PreviewPopup(QWidget):
         request.setRawHeader(b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
         self._current_reply = self._network_manager.get(request)
-    
+
     def _on_image_loaded(self, reply: QNetworkReply):
         url = reply.url().toString()
         error = reply.error()
@@ -134,59 +146,117 @@ class PreviewPopup(QWidget):
         if error == QNetworkReply.NetworkError.NoError:
             data = reply.readAll()
             
-            pixmap = QPixmap()
-            load_ok = pixmap.loadFromData(data)
+            is_gif = self._is_gif_data(data)
             
-            if load_ok and not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    150, 150,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation
-                )
-                self._pixmap_cache[url] = scaled
+            if is_gif:
+                self._gif_data_cache[url] = QByteArray(data)
                 
                 if url == self._current_url and self.isVisible():
-                    self._set_pixmap(scaled)
+                    self._play_gif_from_data(data)
             else:
-                if url == self._current_url and self.isVisible():
-                    self.preview_label.setText("Load failed")
-                    self.preview_label.setStyleSheet("""
-                        background: transparent; 
-                        border: none;
-                        color: #888;
-                        font-size: 11px;
-                    """)
+                pixmap = QPixmap()
+                load_ok = pixmap.loadFromData(data)
+                
+                if load_ok and not pixmap.isNull():
+                    scaled = pixmap.scaled(
+                        150, 150,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation
+                    )
+                    self._pixmap_cache[url] = scaled
+                    
+                    if url == self._current_url and self.isVisible():
+                        self._stop_current_movie()
+                        self._set_pixmap(scaled)
+                else:
+                    if url == self._current_url and self.isVisible():
+                        self._show_error("Load failed")
         else:
             if url == self._current_url and self.isVisible():
-                self.preview_label.setText("No preview")
-                self.preview_label.setStyleSheet("""
-                    background: transparent; 
-                    border: none;
-                    color: #888;
-                    font-size: 11px;
-                """)
+                self._show_error("No preview")
         
         reply.deleteLater()
         if reply == self._current_reply:
             self._current_reply = None
             self._pending_url = ""
-    
+
+    def _is_gif_data(self, data: QByteArray) -> bool:
+        if data.size() < 6:
+            return False
+        header = bytes(data[:6])
+        return header.startswith(b'GIF87a') or header.startswith(b'GIF89a')
+
+    def _play_gif_from_data(self, data: QByteArray):
+        self._stop_current_movie()
+        
+        self._current_buffer = QBuffer()
+        self._current_buffer.setData(data)
+        self._current_buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+
+        self._current_movie = QMovie()
+        self._current_movie.setDevice(self._current_buffer)
+        self._current_movie.setScaledSize(self._calculate_scaled_size(self._current_movie))
+        
+        self.preview_label.setStyleSheet("background: transparent; border: none;")
+        self.preview_label.setText("")
+        self.preview_label.setMovie(self._current_movie)
+        
+        self._current_movie.start()
+
+    def _calculate_scaled_size(self, movie: QMovie) -> 'QSize':
+        movie.jumpToFrame(0)
+        original_size = movie.currentImage().size()
+        
+        if original_size.isEmpty():
+            return QSize(150, 150)
+
+        scaled = original_size.scaled(
+            150, 150,
+            Qt.AspectRatioMode.KeepAspectRatio
+        )
+        return scaled
+
+    def _stop_current_movie(self):
+        if self._current_movie is not None:
+            self._current_movie.stop()
+            self.preview_label.setMovie(None)
+            self._current_movie.deleteLater()
+            self._current_movie = None
+        
+        if self._current_buffer is not None:
+            self._current_buffer.close()
+            self._current_buffer = None
+
     def _set_pixmap(self, pixmap: QPixmap):
         self.preview_label.setStyleSheet("background: transparent; border: none;")
         self.preview_label.setText("")
         self.preview_label.setPixmap(pixmap)
-    
+
+    def _show_error(self, message: str):
+        self._stop_current_movie()
+        self.preview_label.setText(message)
+        self.preview_label.setStyleSheet("""
+            background: transparent; 
+            border: none;
+            color: #888;
+            font-size: 11px;
+        """)
+
     def hide_preview(self):
+        self._stop_current_movie()
         self.hide()
-    
+
     def force_cancel(self):
         if self._current_reply and self._current_reply.isRunning():
             self._current_reply.abort()
         self._current_url = ""
         self._pending_url = ""
-    
+        self._stop_current_movie()
+
     def clear_cache(self):
+        self._stop_current_movie()
         self._pixmap_cache.clear()
+        self._gif_data_cache.clear()
 
 class WorkshopTab(QWidget):
     download_requested = pyqtSignal(str)
