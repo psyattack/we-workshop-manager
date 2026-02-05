@@ -217,6 +217,23 @@ class InfoDialog(CustomDialog):
         info_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.content_layout.addWidget(info_text)
 
+        github_container = QHBoxLayout()
+        github_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        github_container.setSpacing(8)
+
+        github_icon = QLabel()
+        github_icon.setPixmap(get_pixmap("ICON_GITHUB", size=34)) 
+        github_icon.setStyleSheet("border: none; margin-right: -5px;")
+        
+        github_link = QLabel('<a href="https://github.com/psyattack/we-workshop-manager" style="color: #4A7FD9; text-decoration: none;">GitHub</a>')
+        github_link.setOpenExternalLinks(True)
+        github_link.setStyleSheet("border: none; font-size: 14px; font-weight: bold;")
+
+        github_container.addWidget(github_icon)
+        github_container.addWidget(github_link)
+
+        self.content_layout.addLayout(github_container)
+
         ok_btn = QPushButton("OK")
         ok_btn.setFixedHeight(40)
         ok_btn.setStyleSheet("""

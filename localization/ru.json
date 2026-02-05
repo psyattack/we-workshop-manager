@@ -24,9 +24,7 @@
     "extract": "Извлечь",
     "install": "Установить",
     "install_open": "Установить и открыть в WE",
-    "download_all": "Скачать всё",
-    "select_bg": "Выбрать свой фон",
-    "remove_bg": "Удалить свой фон"
+    "download_all": "Скачать всё"
   },
   "tooltips": {
     "open_folder": "Открыть папку в Проводнике",
@@ -35,7 +33,6 @@
     "extract_wallpaper": "Извлечь .pkg файл",
     "install_wallpaper": "Установить обои",
     "install_open_we": "Установить обои и открыть в Wallpaper Engine",
-    "copy_title": "Скопировать название",
     "copy_id": "Скопировать ID",
     "tasks": "Активные загрузки и извлечения",
     "settings": "Настройки",
@@ -54,12 +51,8 @@
     "no_description": "Описание отсутствует.",
     "no_preview": "Нет превью",
     "loading": "⏳ Загрузка Мастерской",
-    "page_or_id": "Страница ИЛИ ID",
     "select_account": "Выберите аккаунт:",
-    "background_settings": "Настройки фона:",
     "status": "Статус:",
-    "status_default": "Используется стандартный фон",
-    "status_custom": "Установлен свой фон",
     "theme": "Тема:",
     "language": "Язык:",
     "no_tasks": "Нет активных задач",
@@ -73,7 +66,6 @@
     "extraction_completed": "Извлечение завершено!",
     "already_installed": "Эти обои уже установлены,\nпроверьте вкладку Обои!",
     "wallpaper_deleted": "Обои удалены!",
-    "title_copied": "Название скопировано!",
     "id_copied": "ID скопирован!",
     "cannot_delete_active": "Эти обои сейчас активны.\nПожалуйста, смените обои перед удалением.",
     "confirm_delete": "Вы уверены, что хотите удалить эти обои?",
@@ -92,7 +84,6 @@
     "dotnet_installation_started": "Установка .NET 9 Desktop Runtime запущена.\nЗавершите установку и нажмите ОК.",
     "dotnet_installation_failed": "Установщик .NET 9 Desktop Runtime не найден.\nСкачайте вручную:\nhttps://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime",
     "dotnet_warning": ".NET 9 Desktop Runtime необходим для корректной работы приложения.\nВернитесь, когда будете готовы установить его.",
-    "bg_select_error": "Не удалось установить фон:\n{error}",
     "batch_input_placeholder": "Введите ID и/или ссылки Мастерской\n(через пробел или с новой строки):"
   },
   "dialog": {

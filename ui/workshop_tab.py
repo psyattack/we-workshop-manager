@@ -591,10 +591,10 @@ class WorkshopTab(QWidget):
         account_index = self.config.get_account_number()
         self.dm.start_download(pubfileid, account_index)
         self._update_item_statuses()
-        NotificationLabel.show_notification(self, self.tr.t("messages.download_started"))
+        NotificationLabel.show_notification(self.details_panel, self.tr.t("messages.download_started"), 55, 15)
     
     def show_downloads_popup(self, button_pos):
-        self.downloads_popup.move(button_pos.x() - 12, button_pos.y() - 2)
+        self.downloads_popup.move(button_pos.x() - 90, button_pos.y())
         self.downloads_popup.show()
     
     def hide_downloads_popup(self):
