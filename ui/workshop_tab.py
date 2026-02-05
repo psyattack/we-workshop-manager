@@ -1,13 +1,14 @@
 from typing import Optional, List, Dict
+import weakref
 import webbrowser
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint, QByteArray, QBuffer, QIODevice
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QGridLayout, QFrame, QSplitter, QSizePolicy, QLineEdit
 )
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-from PyQt6.QtGui import QPixmap, QMovie
+from PyQt6.QtGui import QPixmap, QMovie, QPainter, QPainterPath
 
+from core.image_cache import ImageCache
 from core.workshop_parser import WorkshopParser, WorkshopItem, WorkshopPage
 from core.workshop_filters import WorkshopFilters
 from ui.workshop_filters import CompactFilterBar
@@ -29,7 +30,7 @@ class PreviewPopup(QWidget):
             Qt.WindowType.NoDropShadowWindowHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(158, 158)
+        self.setFixedSize(156, 156)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -42,7 +43,7 @@ class PreviewPopup(QWidget):
         """)
         
         container_layout = QVBoxLayout(self.container)
-        container_layout.setContentsMargins(4, 4, 4, 4)
+        container_layout.setContentsMargins(3, 3, 3, 3)
         
         self.preview_label = QLabel()
         self.preview_label.setFixedSize(150, 150)
@@ -51,15 +52,8 @@ class PreviewPopup(QWidget):
         container_layout.addWidget(self.preview_label)
         
         layout.addWidget(self.container)
-        
-        self._network_manager = QNetworkAccessManager(self)
-        self._network_manager.finished.connect(self._on_image_loaded)
-        self._current_reply: Optional[QNetworkReply] = None
-        self._current_url: str = ""
-        self._pending_url: str = ""
 
-        self._pixmap_cache: Dict[str, QPixmap] = {}
-        self._gif_data_cache: Dict[str, QByteArray] = {}
+        self._current_url: str = ""
         self._current_movie: Optional[QMovie] = None
         self._current_buffer: Optional[QBuffer] = None
 
@@ -67,118 +61,65 @@ class PreviewPopup(QWidget):
         if not preview_url:
             self._stop_current_movie()
             self.preview_label.setText("No preview")
-            self.preview_label.setStyleSheet("""
-                background: transparent; 
-                border: none;
-                color: #888;
-                font-size: 11px;
-            """)
-            x_pos = global_pos.x() - self.width() - 10
-            if x_pos < 0:
-                x_pos = global_pos.x() + 10
-            self.move(x_pos, global_pos.y() - 35)
             self.show()
             return
-        
+
         x_pos = global_pos.x() - self.width() - 10
-        y_pos = global_pos.y() - 35
-        
         if x_pos < 0:
             x_pos = global_pos.x() + 10
-        
-        self.move(x_pos, y_pos)
+        self.move(x_pos, global_pos.y() - 35)
         self.show()
         
         if preview_url == self._current_url:
             return
+        
+        self._current_url = preview_url
+        cache = ImageCache.instance()
 
-        if preview_url in self._gif_data_cache:
-            self._current_url = preview_url
-            self._play_gif_from_data(self._gif_data_cache[preview_url])
-            return
-
-        if preview_url in self._pixmap_cache:
-            self._current_url = preview_url
-            self._stop_current_movie()
-            self._set_pixmap(self._pixmap_cache[preview_url])
+        gif_data = cache.get_gif(preview_url)
+        if gif_data:
+            self._play_gif_from_data(gif_data)
             return
         
+        pixmap = cache.get_pixmap(preview_url)
+        if pixmap:
+            self._stop_current_movie()
+            self._set_pixmap(self._create_rounded_pixmap(pixmap.scaled(
+                150, 150,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )))
+            return
+
         self._stop_current_movie()
         self.preview_label.setText("Loading...")
-        self.preview_label.setStyleSheet("""
-            background: transparent; 
-            border: none;
-            color: white;
-            font-size: 12px;
-        """)
         
-        self._load_image(preview_url)
-
-    def _load_image(self, url: str):
-        if self._pending_url == url and self._current_reply and self._current_reply.isRunning():
-            return
+        weak_self = weakref.ref(self)
+        expected_url = preview_url
         
-        if self._current_reply and self._current_reply.isRunning():
-            if self._pending_url != url:
-                self._current_reply.abort()
-        
-        self._current_url = url
-        self._pending_url = url
-        
-        from PyQt6.QtCore import QUrl
-        request = QNetworkRequest(QUrl(url))
-        request.setAttribute(
-            QNetworkRequest.Attribute.RedirectPolicyAttribute,
-            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
-        )
-        request.setRawHeader(b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        
-        self._current_reply = self._network_manager.get(request)
-
-    def _on_image_loaded(self, reply: QNetworkReply):
-        url = reply.url().toString()
-        error = reply.error()
-        
-        if error == QNetworkReply.NetworkError.OperationCanceledError:
-            reply.deleteLater()
-            return
-        
-        if error == QNetworkReply.NetworkError.NoError:
-            data = reply.readAll()
+        def on_loaded(url: str, data, is_gif: bool):
+            self_ref = weak_self()
+            if self_ref is None or not self_ref.isVisible():
+                return
+            if self_ref._current_url != expected_url:
+                return
             
-            is_gif = self._is_gif_data(data)
+            if data is None:
+                self_ref._show_error("Load failed")
+                return
             
             if is_gif:
-                self._gif_data_cache[url] = QByteArray(data)
-                
-                if url == self._current_url and self.isVisible():
-                    self._play_gif_from_data(data)
+                self_ref._play_gif_from_data(data)
             else:
-                pixmap = QPixmap()
-                load_ok = pixmap.loadFromData(data)
-                
-                if load_ok and not pixmap.isNull():
-                    scaled = pixmap.scaled(
-                        150, 150,
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    self._pixmap_cache[url] = scaled
-                    
-                    if url == self._current_url and self.isVisible():
-                        self._stop_current_movie()
-                        self._set_pixmap(scaled)
-                else:
-                    if url == self._current_url and self.isVisible():
-                        self._show_error("Load failed")
-        else:
-            if url == self._current_url and self.isVisible():
-                self._show_error("No preview")
+                scaled = data.scaled(
+                    150, 150,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self_ref._stop_current_movie()
+                self_ref._set_pixmap(self_ref._create_rounded_pixmap(scaled))
         
-        reply.deleteLater()
-        if reply == self._current_reply:
-            self._current_reply = None
-            self._pending_url = ""
+        cache.load_image(preview_url, callback=on_loaded)
 
     def _is_gif_data(self, data: QByteArray) -> bool:
         if data.size() < 6:
@@ -200,8 +141,19 @@ class PreviewPopup(QWidget):
         self.preview_label.setStyleSheet("background: transparent; border: none;")
         self.preview_label.setText("")
         self.preview_label.setMovie(self._current_movie)
+
+        self._current_movie.frameChanged.connect(self._on_gif_frame_changed)
         
         self._current_movie.start()
+    
+    def _on_gif_frame_changed(self, frame_number: int):
+        if self._current_movie is None:
+            return
+        
+        current_pixmap = self._current_movie.currentPixmap()
+        if not current_pixmap.isNull():
+            rounded = self._create_rounded_pixmap(current_pixmap, radius=6)
+            self.preview_label.setPixmap(rounded)
 
     def _calculate_scaled_size(self, movie: QMovie) -> 'QSize':
         movie.jumpToFrame(0)
@@ -230,7 +182,33 @@ class PreviewPopup(QWidget):
     def _set_pixmap(self, pixmap: QPixmap):
         self.preview_label.setStyleSheet("background: transparent; border: none;")
         self.preview_label.setText("")
-        self.preview_label.setPixmap(pixmap)
+        
+        rounded_pixmap = self._create_rounded_pixmap(pixmap, radius=6)
+        self.preview_label.setPixmap(rounded_pixmap)
+
+    def _create_rounded_pixmap(self, pixmap: QPixmap, radius: int = 6) -> QPixmap:
+        if pixmap.isNull():
+            return pixmap
+        
+        rounded = QPixmap(pixmap.size())
+        rounded.fill(Qt.GlobalColor.transparent)
+        
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        
+        path = QPainterPath()
+        path.addRoundedRect(
+            0, 0, 
+            pixmap.width(), pixmap.height(), 
+            radius, radius
+        )
+
+        painter.setClipPath(path)
+        painter.drawPixmap(0, 0, pixmap)
+        painter.end()
+        
+        return rounded
 
     def _show_error(self, message: str):
         self._stop_current_movie()
@@ -247,16 +225,8 @@ class PreviewPopup(QWidget):
         self.hide()
 
     def force_cancel(self):
-        if self._current_reply and self._current_reply.isRunning():
-            self._current_reply.abort()
         self._current_url = ""
-        self._pending_url = ""
         self._stop_current_movie()
-
-    def clear_cache(self):
-        self._stop_current_movie()
-        self._pixmap_cache.clear()
-        self._gif_data_cache.clear()
 
 class WorkshopTab(QWidget):
     download_requested = pyqtSignal(str)
@@ -592,9 +562,9 @@ class WorkshopTab(QWidget):
         self.current_page = page_data.current_page
         self.total_pages = max(1, page_data.total_pages)
         
-        for item in page_data.items:
-            if item.preview_url:
-                self._preview_url_cache[item.pubfileid] = item.preview_url
+        cache = ImageCache.instance()
+        urls = [item.preview_url for item in page_data.items if item.preview_url]
+        cache.preload(urls)
         
         self._clear_grid()
         self._populate_grid(page_data.items)
@@ -602,6 +572,17 @@ class WorkshopTab(QWidget):
         
         if page_data.items and not self.selected_pubfileid:
             self._select_item(page_data.items[0].pubfileid)
+
+    def cleanup(self):
+        if hasattr(self, '_status_timer'):
+            self._status_timer.stop()
+        if hasattr(self, 'parser'):
+            self.parser.cleanup()
+        
+        ImageCache.instance().clear()
+        
+        self._preview_url_cache.clear()
+        self._clear_grid()
 
     def _on_item_details_loaded(self, item: WorkshopItem):
         self._is_loading_details = False
@@ -979,13 +960,3 @@ class WorkshopTab(QWidget):
         self.dm.cancel_download(pubfileid)
         QTimer.singleShot(100, self._update_downloads_list)
         self._update_item_statuses()
-
-    def cleanup(self):
-        if hasattr(self, '_status_timer'):
-            self._status_timer.stop()
-        if hasattr(self, 'parser'):
-            self.parser.cleanup()
-        if hasattr(self, 'preview_popup'):
-            self.preview_popup.clear_cache()
-        self._preview_url_cache.clear()
-        self._clear_grid()

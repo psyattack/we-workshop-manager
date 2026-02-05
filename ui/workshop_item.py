@@ -1,14 +1,12 @@
-from PyQt6.QtCore import Qt, QSize, pyqtSignal, QUrl, QByteArray, QBuffer
+from PyQt6.QtCore import Qt, QSize, pyqtSignal, QByteArray, QBuffer
 from PyQt6.QtGui import QPixmap, QFontMetrics, QMovie
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
+from core.image_cache import ImageCache
 import weakref
 
 class WorkshopGridItem(QWidget):
     
-    clicked = pyqtSignal(str)  # pubfileid
-    
-    _network_manager = None
+    clicked = pyqtSignal(str)
     
     STATUS_AVAILABLE = "available"
     STATUS_INSTALLED = "installed"
@@ -30,24 +28,17 @@ class WorkshopGridItem(QWidget):
         self.item_size = item_size
         self.status = self.STATUS_AVAILABLE
         
-        self._pixmap = None
-        self._movie = None
-        self._gif_buffer = None
-        self._buffer = None
+        self._pixmap: QPixmap = None
+        self._movie: QMovie = None
+        self._gif_buffer: QByteArray = None
+        self._buffer: QBuffer = None
         self._is_gif = False
         self._is_loading = False
         self._is_hovered = False
         self._is_destroyed = False
-        self._current_reply = None
         
         self._setup_ui()
         self._load_preview()
-    
-    @classmethod
-    def get_network_manager(cls) -> QNetworkAccessManager:
-        if cls._network_manager is None:
-            cls._network_manager = QNetworkAccessManager()
-        return cls._network_manager
     
     def _setup_ui(self):
         self.setFixedSize(self.item_size, self.item_size)
@@ -118,77 +109,51 @@ class WorkshopGridItem(QWidget):
             self._show_placeholder()
             return
         
+        cache = ImageCache.instance()
+
+        pixmap = cache.get_pixmap(self.preview_url)
+        if pixmap:
+            self._pixmap = pixmap
+            self._is_gif = False
+            self._apply_pixmap(self.item_size)
+            return
+        
+        gif_data = cache.get_gif(self.preview_url)
+        if gif_data:
+            self._is_gif = True
+            self._load_gif_from_data(gif_data)
+            return
+
         self._is_loading = True
         self._show_loading()
         
-        manager = self.get_network_manager()
-        request = QNetworkRequest(QUrl(self.preview_url))
-        request.setAttribute(
-            QNetworkRequest.Attribute.RedirectPolicyAttribute,
-            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
-        )
-        
-        self._current_reply = manager.get(request)
-
         weak_self = weakref.ref(self)
+        expected_url = self.preview_url
         
-        def on_finished():
+        def on_loaded(url: str, data, is_gif: bool):
             self_ref = weak_self()
-            if self_ref is not None and not self_ref._is_destroyed:
-                self_ref._on_preview_loaded()
-        
-        self._current_reply.finished.connect(on_finished)
-    
-    def _on_preview_loaded(self):
-        if self._is_destroyed:
-            return
-        
-        self._is_loading = False
-        
-        reply = self._current_reply
-        if reply is None:
-            return
-        
-        try:
-            if reply.error() != QNetworkReply.NetworkError.NoError:
-                self._show_placeholder()
-                reply.deleteLater()
-                self._current_reply = None
+            if self_ref is None or self_ref._is_destroyed:
+                return
+            if url != expected_url:
                 return
             
-            data = reply.readAll()
-            content_type = reply.header(QNetworkRequest.KnownHeaders.ContentTypeHeader)
-            url = reply.url().toString().lower()
+            self_ref._is_loading = False
             
-            is_gif = False
-            if content_type and 'gif' in str(content_type).lower():
-                is_gif = True
-            elif url.endswith('.gif'):
-                is_gif = True
+            if data is None:
+                self_ref._show_placeholder()
+                return
             
             if is_gif:
-                self._is_gif = True
-                self._load_gif(data)
+                self_ref._is_gif = True
+                self_ref._load_gif_from_data(data)
             else:
-                self._is_gif = False
-                pixmap = QPixmap()
-                if pixmap.loadFromData(data):
-                    self._pixmap = pixmap
-                    self._apply_pixmap(self.item_size)
-                else:
-                    self._show_placeholder()
-            
-            reply.deleteLater()
-            self._current_reply = None
-            
-        except Exception as e:
-            print(f"[WorkshopGridItem] Preview load error: {e}")
-            self._show_placeholder()
-            if self._current_reply:
-                self._current_reply.deleteLater()
-                self._current_reply = None
+                self_ref._is_gif = False
+                self_ref._pixmap = data
+                self_ref._apply_pixmap(self_ref.item_size)
+        
+        cache.load_image(self.preview_url, callback=on_loaded)
     
-    def _load_gif(self, data: QByteArray):
+    def _load_gif_from_data(self, data: QByteArray):
         if self._is_destroyed:
             return
         
@@ -326,14 +291,6 @@ class WorkshopGridItem(QWidget):
     def release_resources(self):
         self._is_destroyed = True
 
-        if self._current_reply is not None:
-            try:
-                self._current_reply.abort()
-                self._current_reply.deleteLater()
-            except RuntimeError:
-                pass
-            self._current_reply = None
-        
         if self._movie is not None:
             try:
                 self._movie.stop()
@@ -351,7 +308,6 @@ class WorkshopGridItem(QWidget):
             self._buffer = None
         
         self._gif_buffer = None
-        self._pixmap = None
         
         try:
             self.preview_label.clear()
@@ -362,16 +318,11 @@ class WorkshopGridItem(QWidget):
         self.release_resources()
         super().deleteLater()
 
-
 class SkeletonGridItem(QWidget):
-
     def __init__(self, item_size: int = 185, parent=None):
         super().__init__(parent)
-        
         self.item_size = item_size
-        
         self.setFixedSize(item_size, item_size)
-        
         self.setStyleSheet(f"""
             background: qlineargradient(
                 x1:0, y1:0, x2:1, y2:0,

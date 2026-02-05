@@ -1,28 +1,27 @@
 import os
 import json
 import shutil
+import tempfile
 import webbrowser
 from pathlib import Path
 from typing import Optional
-import tempfile
 
-from PyQt6.QtCore import Qt, QSize, QTimer, QUrl
+from PyQt6.QtCore import Qt, QSize, QTimer, QByteArray
 from PyQt6.QtGui import QPixmap, QMovie
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication
-)
-from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
+    QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication)
+from PyQt6.QtNetwork import QNetworkReply
 
 from core.workshop_parser import WorkshopItem
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
 import weakref
+from core.image_cache import ImageCache
 
 
 class WorkshopDetailsPanel(QWidget):
-    _network_manager = None
     
     def __init__(self, wallpaper_engine, download_manager, translator, theme_manager, parent=None):
         super().__init__(parent)
@@ -39,15 +38,10 @@ class WorkshopDetailsPanel(QWidget):
         self._current_reply: Optional[QNetworkReply] = None
         self._temp_gif_file: Optional[str] = None
         self._current_item: Optional[WorkshopItem] = None
+        self._current_preview_url: str = ""
         
         self._setup_ui()
         self.setVisible(False)
-    
-    @classmethod
-    def get_network_manager(cls) -> QNetworkAccessManager:
-        if cls._network_manager is None:
-            cls._network_manager = QNetworkAccessManager()
-        return cls._network_manager
     
     def _setup_ui(self):
         self.setMinimumWidth(310)
@@ -189,13 +183,7 @@ class WorkshopDetailsPanel(QWidget):
         layout.addWidget(details_container)
     
     def _reset_preview(self):
-        if self._current_reply is not None:
-            try:
-                self._current_reply.abort()
-                self._current_reply.deleteLater()
-            except:
-                pass
-            self._current_reply = None
+        self._current_preview_url = ""
         
         if self.movie is not None:
             try:
@@ -224,6 +212,38 @@ class WorkshopDetailsPanel(QWidget):
             }
         """)
     
+    def _find_grid_item(self, pubfileid: str):
+        parent = self.parent()
+        while parent and not hasattr(parent, 'grid_items'):
+            parent = parent.parent()
+        
+        if parent and hasattr(parent, 'grid_items'):
+            for item in parent.grid_items:
+                try:
+                    if item and item.pubfileid == pubfileid:
+                        return item
+                except RuntimeError:
+                    continue
+        return None
+    
+    def _try_copy_from_grid_item(self, pubfileid: str) -> bool:
+        grid_item = self._find_grid_item(pubfileid)
+        if not grid_item:
+            return False
+        
+        try:
+            if grid_item._is_gif and grid_item._gif_buffer:
+                self._apply_preview_gif(grid_item._gif_buffer)
+                return True
+            
+            if grid_item._pixmap and not grid_item._pixmap.isNull():
+                self._apply_preview_pixmap(grid_item._pixmap)
+                return True
+        except (RuntimeError, AttributeError):
+            pass
+        
+        return False
+    
     def set_workshop_item(self, item: WorkshopItem):
         self._reset_preview()
         
@@ -231,13 +251,16 @@ class WorkshopDetailsPanel(QWidget):
         self.current_pubfileid = item.pubfileid
         self.current_folder = ""
         self._current_item = item
+        self._current_preview_url = item.preview_url or ""
         
         self.setVisible(True)
         
         self.title_label.setText(item.title or item.pubfileid)
         self.id_label.setText(self.tr.t("labels.id", id=item.pubfileid))
         
-        self._load_remote_preview(item.preview_url)
+        if not self._try_copy_from_grid_item(item.pubfileid):
+            self._load_remote_preview(item.preview_url)
+        
         self._setup_remote_buttons()
         self._setup_remote_details(item)
     
@@ -248,6 +271,7 @@ class WorkshopDetailsPanel(QWidget):
         self.current_folder = folder_path
         self.current_pubfileid = Path(folder_path).name
         self._current_item = None
+        self._current_preview_url = ""
         
         self.setVisible(True)
         
@@ -257,7 +281,9 @@ class WorkshopDetailsPanel(QWidget):
         self.title_label.setText(title)
         self.id_label.setText(self.tr.t("labels.id", id=self.current_pubfileid))
         
-        self._load_local_preview(folder_path)
+        if not self._try_copy_from_grid_item(self.current_pubfileid):
+            self._load_local_preview(folder_path)
+        
         self._setup_installed_buttons()
         self._setup_installed_details(folder_path, project_data)
     
@@ -503,94 +529,104 @@ class WorkshopDetailsPanel(QWidget):
             self.preview_label.setText("🖼️")
             return
         
-        manager = self.get_network_manager()
-        request = QNetworkRequest(QUrl(url))
-        request.setAttribute(
-            QNetworkRequest.Attribute.RedirectPolicyAttribute,
-            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
-        )
+        self._current_preview_url = url
         
-        self._current_reply = manager.get(request)
+        cache = ImageCache.instance()
+
+        pixmap = cache.get_pixmap(url)
+        if pixmap:
+            self._apply_preview_pixmap(pixmap)
+            return
         
+        gif_data = cache.get_gif(url)
+        if gif_data:
+            self._apply_preview_gif(gif_data)
+            return
+
         expected_pubfileid = self.current_pubfileid
+        expected_url = url
         weak_self = weakref.ref(self)
         
-        def on_finished():
+        def on_loaded(loaded_url: str, data, is_gif: bool):
             self_ref = weak_self()
             if self_ref is None:
                 return
             if self_ref.current_pubfileid != expected_pubfileid:
-                if self_ref._current_reply:
-                    try:
-                        self_ref._current_reply.deleteLater()
-                    except:
-                        pass
-                    self_ref._current_reply = None
                 return
-            self_ref._on_preview_loaded()
-        
-        self._current_reply.finished.connect(on_finished)
-    
-    def _on_preview_loaded(self):
-        if self._current_reply is None:
-            return
-        
-        reply = self._current_reply
-        
-        try:
-            if reply.error() != QNetworkReply.NetworkError.NoError:
-                self.preview_label.setText("🖼️")
-                reply.deleteLater()
-                self._current_reply = None
+            if self_ref._current_preview_url != expected_url:
                 return
             
-            data = reply.readAll()
-            content_type = reply.header(QNetworkRequest.KnownHeaders.ContentTypeHeader)
-            url = reply.url().toString().lower()
-            
-            is_gif = False
-            if content_type and 'gif' in str(content_type).lower():
-                is_gif = True
-            elif url.endswith('.gif'):
-                is_gif = True
+            if data is None:
+                self_ref.preview_label.setText("🖼️")
+                return
             
             if is_gif:
-                try:
-                    fd, self._temp_gif_file = tempfile.mkstemp(suffix='.gif')
-                    os.write(fd, bytes(data))
-                    os.close(fd)
-                    
-                    self.movie = QMovie(self._temp_gif_file)
-                    self.movie.setScaledSize(self.preview_label.size())
-                    self.preview_label.setMovie(self.movie)
-                    self.movie.start()
-                except Exception as e:
-                    print(f"[DetailsPanel] GIF load error: {e}")
-                    self.preview_label.setText("🖼️")
+                self_ref._apply_preview_gif(data)
             else:
-                pixmap = QPixmap()
-                if pixmap.loadFromData(data):
-                    scaled = pixmap.scaled(
-                        self.preview_label.size(),
-                        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                        Qt.TransformationMode.SmoothTransformation
-                    )
-                    self.preview_label.setPixmap(scaled)
-                else:
-                    self.preview_label.setText("🖼️")
-            
-            reply.deleteLater()
-            self._current_reply = None
-            
-        except Exception as e:
-            print(f"[DetailsPanel] Preview load error: {e}")
+                self_ref._apply_preview_pixmap(data)
+        
+        cache.load_image(url, callback=on_loaded)
+    
+    def _apply_preview_pixmap(self, pixmap: QPixmap):
+        if pixmap is None or pixmap.isNull():
             self.preview_label.setText("🖼️")
-            if self._current_reply:
+            return
+        
+        try:
+            scaled = pixmap.scaled(
+                self.preview_label.size(),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            self.preview_label.setPixmap(scaled)
+            self.preview_label.setStyleSheet("""
+                QLabel {
+                    background-color: #2c2f48;
+                    border-radius: 8px;
+                }
+            """)
+        except Exception as e:
+            print(f"[DetailsPanel] Apply pixmap error: {e}")
+            self.preview_label.setText("🖼️")
+    
+    def _apply_preview_gif(self, data: QByteArray):
+        if data is None or data.isEmpty():
+            self.preview_label.setText("🖼️")
+            return
+        
+        try:
+            if self._temp_gif_file and os.path.exists(self._temp_gif_file):
                 try:
-                    self._current_reply.deleteLater()
+                    os.remove(self._temp_gif_file)
                 except:
                     pass
-                self._current_reply = None
+            
+            if self.movie is not None:
+                try:
+                    self.movie.stop()
+                    self.preview_label.setMovie(None)
+                    self.movie.deleteLater()
+                except:
+                    pass
+                self.movie = None
+            
+            fd, self._temp_gif_file = tempfile.mkstemp(suffix='.gif')
+            os.write(fd, bytes(data))
+            os.close(fd)
+            
+            self.movie = QMovie(self._temp_gif_file)
+            self.movie.setScaledSize(self.preview_label.size())
+            self.preview_label.setMovie(self.movie)
+            self.preview_label.setStyleSheet("""
+                QLabel {
+                    background-color: #2c2f48;
+                    border-radius: 8px;
+                }
+            """)
+            self.movie.start()
+        except Exception as e:
+            print(f"[DetailsPanel] Apply GIF error: {e}")
+            self.preview_label.setText("🖼️")
     
     def _load_local_preview(self, folder_path: str):
         preview_file = None
@@ -609,6 +645,15 @@ class WorkshopDetailsPanel(QWidget):
             ext = preview_file.suffix.lower()
             
             if ext == ".gif":
+                if self.movie is not None:
+                    try:
+                        self.movie.stop()
+                        self.preview_label.setMovie(None)
+                        self.movie.deleteLater()
+                    except:
+                        pass
+                    self.movie = None
+                
                 self.movie = QMovie(str(preview_file))
                 self.movie.setScaledSize(self.preview_label.size())
                 self.preview_label.setMovie(self.movie)
