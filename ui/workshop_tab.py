@@ -1,9 +1,13 @@
-from typing import Optional, List
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize
+from typing import Optional, List, Dict
+import webbrowser
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QGridLayout, QFrame, QSplitter, QSizePolicy, QLineEdit
 )
+from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
+from PyQt6.QtGui import QPixmap
+
 from core.workshop_parser import WorkshopParser, WorkshopItem, WorkshopPage
 from core.workshop_filters import WorkshopFilters
 from ui.workshop_filters import CompactFilterBar
@@ -12,10 +16,181 @@ from ui.workshop_details_panel import WorkshopDetailsPanel
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 
+class PreviewPopup(QWidget):
+
+    def __init__(self, theme_manager, parent=None):
+        super().__init__(parent)
+        self.theme = theme_manager
+        
+        self.setWindowFlags(
+            Qt.WindowType.ToolTip |
+            Qt.WindowType.FramelessWindowHint |
+            Qt.WindowType.NoDropShadowWindowHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(158, 158)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        self.container = QWidget()
+        self.container.setStyleSheet(f"""
+            background-color: rgba(0, 0, 0, 230);
+            border-radius: 8px;
+            border: 2px solid {self.theme.get_color('primary')};
+        """)
+        
+        container_layout = QVBoxLayout(self.container)
+        container_layout.setContentsMargins(4, 4, 4, 4)
+        
+        self.preview_label = QLabel()
+        self.preview_label.setFixedSize(150, 150)
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.preview_label.setStyleSheet("background: transparent; border: none;")
+        container_layout.addWidget(self.preview_label)
+        
+        layout.addWidget(self.container)
+        
+        self._network_manager = QNetworkAccessManager(self)
+        self._network_manager.finished.connect(self._on_image_loaded)
+        self._current_reply: Optional[QNetworkReply] = None
+        self._current_url: str = ""
+        self._pending_url: str = ""
+        
+        self._pixmap_cache: Dict[str, QPixmap] = {}
+    
+    def show_preview(self, preview_url: str, global_pos: QPoint):
+        if not preview_url:
+            self.preview_label.setText("No preview")
+            self.preview_label.setStyleSheet("""
+                background: transparent; 
+                border: none;
+                color: #888;
+                font-size: 11px;
+            """)
+            x_pos = global_pos.x() - self.width() - 10
+            if x_pos < 0:
+                x_pos = global_pos.x() + 10
+            self.move(x_pos, global_pos.y() - 35)
+            self.show()
+            return
+        
+        x_pos = global_pos.x() - self.width() - 10
+        y_pos = global_pos.y() - 35
+        
+        if x_pos < 0:
+            x_pos = global_pos.x() + 10
+        
+        self.move(x_pos, y_pos)
+        self.show()
+        
+        if preview_url == self._current_url:
+            return
+        
+        if preview_url in self._pixmap_cache:
+            self._current_url = preview_url
+            self._set_pixmap(self._pixmap_cache[preview_url])
+            return
+        
+        self.preview_label.setText("Loading...")
+        self.preview_label.setStyleSheet("""
+            background: transparent; 
+            border: none;
+            color: white;
+            font-size: 12px;
+        """)
+        
+        self._load_image(preview_url)
+    
+    def _load_image(self, url: str):
+        if self._pending_url == url and self._current_reply and self._current_reply.isRunning():
+            return
+        
+        if self._current_reply and self._current_reply.isRunning():
+            if self._pending_url != url:
+                self._current_reply.abort()
+        
+        self._current_url = url
+        self._pending_url = url
+        
+        from PyQt6.QtCore import QUrl
+        request = QNetworkRequest(QUrl(url))
+        request.setAttribute(
+            QNetworkRequest.Attribute.RedirectPolicyAttribute,
+            QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy
+        )
+        request.setRawHeader(b"User-Agent", b"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        
+        self._current_reply = self._network_manager.get(request)
+    
+    def _on_image_loaded(self, reply: QNetworkReply):
+        url = reply.url().toString()
+        error = reply.error()
+        
+        if error == QNetworkReply.NetworkError.OperationCanceledError:
+            reply.deleteLater()
+            return
+        
+        if error == QNetworkReply.NetworkError.NoError:
+            data = reply.readAll()
+            
+            pixmap = QPixmap()
+            load_ok = pixmap.loadFromData(data)
+            
+            if load_ok and not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    150, 150,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+                self._pixmap_cache[url] = scaled
+                
+                if url == self._current_url and self.isVisible():
+                    self._set_pixmap(scaled)
+            else:
+                if url == self._current_url and self.isVisible():
+                    self.preview_label.setText("Load failed")
+                    self.preview_label.setStyleSheet("""
+                        background: transparent; 
+                        border: none;
+                        color: #888;
+                        font-size: 11px;
+                    """)
+        else:
+            if url == self._current_url and self.isVisible():
+                self.preview_label.setText("No preview")
+                self.preview_label.setStyleSheet("""
+                    background: transparent; 
+                    border: none;
+                    color: #888;
+                    font-size: 11px;
+                """)
+        
+        reply.deleteLater()
+        if reply == self._current_reply:
+            self._current_reply = None
+            self._pending_url = ""
+    
+    def _set_pixmap(self, pixmap: QPixmap):
+        self.preview_label.setStyleSheet("background: transparent; border: none;")
+        self.preview_label.setText("")
+        self.preview_label.setPixmap(pixmap)
+    
+    def hide_preview(self):
+        self.hide()
+    
+    def force_cancel(self):
+        if self._current_reply and self._current_reply.isRunning():
+            self._current_reply.abort()
+        self._current_url = ""
+        self._pending_url = ""
+    
+    def clear_cache(self):
+        self._pixmap_cache.clear()
+
 class WorkshopTab(QWidget):
-    
     download_requested = pyqtSignal(str)
-    
+
     def __init__(
         self,
         config_manager,
@@ -45,23 +220,23 @@ class WorkshopTab(QWidget):
         self._is_loading_page = False
         self._is_loading_details = False
         
+        self._preview_url_cache: Dict[str, str] = {}
+        
         self._setup_ui()
         self._setup_parser()
         self._setup_downloads_popup()
         
         self.dm.download_completed.connect(self._on_download_completed)
-    
+
         self._status_timer = QTimer()
         self._status_timer.timeout.connect(self._update_item_statuses)
         self._status_timer.start(3000)
-    
+
     def _setup_parser(self):
         self.parser = WorkshopParser(self.accounts, self)
         self.parser.page_loaded.connect(self._on_page_loaded)
         self.parser.item_details_loaded.connect(self._on_item_details_loaded)
         self.parser.page_loading_started.connect(self._on_page_loading_started)
-        self.parser.details_loading_started.connect(self._on_details_loading_started)
-        self.parser.loading_finished.connect(self._on_loading_finished)
         self.parser.error_occurred.connect(self._on_error)
 
         self.parser.login_successful.connect(self._on_login_success)
@@ -74,7 +249,7 @@ class WorkshopTab(QWidget):
     def _on_login_failed(self, error: str):
         print("[Workshop Tab]: Login failed (May be lie)")
         self._initial_load()
-    
+
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -105,7 +280,9 @@ class WorkshopTab(QWidget):
         self.resize_timer = QTimer()
         self.resize_timer.setSingleShot(True)
         self.resize_timer.timeout.connect(self._recalculate_grid)
-    
+
+        self.preview_popup = PreviewPopup(self.theme, self)
+
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -138,7 +315,7 @@ class WorkshopTab(QWidget):
         layout.addWidget(pagination)
         
         return widget
-    
+
     def _create_info_bar(self) -> QFrame:
         bar = QFrame()
         bar.setFixedHeight(30)
@@ -247,7 +424,7 @@ class WorkshopTab(QWidget):
         except ValueError:
             self.page_input.clear()
             NotificationLabel.show_notification(self, "Invalid page number")
-    
+
     def _create_page_btn(self, text: str) -> QPushButton:
         btn = QPushButton(text)
         btn.setFixedSize(70, 32)
@@ -269,7 +446,7 @@ class WorkshopTab(QWidget):
             }}
         """)
         return btn
-    
+
     def _setup_downloads_popup(self):
         self.downloads_popup = QWidget()
         self.downloads_popup.setWindowFlags(
@@ -311,17 +488,19 @@ class WorkshopTab(QWidget):
 
     def _on_downloads_popup_hide(self, event):
         self.downloads_update_timer.stop()
+        self.preview_popup.hide_preview()
+        self.preview_popup.force_cancel()
         if event:
             event.accept()
 
     def _auto_update_downloads_popup(self):
         if self.downloads_popup.isVisible():
             self._update_downloads_list()
-    
+
     def _initial_load(self):
         filters = self.filter_bar.get_current_filters()
         self.parser.load_page(filters)
-    
+
     def _on_filters_changed(self, filters: WorkshopFilters):
         if self._is_loading_page:
             return
@@ -331,23 +510,21 @@ class WorkshopTab(QWidget):
         self.filter_bar.set_page(1)
         self.selected_pubfileid = None
         self.parser.load_page(filters)
-    
+
     def _on_page_loading_started(self):
         self._is_loading_page = True
         self._show_skeleton_grid()
         self._update_pagination_buttons()
-    
-    def _on_details_loading_started(self):
-        self._is_loading_details = True
-    
-    def _on_loading_finished(self):
-        self._is_loading_details = False
-    
+
     def _on_page_loaded(self, page_data: WorkshopPage):
         self._is_loading_page = False
         self._current_page_data = page_data
         self.current_page = page_data.current_page
         self.total_pages = max(1, page_data.total_pages)
+        
+        for item in page_data.items:
+            if item.preview_url:
+                self._preview_url_cache[item.pubfileid] = item.preview_url
         
         self._clear_grid()
         self._populate_grid(page_data.items)
@@ -355,11 +532,15 @@ class WorkshopTab(QWidget):
         
         if page_data.items and not self.selected_pubfileid:
             self._select_item(page_data.items[0].pubfileid)
-    
+
     def _on_item_details_loaded(self, item: WorkshopItem):
         self._is_loading_details = False
+        
+        if item.preview_url:
+            self._preview_url_cache[item.pubfileid] = item.preview_url
+        
         self.details_panel.set_workshop_item(item)
-    
+
     def _on_error(self, error_msg: str):
         print(f"[WorkshopTab] Error: {error_msg}")
         self._is_loading_page = False
@@ -367,14 +548,14 @@ class WorkshopTab(QWidget):
         NotificationLabel.show_notification(self, f"Error: {error_msg}")
         self._clear_skeleton_grid()
         self._update_pagination_buttons()
-    
+
     def _on_download_completed(self, pubfileid: str, success: bool):
         if success:
             self._update_item_statuses()
 
             if self.selected_pubfileid == pubfileid:
                 self.details_panel.refresh_after_state_change()
-    
+
     def _show_skeleton_grid(self):
         self._clear_grid()
         
@@ -388,7 +569,7 @@ class WorkshopTab(QWidget):
             skeleton = SkeletonGridItem(item_size, self)
             self.grid_layout.addWidget(skeleton, row, col)
             self.skeleton_items.append(skeleton)
-    
+
     def _clear_skeleton_grid(self):
         for item in self.skeleton_items:
             try:
@@ -398,7 +579,7 @@ class WorkshopTab(QWidget):
             except RuntimeError:
                 pass
         self.skeleton_items.clear()
-    
+
     def _populate_grid(self, items: List[WorkshopItem]):
         self._clear_skeleton_grid()
         
@@ -443,7 +624,7 @@ class WorkshopTab(QWidget):
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
         self.grid_layout.addWidget(spacer, len(items) // columns + 1, 0, 1, columns)
-    
+
     def _is_fully_installed(self, pubfileid: str) -> bool:
         return (
             self.we.is_installed(pubfileid) and
@@ -472,7 +653,7 @@ class WorkshopTab(QWidget):
                         pass
         
         self.grid_items.clear()
-    
+
     def _calculate_columns(self) -> int:
         try:
             available_width = self.scroll_area.viewport().width()
@@ -484,7 +665,7 @@ class WorkshopTab(QWidget):
             return min(columns, 8)
         except:
             return 4
-    
+
     def _calculate_item_size(self, columns: int) -> int:
         try:
             if columns <= 0:
@@ -500,10 +681,10 @@ class WorkshopTab(QWidget):
             return max(160, min(ideal_size, 240))
         except:
             return 185
-    
+
     def _on_item_clicked(self, pubfileid: str):
         self._select_item(pubfileid)
-    
+
     def _select_item(self, pubfileid: str):
         self.selected_pubfileid = pubfileid
         is_fully_installed = (
@@ -515,7 +696,7 @@ class WorkshopTab(QWidget):
             self.details_panel.set_installed_folder(str(folder_path))
             return
         self.parser.load_item_details(pubfileid)
-    
+
     def _update_item_statuses(self):
         for item in self.grid_items:
             try:
@@ -529,7 +710,7 @@ class WorkshopTab(QWidget):
                     item.set_status(WorkshopGridItem.STATUS_AVAILABLE)
             except RuntimeError:
                 pass
-    
+
     def _update_pagination(self):
         self.page_label2.setText(f"of {self.total_pages}")
         self.page_input.setText(str(self.current_page))
@@ -549,7 +730,7 @@ class WorkshopTab(QWidget):
             self.results_label.setText(results_text)
         else:
             self.results_label.setText("Loading...")
-    
+
     def _update_pagination_buttons(self):
         can_go_back = self.current_page > 1 and not self._is_loading_page
         can_go_forward = self.current_page < self.total_pages and not self._is_loading_page
@@ -558,7 +739,7 @@ class WorkshopTab(QWidget):
         self.prev_btn.setEnabled(can_go_back)
         self.next_btn.setEnabled(can_go_forward)
         self.last_btn.setEnabled(can_go_forward)
-    
+
     def _go_to_page(self, page: int):
         if self._is_loading_page:
             return
@@ -573,33 +754,34 @@ class WorkshopTab(QWidget):
             self.filter_bar.set_page(page)
             self.parser.load_page(filters)
             self.scroll_area.verticalScrollBar().setValue(0)
-    
+
     def _recalculate_grid(self):
         if self._current_page_data and self._current_page_data.items:
             self._clear_grid()
             self._populate_grid(self._current_page_data.items)
-    
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, 'resize_timer'):
             self.resize_timer.start(200)
-    
+
     def start_download(self, pubfileid: str):
         if self.dm.is_downloading(pubfileid):
             return
+
+        cached_item = self.parser.get_cached_item(pubfileid)
+        if cached_item and cached_item.preview_url:
+            self._preview_url_cache[pubfileid] = cached_item.preview_url
         
         account_index = self.config.get_account_number()
         self.dm.start_download(pubfileid, account_index)
         self._update_item_statuses()
         NotificationLabel.show_notification(self.details_panel, self.tr.t("messages.download_started"), 55, 15)
-    
+
     def show_downloads_popup(self, button_pos):
         self.downloads_popup.move(button_pos.x() - 90, button_pos.y())
         self.downloads_popup.show()
-    
-    def hide_downloads_popup(self):
-        self.downloads_popup.hide()
-    
+
     def _update_downloads_list(self):
         while self.scroll_layout.count():
             child = self.scroll_layout.takeAt(0)
@@ -634,7 +816,7 @@ class WorkshopTab(QWidget):
                 self._create_task_item(task_type, pubfileid, info)
         
         self.scroll_layout.addStretch()
-    
+
     def _create_task_item(self, task_type: str, pubfileid: str, info: dict):
         item_widget = QWidget()
         item_widget.setFixedSize(250, 70)
@@ -663,8 +845,12 @@ class WorkshopTab(QWidget):
         text_label.setWordWrap(True)
         text_label.setFixedSize(200, 50)
         text_label.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        text_label.setProperty("pubfileid", pubfileid)
+        text_label.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        text_label.installEventFilter(self)
         
-        text_label.mousePressEvent = lambda e, pid=pubfileid: self._open_workshop_page(pid)
+        text_label.mousePressEvent = lambda e, pid=pubfileid: self._on_open_browser(pid)
         
         bg_layout.addWidget(text_label)
         bg_layout.addStretch()
@@ -680,15 +866,56 @@ class WorkshopTab(QWidget):
         
         item_layout.addWidget(bg_container)
         self.scroll_layout.addWidget(item_widget)
-    
+
+    def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
+        if isinstance(obj, QLabel):
+            pubfileid = obj.property("pubfileid")
+            if pubfileid:
+                if event.type() == QEvent.Type.Enter:
+                    self._show_item_preview(pubfileid, obj)
+                    return False
+                    
+                elif event.type() == QEvent.Type.Leave:
+                    self.preview_popup.hide_preview()
+                    return False
+        
+        return super().eventFilter(obj, event)
+
+    def _show_item_preview(self, pubfileid: str, widget: QWidget):
+        preview_url = self._preview_url_cache.get(pubfileid)
+        
+        if not preview_url:
+            cached_item = self.parser.get_cached_item(pubfileid)
+            if cached_item and cached_item.preview_url:
+                preview_url = cached_item.preview_url
+                self._preview_url_cache[pubfileid] = preview_url
+        
+        if not preview_url and self._current_page_data:
+            for page_item in self._current_page_data.items:
+                if page_item.pubfileid == pubfileid:
+                    if page_item.preview_url:
+                        preview_url = page_item.preview_url
+                        self._preview_url_cache[pubfileid] = preview_url
+                    break
+        
+        global_pos = widget.mapToGlobal(QPoint(0, widget.height() // 2))
+        self.preview_popup.show_preview(preview_url or "", global_pos)
+
+    def _on_open_browser(self, pubfileid):
+        url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={pubfileid}"
+        webbrowser.open(url)
+
     def _cancel_download(self, pubfileid: str):
         self.dm.cancel_download(pubfileid)
         QTimer.singleShot(100, self._update_downloads_list)
         self._update_item_statuses()
-    
+
     def cleanup(self):
         if hasattr(self, '_status_timer'):
             self._status_timer.stop()
         if hasattr(self, 'parser'):
             self.parser.cleanup()
+        if hasattr(self, 'preview_popup'):
+            self.preview_popup.clear_cache()
+        self._preview_url_cache.clear()
         self._clear_grid()
