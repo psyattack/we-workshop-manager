@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 class ConfigManager:
     DEFAULT_CONFIG = {
@@ -87,13 +87,3 @@ class ConfigManager:
     
     def set_language(self, lang: str) -> None:
         self.set("language", lang)
-    
-    def get_custom_background(self) -> Optional[str]:
-        return self.get("custom_background")
-    
-    def set_custom_background(self, base64_data: Optional[str]) -> None:
-        if base64_data:
-            self.set("custom_background", base64_data)
-        elif "custom_background" in self.config:
-            del self.config["custom_background"]
-            self.save()

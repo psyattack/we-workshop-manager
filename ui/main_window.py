@@ -315,7 +315,8 @@ class MainWindow(QMainWindow):
         )
 
         self.wallpapers_tab = WallpapersTab(
-            self.we, self.dm, self.tr, self.theme, self
+            self.config, self.dm, self.we,
+            self.tr, self.theme, self
         )
         
         self.stack.addWidget(self.workshop_tab)
