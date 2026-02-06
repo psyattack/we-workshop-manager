@@ -221,6 +221,7 @@ class PreviewPopup(QWidget):
         """)
 
     def hide_preview(self):
+        self._current_url = ""
         self._stop_current_movie()
         self.hide()
 
