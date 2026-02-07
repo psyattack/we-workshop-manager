@@ -14,12 +14,11 @@ from PyQt6.QtWidgets import (
     QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication
 )
 
-from ui.custom_widgets import NotificationLabel
 # from ui.preset_panel import PresetPanel
+from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
 from core.image_cache import ImageCache
-
 
 class DetailsPanel(QWidget):
 
@@ -70,13 +69,12 @@ class DetailsPanel(QWidget):
         """)
         main_layout.addWidget(self.preview_label)
 
-        self._create_action_buttons(main_layout)
-
         # self.preset_panel = PresetPanel(self.we, self.tr, self.config, self)
         # self.preset_panel.property_changed.connect(self._on_preset_property_changed)
         # self.preset_panel.panel_toggled.connect(self._on_preset_panel_toggled)
         # main_layout.addWidget(self.preset_panel)
 
+        self._create_action_buttons(main_layout)
         self._create_title_section(main_layout)
         self._create_id_section(main_layout)
         self._create_details_section(main_layout)
@@ -192,8 +190,6 @@ class DetailsPanel(QWidget):
         container_layout.addWidget(self.details_scroll)
         layout.addWidget(self.details_container)
 
-    # ==================== PRESET PANEL HANDLERS ====================
-
     # def _on_preset_panel_toggled(self, is_visible: bool):
     #     self.preview_label.setVisible(not is_visible)
     #     self.buttons_widget.setVisible(not is_visible)
@@ -211,6 +207,19 @@ class DetailsPanel(QWidget):
     #         panel = getattr(main_window.workshop_tab, 'details_panel', None)
     #         if panel and panel is not self and hasattr(panel, 'preset_panel'):
     #             panel.preset_panel.sync_property(pubfileid, key, value)
+
+    @staticmethod
+    def _star_file_to_text(rating_star_file: str) -> str:
+        """'4-star_large' → '★★★★☆'"""
+        mapping = {
+            "5-star_large": "★★★★★",
+            "4-star_large": "★★★★☆",
+            "3-star_large": "★★★☆☆",
+            "2-star_large": "★★☆☆☆",
+            "1-star_large": "★☆☆☆☆",
+            "not-yet_large": "☆☆☆☆☆",
+        }
+        return mapping.get(rating_star_file, "")
 
     def set_installed_folder(self, folder_path: str):
         self._reset_state()
@@ -464,6 +473,22 @@ class DetailsPanel(QWidget):
     def _setup_workshop_details(self, item):
         self._clear_details()
 
+        rating_star_file = getattr(item, 'rating_star_file', '')
+        num_ratings = getattr(item, 'num_ratings', '')
+
+        if rating_star_file:
+            stars_text = self._star_file_to_text(rating_star_file)
+            if stars_text:
+                count_part = f"  ({num_ratings})" if num_ratings else ""
+                rating_label = QLabel(
+                    f'<span style="color: #a3a3a3;">✨ Rating:&nbsp;&nbsp;</span>'
+                    f'<span style="color: #f5c518;">{stars_text}{count_part}</span>'
+                )
+                rating_label.setStyleSheet(
+                    "font-size: 14px; background: transparent; border: none;"
+                )
+                self.details_layout.addWidget(rating_label)
+
         if item.file_size:
             self._add_detail_label(self.tr.t("labels.size", size=item.file_size), "📦")
         if item.posted_date:
@@ -486,7 +511,7 @@ class DetailsPanel(QWidget):
         if item.description:
             self._add_separator()
             self._add_section_title(self.tr.t("labels.description"))
-            desc_text = item.description[:500] + ("..." if len(item.description) > 500 else "")
+            desc_text = item.description
             self._add_description_label(desc_text)
 
         self.details_layout.addStretch()

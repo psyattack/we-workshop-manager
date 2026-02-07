@@ -2,8 +2,11 @@ import weakref
 import webbrowser
 from typing import Optional, List, Dict
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint, QByteArray, QBuffer, QIODevice
-from PyQt6.QtGui import QPixmap, QMovie, QPainter, QPainterPath
+from PyQt6.QtCore import (
+    Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint, QByteArray,
+    QBuffer, QIODevice, QPropertyAnimation, QRectF, pyqtProperty
+)
+from PyQt6.QtGui import QPixmap, QMovie, QPainter, QPainterPath, QColor
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QGridLayout, QFrame, QSplitter, QSizePolicy, QLineEdit
@@ -17,6 +20,62 @@ from ui.grid_items import WorkshopGridItem, SkeletonGridItem
 from ui.details_panel import DetailsPanel
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
+
+class ToggleSwitch(QWidget):
+
+    toggled = pyqtSignal(bool)
+
+    def __init__(self, checked=True, theme_manager=None, parent=None):
+        super().__init__(parent)
+        self.theme = theme_manager
+        self._checked = checked
+        self._handle_pos = 1.0 if checked else 0.0
+        self.setFixedSize(36, 18)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._animation = QPropertyAnimation(self, b"handlePos")
+        self._animation.setDuration(150)
+
+    def get_handle_pos(self):
+        return self._handle_pos
+
+    def set_handle_pos(self, pos):
+        self._handle_pos = pos
+        self.update()
+
+    handlePos = pyqtProperty(float, get_handle_pos, set_handle_pos)
+
+    def isChecked(self):
+        return self._checked
+
+    def mousePressEvent(self, event):
+        self._checked = not self._checked
+        self._animation.setStartValue(self._handle_pos)
+        self._animation.setEndValue(1.0 if self._checked else 0.0)
+        self._animation.start()
+        self.toggled.emit(self._checked)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        w, h = self.width(), self.height()
+        radius = h / 2
+
+        if self._checked:
+            bg_color = QColor(self.theme.get_color('primary'))
+        else:
+            bg_color = QColor(self.theme.get_color('bg_tertiary'))
+
+        p.setBrush(bg_color)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(QRectF(0, 0, w, h), radius, radius)
+
+        handle_diameter = h - 4
+        x = 2 + self._handle_pos * (w - handle_diameter - 4)
+        p.setBrush(QColor("white"))
+        p.drawEllipse(QRectF(x, 2, handle_diameter, handle_diameter))
+
+        p.end()
 
 class PreviewPopup(QWidget):
 
@@ -320,6 +379,7 @@ class WorkshopTab(QWidget):
 
         self.filter_bar = CompactFilterBar(self.theme, self)
         self.filter_bar.filters_changed.connect(self._on_filters_changed)
+        self.filter_bar.setVisible(False)
         layout.addWidget(self.filter_bar)
 
         self.info_bar = self._create_info_bar()
@@ -338,10 +398,19 @@ class WorkshopTab(QWidget):
         self.grid_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
         self.scroll_area.setWidget(self.grid_widget)
+        self._scrollbar_visible = self.scroll_area.verticalScrollBar().isVisible()
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scrollbar_range_changed)
         layout.addWidget(self.scroll_area, 1)
 
         layout.addWidget(self._create_pagination_bar())
         return widget
+
+    def _on_scrollbar_range_changed(self, min_val: int, max_val: int):
+        scrollbar_now_visible = max_val > 0
+        if scrollbar_now_visible != self._scrollbar_visible:
+            self._scrollbar_visible = scrollbar_now_visible
+            if hasattr(self, 'resize_timer'):
+                self.resize_timer.start(50)
 
     def _create_info_bar(self) -> QFrame:
         bar = QFrame()
@@ -355,6 +424,7 @@ class WorkshopTab(QWidget):
         """)
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(12, 0, 12, 0)
+        layout.setSpacing(8)
 
         self.results_label = QLabel("Loading...")
         self.results_label.setStyleSheet(f"""
@@ -364,11 +434,27 @@ class WorkshopTab(QWidget):
         """)
         layout.addWidget(self.results_label)
         layout.addStretch()
+
+        self.filter_toggle_label = QLabel("Filters")
+        self.filter_toggle_label.setStyleSheet(f"""
+            color: {self.theme.get_color('text_secondary')};
+            font-size: 10px;
+            font-weight: 600;
+        """)
+        layout.addWidget(self.filter_toggle_label)
+
+        self.filter_toggle = ToggleSwitch(checked=False, theme_manager=self.theme, parent=bar)
+        self.filter_toggle.toggled.connect(self._on_filter_toggle)
+        layout.addWidget(self.filter_toggle)
+
         return bar
+
+    def _on_filter_toggle(self, checked: bool):
+        self.filter_bar.setVisible(checked)
 
     def _create_pagination_bar(self) -> QFrame:
         bar = QFrame()
-        bar.setFixedHeight(50)
+        bar.setFixedHeight(40)
         bar.setStyleSheet(f"""
             QFrame {{
                 background-color: {self.theme.get_color('bg_secondary')};
@@ -376,7 +462,7 @@ class WorkshopTab(QWidget):
             }}
         """)
         layout = QHBoxLayout(bar)
-        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setContentsMargins(12, 4, 12, 4)
 
         self.first_btn = self._create_page_btn("« First")
         self.first_btn.clicked.connect(lambda: self._go_to_page(1))
@@ -405,7 +491,7 @@ class WorkshopTab(QWidget):
                 background-color: {self.theme.get_color('bg_tertiary')};
                 border: 2px solid {self.theme.get_color('border')};
                 border-radius: 6px;
-                padding: 4px 8px;
+                padding: 2px 8px;
                 color: {self.theme.get_color('text_primary')};
                 font-size: 12px;
                 text-align: center;
@@ -440,7 +526,7 @@ class WorkshopTab(QWidget):
 
     def _create_page_btn(self, text: str) -> QPushButton:
         btn = QPushButton(text)
-        btn.setFixedSize(70, 32)
+        btn.setFixedSize(70, 28)
         btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {self.theme.get_color('primary')};
@@ -449,6 +535,7 @@ class WorkshopTab(QWidget):
                 border-radius: 6px;
                 font-weight: 600;
                 font-size: 11px;
+                padding: 0px;
             }}
             QPushButton:hover {{
                 background-color: {self.theme.get_color('primary_hover')};
@@ -458,7 +545,33 @@ class WorkshopTab(QWidget):
                 color: {self.theme.get_color('text_disabled')};
             }}
         """)
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         return btn
+
+    def _on_page_input(self):
+        self.page_input.clearFocus()
+        try:
+            page = int(self.page_input.text().strip())
+            if 1 <= page <= self.total_pages:
+                self._go_to_page(page)
+            self.page_input.clear()
+        except ValueError:
+            self.page_input.clear()
+            NotificationLabel.show_notification(self, "Invalid page number")
+
+    def _go_to_page(self, page: int):
+        if self._is_loading_page:
+            return
+        self.page_input.clearFocus()
+        page = max(1, min(page, self.total_pages))
+        if page != self.current_page:
+            self.current_page = page
+            self.selected_pubfileid = None
+            filters = self.filter_bar.get_current_filters()
+            filters.page = page
+            self.filter_bar.set_page(page)
+            self.parser.load_page(filters)
+            self.scroll_area.verticalScrollBar().setValue(0)
 
     def _on_login_success(self):
         self._initial_load()
@@ -519,16 +632,6 @@ class WorkshopTab(QWidget):
             self._update_item_statuses()
             if self.selected_pubfileid == pubfileid:
                 self.details_panel.refresh_after_state_change()
-
-    def _on_page_input(self):
-        try:
-            page = int(self.page_input.text().strip())
-            if 1 <= page <= self.total_pages:
-                self._go_to_page(page)
-            self.page_input.clear()
-        except ValueError:
-            self.page_input.clear()
-            NotificationLabel.show_notification(self, "Invalid page number")
 
     def _is_fully_installed(self, pubfileid: str) -> bool:
         return self.we.is_installed(pubfileid) and not self.dm.is_downloading(pubfileid)
@@ -684,19 +787,6 @@ class WorkshopTab(QWidget):
         self.prev_btn.setEnabled(can_go_back)
         self.next_btn.setEnabled(can_go_forward)
         self.last_btn.setEnabled(can_go_forward)
-
-    def _go_to_page(self, page: int):
-        if self._is_loading_page:
-            return
-        page = max(1, min(page, self.total_pages))
-        if page != self.current_page:
-            self.current_page = page
-            self.selected_pubfileid = None
-            filters = self.filter_bar.get_current_filters()
-            filters.page = page
-            self.filter_bar.set_page(page)
-            self.parser.load_page(filters)
-            self.scroll_area.verticalScrollBar().setValue(0)
 
     def _recalculate_grid(self):
         if self._current_page_data and self._current_page_data.items:

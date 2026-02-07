@@ -92,8 +92,18 @@ class WallpapersTab(QWidget):
         self.grid_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.scroll_area.setWidget(self.grid_widget)
 
+        self._scrollbar_visible = self.scroll_area.verticalScrollBar().isVisible()
+        self.scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scrollbar_range_changed)
+
         layout.addWidget(self.scroll_area)
         return widget
+
+    def _on_scrollbar_range_changed(self, min_val: int, max_val: int):
+        scrollbar_now_visible = max_val > 0
+        if scrollbar_now_visible != self._scrollbar_visible:
+            self._scrollbar_visible = scrollbar_now_visible
+            if hasattr(self, 'resize_timer'):
+                self.resize_timer.start(50)
 
     def _create_header(self) -> QFrame:
         header = QFrame()
