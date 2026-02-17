@@ -4,8 +4,7 @@ from typing import Optional, List, Dict
 
 from PyQt6.QtCore import (
     Qt, QTimer, pyqtSignal, QSize, QEvent, QPoint, QByteArray,
-    QBuffer, QIODevice, QPropertyAnimation, QRectF, pyqtProperty,
-    QEasingCurve,
+    QBuffer, QIODevice, QPropertyAnimation, QRectF, pyqtProperty
 )
 from PyQt6.QtGui import QPixmap, QMovie, QPainter, QPainterPath, QColor
 from PyQt6.QtWidgets import (

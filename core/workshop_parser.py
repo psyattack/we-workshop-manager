@@ -7,9 +7,7 @@ from PyQt6.QtCore import QObject, QUrl, pyqtSignal, QTimer
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import QWidget
-
 from core.workshop_filters import WorkshopFilters
-
 
 @dataclass
 class WorkshopItem:
@@ -19,21 +17,17 @@ class WorkshopItem:
     author: str = ""
     author_url: str = ""
 
-    # Details
     description: str = ""
     file_size: str = ""
     posted_date: str = ""
     updated_date: str = ""
     tags: dict = field(default_factory=dict)
 
-    # Rating
-    rating_star_file: str = ""   # e.g. "4-star_large", "5-star_large", "not-yet_large"
-    num_ratings: str = ""        # e.g. "154"
+    rating_star_file: str = ""
+    num_ratings: str = ""
 
-    # State
     is_installed: bool = False
     is_downloading: bool = False
-
 
 @dataclass
 class WorkshopPage:
@@ -42,7 +36,6 @@ class WorkshopPage:
     total_pages: int = 1
     total_items: int = 0
     filters: Optional[WorkshopFilters] = None
-
 
 class LRUCache:
 
@@ -84,7 +77,6 @@ class LRUCache:
         self._pages.clear()
         self._items.clear()
 
-
 class WorkshopParser(QObject):
 
     page_loaded = pyqtSignal(WorkshopPage)
@@ -97,7 +89,6 @@ class WorkshopParser(QObject):
     login_failed = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
 
-    # Timeouts
     FETCH_TIMEOUT_MS = 10000
     POLL_INTERVAL_MS = 50
     LOGIN_CHECK_INTERVAL_MS = 500

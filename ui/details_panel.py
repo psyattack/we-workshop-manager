@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
     QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication
 )
 
-# from ui.preset_panel import PresetPanel
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
@@ -68,11 +67,6 @@ class DetailsPanel(QWidget):
             }
         """)
         main_layout.addWidget(self.preview_label)
-
-        # self.preset_panel = PresetPanel(self.we, self.tr, self.config, self)
-        # self.preset_panel.property_changed.connect(self._on_preset_property_changed)
-        # self.preset_panel.panel_toggled.connect(self._on_preset_panel_toggled)
-        # main_layout.addWidget(self.preset_panel)
 
         self._create_action_buttons(main_layout)
         self._create_title_section(main_layout)
@@ -211,24 +205,6 @@ class DetailsPanel(QWidget):
         container_layout.addWidget(self.details_scroll)
         layout.addWidget(self.details_container)
 
-    # def _on_preset_panel_toggled(self, is_visible: bool):
-    #     self.preview_label.setVisible(not is_visible)
-    #     self.buttons_widget.setVisible(not is_visible)
-    #     self.title_scroll.setVisible(not is_visible)
-    #     self.id_label.setVisible(not is_visible)
-    #     self.details_container.setVisible(not is_visible)
-
-    # def _on_preset_property_changed(self, pubfileid: str, key: str, value):
-    #     main_window = self.window()
-    #     if hasattr(main_window, 'wallpapers_tab'):
-    #         panel = getattr(main_window.wallpapers_tab, 'details_panel', None)
-    #         if panel and panel is not self and hasattr(panel, 'preset_panel'):
-    #             panel.preset_panel.sync_property(pubfileid, key, value)
-    #     if hasattr(main_window, 'workshop_tab'):
-    #         panel = getattr(main_window.workshop_tab, 'details_panel', None)
-    #         if panel and panel is not self and hasattr(panel, 'preset_panel'):
-    #             panel.preset_panel.sync_property(pubfileid, key, value)
-
     @staticmethod
     def _star_file_to_text(rating_star_file: str) -> str:
         """'4-star_large' → '★★★★☆'"""
@@ -302,8 +278,6 @@ class DetailsPanel(QWidget):
 
     def release_resources(self):
         self._reset_preview()
-        # if self.preset_panel.isVisible():
-        #     self.preset_panel.hide_panel()
 
     @property
     def large_preview(self):
@@ -311,8 +285,6 @@ class DetailsPanel(QWidget):
 
     def _reset_state(self):
         self._reset_preview()
-        # if self.preset_panel.isVisible():
-        #     self.preset_panel.hide_panel()
         self._clear_details()
         self._clear_buttons()
 
@@ -427,13 +399,6 @@ class DetailsPanel(QWidget):
         self.buttons_layout.addWidget(self._create_icon_button(
             "ICON_LINK", self.tr.t("tooltips.install_open_we"), self._on_install_and_open
         ))
-
-        # self.buttons_layout.addWidget(self._create_icon_button(
-        #     "ICON_SETTINGS",
-        #     self.tr.t("tooltips.preset_settings") if hasattr(self.tr, 't') else "Preset Settings",
-        #     self._on_toggle_preset_panel,
-        #     color='#9b59b6', hover_color='#a569bd'
-        # ))
 
     def _setup_workshop_buttons(self):
         self._clear_buttons()
@@ -786,7 +751,6 @@ class DetailsPanel(QWidget):
             return
         self.we.apply_wallpaper(Path(self.folder_path) / "project.json")
         
-        # Minimize window if setting is enabled
         if self.config and self.config.get_minimize_on_apply():
             window = self.window()
             if window:
@@ -795,9 +759,6 @@ class DetailsPanel(QWidget):
     def _on_install_and_open(self):
         self._on_apply()
         self.we.open_wallpaper_engine(show_window=True)
-
-    # def _on_toggle_preset_panel(self):
-    #     self.preset_panel.toggle_panel(self.folder_path, self._project_data)
 
     def _on_id_clicked(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
