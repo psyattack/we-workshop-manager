@@ -4,12 +4,19 @@ Entry point
 
 # ----------------------------------
 import sys
+import time
 from tendo import singleton
+
+_is_restart = "--restart" in sys.argv
+if _is_restart:
+    sys.argv.remove("--restart")
+    time.sleep(1)
 
 try:
     me = singleton.SingleInstance()
 except:
-    sys.exit()
+    if not _is_restart:
+        sys.exit()
 # ----------------------------------
 
 import subprocess
@@ -65,7 +72,7 @@ def install_dotnet_runtime(translator) -> bool:
         QMessageBox.critical(
             None,
             translator.t("dialog.error"),
-            f"Failed to start installer: {str(e)}"
+            translator.t("messages.failed_start_installer", error=str(e))
         )
         return False
 
@@ -96,7 +103,7 @@ def setup_wallpaper_engine(config: ConfigManager, translator) -> str:
         QMessageBox.warning(
             None,
             translator.t("dialog.warning"),
-            "Invalid Wallpaper Engine directory.\nPlease select the correct folder."
+            translator.t("messages.invalid_we_directory")
         )
 
 def main():
@@ -110,7 +117,7 @@ def main():
     # .NET Runtime
     if not check_dotnet_runtime():
         msg_box = QMessageBox()
-        msg_box.setWindowTitle(".NET 9 Desktop Runtime Required")
+        msg_box.setWindowTitle(translator.t("dialog.dotnet_required"))
         msg_box.setText(translator.t("messages.dotnet_required"))
         msg_box.setInformativeText(translator.t("messages.dotnet_install_now"))
         msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -123,7 +130,7 @@ def main():
             if install_dotnet_runtime(translator):
                 QMessageBox.information(
                     None,
-                    "Installation Started",
+                    translator.t("dialog.installation_started"),
                     translator.t("messages.dotnet_installation_started")
                 )
             else:

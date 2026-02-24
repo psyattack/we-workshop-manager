@@ -10,21 +10,18 @@
     "wallpapers": "Wallpapers"
   },
   "buttons": {
-    "home": "Home",
-    "back": "Back",
-    "forward": "Forward",
-    "go": "Go",
     "ok": "OK",
     "cancel": "Cancel",
     "apply": "Apply",
     "close": "Close",
     "open_folder": "Open Folder",
-    "open_workshop": "Open in Workshop",
+    "open_workshop": "Browser",
     "delete": "Delete",
     "extract": "Extract",
     "install": "Install",
-    "install_open": "Install & Open in WE",
-    "download_all": "Download All"
+    "download_all": "Download All",
+    "yes": "Yes",
+    "no": "No"
   },
   "tooltips": {
     "open_folder": "Open folder in Explorer",
@@ -37,7 +34,11 @@
     "tasks": "Active downloads and extractions",
     "settings": "Settings",
     "batch_download": "Batch download",
-    "info": "Information"
+    "info": "Information",
+    "search": "Search",
+    "refresh": "Refresh",
+    "translate_description": "Translate description",
+    "show_original": "Show original"
   },
   "labels": {
     "wallpapers_count": "Wallpapers: {count}",
@@ -60,7 +61,41 @@
     "other": "Other",
     "minimize_on_apply": "Minimize on Apply",
     "disabled": "Disabled",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "page": "Page",
+    "of": "of {total}",
+    "filters": "Filters",
+    "sort": "Sort:",
+    "period": "Period:",
+    "category": "Category:",
+    "type": "Type:",
+    "age": "Age:",
+    "content_descriptors": "Content Descriptors:",
+    "resolution": "Resolution:",
+    "clear": "✕ Clear",
+    "more_filters": "▼ More Filters",
+    "less_filters": "▲ Less Filters",
+    "asset_type": "Asset Type:",
+    "asset_genre": "Asset Genre:",
+    "script_type": "Script Type:",
+    "miscellaneous": "Miscellaneous:",
+    "genre": "Genre:",
+    "incompatible_items": "Incompatible items",
+    "rating": "Rating:",
+    "posted": "Posted: {date}",
+    "updated": "Updated: {date}",
+    "author": "Author: {author}",
+    "tags": "Tags:",
+    "showing_wallpapers": "Showing {start}-{end} of {total:,} wallpapers",
+    "no_wallpapers_found": "No wallpapers found",
+    "loading_dots": "Loading...",
+    "starting": "Starting...",
+    "search_placeholder": "Search...",
+    "id_url_placeholder": "ID, URL...",
+    "account": "Account",
+    "dark": "🌙 Dark",
+    "light": "☀️ Light",
+    "translating": "⏳ Translating..."
   },
   "messages": {
     "download_started": "Download started!",
@@ -87,7 +122,20 @@
     "dotnet_installation_started": ".NET 9 Desktop Runtime installation has started.\nPlease complete the installation and click OK.",
     "dotnet_installation_failed": ".NET 9 Desktop Runtime couldn't find the installer.\nPlease download it manually from:\nhttps://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime",
     "dotnet_warning": ".NET 9 Desktop Runtime is necessary for the correct operation of the application.\nPlease come back when you are ready to install it.",
-    "batch_input_placeholder": "Enter Workshop IDs and/or URLs\n(space or newline separated):"
+    "batch_input_placeholder": "Enter Workshop IDs and/or URLs\n(space or newline separated):",
+    "invalid_page_number": "Invalid page number",
+    "invalid_we_directory": "Invalid Wallpaper Engine directory.\nPlease select the correct folder.",
+    "failed_start_installer": "Failed to start installer: {error}",
+    "select_output_directory": "Select Output Directory",
+    "load_failed": "Load failed",
+    "error": "Error",
+    "translation_error": "Translation failed",
+    "language_changed": "Language Changed",
+    "restart_required": "Please restart the application for language changes to take effect.",
+    "restart_now_question": "Restart the application now to apply the language?",
+    "restart_with_tasks": "You have incomplete downloads or extractions.\nThey will be cancelled upon restart.\nContinue?",
+    "restart_with_downloads_only": "You have incomplete downloads.\nThey will be cancelled upon restart.\nContinue?",
+    "restart_with_extractions_only": "You have incomplete extractions.\nThey will be cancelled upon restart.\nContinue?"
   },
   "dialog": {
     "notification": "Notification",
@@ -95,11 +143,159 @@
     "error": "Error",
     "warning": "Warning",
     "information": "Information",
-    "exit": "Exit"
+    "exit": "Exit",
+    "batch_download": "Batch Download",
+    "about": "About",
+    "dotnet_required": ".NET 9 Desktop Runtime Required",
+    "installation_started": "Installation Started"
+  },
+  "settings": {
+    "title": "SETTINGS",
+    "theme_dev": "🎨 Theme (In Dev)",
+    "account": "👤 Account",
+    "language": "🌍 Language",
+    "other": "⚙️ Other"
   },
   "info": {
-    "version": "WE Workshop Manager v1.2.0",
+    "version": "WE Workshop Manager v1.2.4",
     "description": "This application allows you to easily download and manage Wallpaper Engine wallpapers from Steam Workshop.",
     "developed": "Developed with ❤️ free."
+  },
+  "tooltips_extended": {
+    "incompatible_items": "Some items cannot be included. However, you can find them by checking the box here."
+  },
+  "filters": {
+    "sort": {
+      "trend": "Popular",
+      "mostrecent": "Most Recent",
+      "lastupdated": "Recently Updated",
+      "totaluniquesubscribers": "Most Subscribed"
+    },
+    "time_period": {
+      "1": "Today",
+      "7": "This Week",
+      "30": "This Month",
+      "90": "3 Months",
+      "180": "6 Months",
+      "365": "This Year",
+      "-1": "All Time"
+    },
+    "category": {
+      "empty": "All",
+      "Wallpaper": "Wallpaper",
+      "Preset": "Preset",
+      "Asset": "Asset"
+    },
+    "type": {
+      "empty": "Any",
+      "Scene": "Scene",
+      "Video": "Video",
+      "Application": "Application",
+      "Web": "Web"
+    },
+    "age_rating": {
+      "empty": "Any",
+      "Everyone": "Everyone",
+      "Questionable": "Questionable",
+      "Mature": "Mature"
+    },
+    "resolution": {
+      "empty": "Any",
+      "1920_x_1080": "1080p",
+      "2560_x_1440": "1440p",
+      "3840_x_2160": "4K",
+      "1280_x_720": "720p",
+      "1366_x_768": "768p",
+      "Ultrawide_2560_x_1080": "UW 1080p",
+      "Ultrawide_3440_x_1440": "UW 1440p",
+      "Portrait_1080_x_1920": "Portrait 1080p",
+      "Dynamic_resolution": "Dynamic",
+      "Other_resolution": "Other"
+    },
+    "misc_tags": {
+      "Approved": "Approved",
+      "Audio responsive": "Audio Responsive",
+      "3D": "3D",
+      "Customizable": "Customizable",
+      "Puppet Warp": "Puppet Warp",
+      "HDR": "HDR",
+      "Media Integration": "Media Integration",
+      "User Shortcut": "User Shortcut",
+      "Video Texture": "Video Texture",
+      "Asset Pack": "Asset Pack"
+    },
+    "genre_tags": {
+      "Abstract": "Abstract",
+      "Animal": "Animal",
+      "Anime": "Anime",
+      "Cartoon": "Cartoon",
+      "CGI": "CGI",
+      "Cyberpunk": "Cyberpunk",
+      "Fantasy": "Fantasy",
+      "Game": "Game",
+      "Girls": "Girls",
+      "Guys": "Guys",
+      "Landscape": "Landscape",
+      "Medieval": "Medieval",
+      "Memes": "Memes",
+      "MMD": "MMD",
+      "Music": "Music",
+      "Nature": "Nature",
+      "Pixel art": "Pixel Art",
+      "Relaxing": "Relaxing",
+      "Retro": "Retro",
+      "Sci-Fi": "Sci-Fi",
+      "Sports": "Sports",
+      "Technology": "Technology",
+      "Television": "Television",
+      "Vehicle": "Vehicle",
+      "Unspecified": "Unspecified"
+    },
+    "asset_type": {
+      "empty": "Any",
+      "Particle": "Particle",
+      "Image": "Image",
+      "Sound": "Sound",
+      "Model": "Model",
+      "Text": "Text",
+      "Sprite": "Sprite",
+      "Fullscreen": "Fullscreen",
+      "Composite": "Composite",
+      "Script": "Script",
+      "Effect": "Effect"
+    },
+    "asset_genre": {
+      "empty": "Any",
+      "Audio Visualizer": "Audio Visualizer",
+      "Background": "Background",
+      "Character": "Character",
+      "Clock": "Clock",
+      "Fire": "Fire",
+      "Interactive": "Interactive",
+      "Magic": "Magic",
+      "Post Processing": "Post Processing",
+      "Smoke": "Smoke",
+      "Space": "Space"
+    },
+    "script_type": {
+      "empty": "Any",
+      "Boolean": "Boolean",
+      "Number": "Number",
+      "Vec2": "Vec2",
+      "Vec3": "Vec3",
+      "Vec4": "Vec4",
+      "String": "String",
+      "No Animation": "No Animation",
+      "Oversized": "Oversized"
+    },
+    "content_descriptors": {
+      "General Mature Content": "General Mature Content",
+      "Some Nudity or Sexual Content": "Some Nudity or Sexual Content",
+      "Frequent Nudity or Sexual Content": "Frequent Nudity or Sexual Content",
+      "Some Violence or Gore": "Some Violence or Gore",
+      "Frequent Violence or Gore": "Frequent Violence or Gore",
+      "Some Strong Language": "Some Strong Language",
+      "Frequent Strong Language": "Frequent Strong Language"
+    }
   }
 }

@@ -107,7 +107,7 @@ class SmallCircularProgress(QWidget):
         self.setFixedSize(size, size)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-    def update_from_status(self, status_text: str, file_size_bytes: int = 0):
+    def update_from_status(self, status_text: str, file_size_bytes: int = 0, is_extraction: bool = False):
         parsed = parse_depot_status(status_text)
         dl_bytes = parsed['downloaded_bytes']
         total_bytes = parsed['total_bytes']
@@ -124,7 +124,9 @@ class SmallCircularProgress(QWidget):
         else:
             self._progress = 0.0
 
-        if dl_bytes > 0:
+        if is_extraction:
+            self._display_text = "%"
+        elif dl_bytes > 0:
             self._display_text = format_bytes_short(dl_bytes)
         elif percent >= 0:
             effective_total = total_bytes if total_bytes > 0 else file_size_bytes

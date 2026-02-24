@@ -10,21 +10,18 @@
     "wallpapers": "Обои"
   },
   "buttons": {
-    "home": "Домой",
-    "back": "Назад",
-    "forward": "Вперёд",
-    "go": "Перейти",
     "ok": "ОК",
     "cancel": "Отмена",
     "apply": "Применить",
     "close": "Закрыть",
     "open_folder": "Открыть папку",
-    "open_workshop": "Открыть в Мастерской",
+    "open_workshop": "Браузер",
     "delete": "Удалить",
     "extract": "Извлечь",
     "install": "Установить",
-    "install_open": "Установить и открыть в WE",
-    "download_all": "Скачать всё"
+    "download_all": "Скачать всё",
+    "yes": "Да",
+    "no": "Нет"
   },
   "tooltips": {
     "open_folder": "Открыть папку в Проводнике",
@@ -37,7 +34,11 @@
     "tasks": "Активные загрузки и извлечения",
     "settings": "Настройки",
     "batch_download": "Пакетная загрузка",
-    "info": "Информация"
+    "info": "Информация",
+    "search": "Поиск",
+    "refresh": "Обновить",
+    "translate_description": "Перевести описание",
+    "show_original": "Показать оригинал"
   },
   "labels": {
     "wallpapers_count": "Обоев: {count}",
@@ -52,7 +53,6 @@
     "no_preview": "Нет превью",
     "loading": "⏳ Загрузка Мастерской",
     "select_account": "Выберите аккаунт:",
-    "status": "Статус:",
     "theme": "Тема:",
     "language": "Язык:",
     "no_tasks": "Нет активных задач",
@@ -61,7 +61,41 @@
     "other": "Прочее",
     "minimize_on_apply": "Свернуть при установке",
     "disabled": "Отключено",
-    "enabled": "Включено"
+    "enabled": "Включено",
+    "page": "Страница",
+    "of": "из {total}",
+    "filters": "Фильтры",
+    "sort": "Сортировка:",
+    "period": "Период:",
+    "category": "Категория:",
+    "type": "Тип:",
+    "age": "Возраст:",
+    "content_descriptors": "Дескрипторы содержимого:",
+    "resolution": "Разрешение:",
+    "clear": "✕ Сброс",
+    "more_filters": "▼ Больше",
+    "less_filters": "▲ Меньше",
+    "asset_type": "Тип актива:",
+    "asset_genre": "Жанр актива:",
+    "script_type": "Тип скрипта:",
+    "miscellaneous": "Разное:",
+    "genre": "Жанр:",
+    "incompatible_items": "Несовместимые элементы",
+    "rating": "Рейтинг:",
+    "posted": "Опубликовано: {date}",
+    "updated": "Обновлено: {date}",
+    "author": "Автор: {author}",
+    "tags": "Теги:",
+    "showing_wallpapers": "Показано {start}-{end} из {total:,} обоев",
+    "no_wallpapers_found": "Обои не найдены",
+    "loading_dots": "Загрузка...",
+    "starting": "Запуск...",
+    "search_placeholder": "Поиск...",
+    "id_url_placeholder": "ID, URL...",
+    "account": "Аккаунт",
+    "dark": "🌙 Тёмная",
+    "light": "☀️ Светлая",
+    "translating": "⏳ Перевод..."
   },
   "messages": {
     "download_started": "Загрузка началась!",
@@ -88,7 +122,20 @@
     "dotnet_installation_started": "Установка .NET 9 Desktop Runtime запущена.\nЗавершите установку и нажмите ОК.",
     "dotnet_installation_failed": "Установщик .NET 9 Desktop Runtime не найден.\nСкачайте вручную:\nhttps://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime",
     "dotnet_warning": ".NET 9 Desktop Runtime необходим для корректной работы приложения.\nВернитесь, когда будете готовы установить его.",
-    "batch_input_placeholder": "Введите ID и/или ссылки Мастерской\n(через пробел или с новой строки):"
+    "batch_input_placeholder": "Введите ID и/или ссылки Мастерской\n(через пробел или с новой строки):",
+    "invalid_page_number": "Неверный номер страницы",
+    "invalid_we_directory": "Неверная папка Wallpaper Engine.\nПожалуйста, выберите правильную папку.",
+    "failed_start_installer": "Не удалось запустить установщик: {error}",
+    "select_output_directory": "Выберите папку для извлечения",
+    "load_failed": "Ошибка загрузки",
+    "error": "Ошибка",
+    "translation_error": "Ошибка перевода",
+    "language_changed": "Язык изменён",
+    "restart_required": "Пожалуйста, перезапустите приложение, чтобы изменения языка вступили в силу.",
+    "restart_now_question": "Перезапустить приложение сейчас для применения языка?",
+    "restart_with_tasks": "У вас есть незавершённые загрузки или извлечения.\nПри перезапуске они будут отменены.\nПродолжить?",
+    "restart_with_downloads_only": "У вас есть незавершённые загрузки.\nПри перезапуске они будут отменены.\nПродолжить?",
+    "restart_with_extractions_only": "У вас есть незавершённые извлечения.\nПри перезапуске они будут отменены.\nПродолжить?"
   },
   "dialog": {
     "notification": "Уведомление",
@@ -96,11 +143,159 @@
     "error": "Ошибка",
     "warning": "Предупреждение",
     "information": "Информация",
-    "exit": "Выход"
+    "exit": "Выход",
+    "batch_download": "Пакетная загрузка",
+    "about": "О программе",
+    "dotnet_required": "Требуется .NET 9 Desktop Runtime",
+    "installation_started": "Установка запущена"
+  },
+  "settings": {
+    "title": "НАСТРОЙКИ",
+    "theme_dev": "🎨 Тема (В разработке)",
+    "account": "👤 Аккаунт",
+    "language": "🌍 Язык",
+    "other": "⚙️ Прочее"
   },
   "info": {
-    "version": "WE Workshop Manager v1.2.0",
+    "version": "WE Workshop Manager v1.2.4",
     "description": "Это приложение позволяет легко загружать и управлять обоями Wallpaper Engine из Steam Мастерской.",
     "developed": "Разработано с ❤️ бесплатно."
+  },
+  "tooltips_extended": {
+    "incompatible_items": "Некоторые элементы не могут быть включены. Однако вы можете найти их, установив этот флажок."
+  },
+  "filters": {
+    "sort": {
+      "trend": "Популярные",
+      "mostrecent": "Недавние",
+      "lastupdated": "Недавно обновлённые",
+      "totaluniquesubscribers": "По подписчикам"
+    },
+    "time_period": {
+      "1": "Сегодня",
+      "7": "Эта неделя",
+      "30": "Этот месяц",
+      "90": "3 месяца",
+      "180": "6 месяцев",
+      "365": "Этот год",
+      "-1": "За всё время"
+    },
+    "category": {
+      "empty": "Все",
+      "Wallpaper": "Обои",
+      "Preset": "Пресет",
+      "Asset": "Актив"
+    },
+    "type": {
+      "empty": "Любой",
+      "Scene": "Сцена",
+      "Video": "Видео",
+      "Application": "Приложение",
+      "Web": "Веб"
+    },
+    "age_rating": {
+      "empty": "Любой",
+      "Everyone": "Для всех",
+      "Questionable": "Вопросительный",
+      "Mature": "Для взрослых"
+    },
+    "resolution": {
+      "empty": "Любое",
+      "1920_x_1080": "1080p",
+      "2560_x_1440": "1440p",
+      "3840_x_2160": "4K",
+      "1280_x_720": "720p",
+      "1366_x_768": "768p",
+      "Ultrawide_2560_x_1080": "UW 1080p",
+      "Ultrawide_3440_x_1440": "UW 1440p",
+      "Portrait_1080_x_1920": "Портрет 1080p",
+      "Dynamic_resolution": "Динамическое",
+      "Other_resolution": "Другое"
+    },
+    "misc_tags": {
+      "Approved": "Одобрено",
+      "Audio responsive": "Реакция на звук",
+      "3D": "3D",
+      "Customizable": "Настраиваемый",
+      "Puppet Warp": "Puppet Warp",
+      "HDR": "HDR",
+      "Media Integration": "Интеграция медиа",
+      "User Shortcut": "Горячие клавиши",
+      "Video Texture": "Видеотекстура",
+      "Asset Pack": "Пак активов"
+    },
+    "genre_tags": {
+      "Abstract": "Абстракция",
+      "Animal": "Животные",
+      "Anime": "Аниме",
+      "Cartoon": "Мультфильм",
+      "CGI": "CGI",
+      "Cyberpunk": "Киберпанк",
+      "Fantasy": "Фэнтези",
+      "Game": "Игры",
+      "Girls": "Девушки",
+      "Guys": "Парни",
+      "Landscape": "Пейзаж",
+      "Medieval": "Средневековье",
+      "Memes": "Мемы",
+      "MMD": "MMD",
+      "Music": "Музыка",
+      "Nature": "Природа",
+      "Pixel art": "Пиксель-арт",
+      "Relaxing": "Расслабляющее",
+      "Retro": "Ретро",
+      "Sci-Fi": "Научная фантастика",
+      "Sports": "Спорт",
+      "Technology": "Технологии",
+      "Television": "Телевидение",
+      "Vehicle": "Транспорт",
+      "Unspecified": "Не указано"
+    },
+    "asset_type": {
+      "empty": "Любой",
+      "Particle": "Частицы",
+      "Image": "Изображение",
+      "Sound": "Звук",
+      "Model": "Модель",
+      "Text": "Текст",
+      "Sprite": "Спрайт",
+      "Fullscreen": "Полноэкранный",
+      "Composite": "Композитный",
+      "Script": "Скрипт",
+      "Effect": "Эффект"
+    },
+    "asset_genre": {
+      "empty": "Любой",
+      "Audio Visualizer": "Аудио визуализатор",
+      "Background": "Фон",
+      "Character": "Персонаж",
+      "Clock": "Часы",
+      "Fire": "Огонь",
+      "Interactive": "Интерактивный",
+      "Magic": "Магия",
+      "Post Processing": "Пост-обработка",
+      "Smoke": "Дым",
+      "Space": "Космос"
+    },
+    "script_type": {
+      "empty": "Любой",
+      "Boolean": "Булево",
+      "Number": "Число",
+      "Vec2": "Vec2",
+      "Vec3": "Vec3",
+      "Vec4": "Vec4",
+      "String": "Строка",
+      "No Animation": "Без анимации",
+      "Oversized": "Увеличенный"
+    },
+    "content_descriptors": {
+      "General Mature Content": "Общий контент для взрослых",
+      "Some Nudity or Sexual Content": "Некоторая нагота или сексуальный контент",
+      "Frequent Nudity or Sexual Content": "Частая нагота или сексуальный контент",
+      "Some Violence or Gore": "Некоторое насилие или кровь",
+      "Frequent Violence or Gore": "Частое насилие или кровь",
+      "Some Strong Language": "Некоторый нецензурный язык",
+      "Frequent Strong Language": "Частый нецензурный язык"
+    }
   }
 }

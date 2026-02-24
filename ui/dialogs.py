@@ -100,7 +100,7 @@ class CustomDialog(QDialog):
 
 class BatchDownloadDialog(CustomDialog):
     def __init__(self, translator, parent=None):
-        super().__init__("Batch Download", parent)
+        super().__init__(translator.t("dialog.batch_download"), parent)
         
         self.tr = translator
         self.pubfileids = []
@@ -113,7 +113,7 @@ class BatchDownloadDialog(CustomDialog):
         self.content_layout.addWidget(label)
 
         self.text_edit = QTextEdit()
-        self.text_edit.setPlaceholderText("ID, URL...")
+        self.text_edit.setPlaceholderText(self.tr.t("labels.id_url_placeholder"))
         self.text_edit.setStyleSheet("""
             QTextEdit {
                 background-color: #252938;
@@ -181,17 +181,18 @@ class BatchDownloadDialog(CustomDialog):
         if valid_ids:
             self.accept()
         else:
-            QMessageBox.warning(self, "Warning", self.tr.t("messages.invalid_input"))
+            QMessageBox.warning(self, self.tr.t("dialog.warning"), self.tr.t("messages.invalid_input"))
     
     def get_pubfileids(self):
         return self.pubfileids
 
 class InfoDialog(CustomDialog):
     def __init__(self, translator, parent=None):
-        super().__init__("About", parent)
+        super().__init__(translator.t("dialog.about"), parent)
         
         self.tr = translator
-        self.setFixedSize(400, 280)
+        self.setMinimumSize(400, 280)
+        self.adjustSize()
         
         icon = QLabel()
         icon.setPixmap(get_pixmap("ICON_APP", size=128))
@@ -234,7 +235,7 @@ class InfoDialog(CustomDialog):
 
         self.content_layout.addLayout(github_container)
 
-        ok_btn = QPushButton("OK")
+        ok_btn = QPushButton(self.tr.t("buttons.ok"))
         ok_btn.setFixedHeight(40)
         ok_btn.setStyleSheet("""
             QPushButton {

@@ -6,18 +6,36 @@ import webbrowser
 import weakref
 from pathlib import Path
 from typing import Optional
-
-from PyQt6.QtCore import Qt, QSize, QTimer, QByteArray
+from PyQt6.QtCore import Qt, QSize, QTimer, QByteArray, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap, QMovie, QMouseEvent
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication
 )
-
 from ui.custom_widgets import NotificationLabel
 from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
 from core.image_cache import ImageCache
+from utils.translation_helper import DescriptionTranslator
+
+class TranslationWorker(QThread):
+    finished = pyqtSignal(str, str)  # original_text, translated_text
+    error = pyqtSignal(str)  # error_message
+    
+    def __init__(self, text: str, target_lang: str, parent=None):
+        super().__init__(parent)
+        self.text = text
+        self.target_lang = target_lang
+    
+    def run(self):
+        try:
+            translated = DescriptionTranslator.translate(self.text, self.target_lang)
+            if translated:
+                self.finished.emit(self.text, translated)
+            else:
+                self.error.emit("Translation failed")
+        except Exception as e:
+            self.error.emit(str(e))
 
 class DetailsPanel(QWidget):
 
@@ -45,6 +63,13 @@ class DetailsPanel(QWidget):
         self._temp_gif_file: Optional[str] = None
 
         self._project_data: dict = {}
+        
+        self._original_description: str = ""
+        self._translated_description: str = ""
+        self._is_translated: bool = False
+        self._translation_worker: Optional[TranslationWorker] = None
+        self._description_label: Optional[QLabel] = None
+        self._translate_button: Optional[QPushButton] = None
 
         self._setup_ui()
         self.setVisible(False)
@@ -287,10 +312,20 @@ class DetailsPanel(QWidget):
         self._reset_preview()
         self._clear_details()
         self._clear_buttons()
+        
+        if self._translation_worker and self._translation_worker.isRunning():
+            self._translation_worker.terminate()
+            self._translation_worker = None
 
         self._current_item = None
         self._current_preview_url = ""
         self._project_data = {}
+        
+        self._original_description = ""
+        self._translated_description = ""
+        self._is_translated = False
+        self._description_label = None
+        self._translate_button = None
 
     def _stop_movie(self):
         if self.movie is not None:
@@ -404,10 +439,10 @@ class DetailsPanel(QWidget):
         self._clear_buttons()
 
         self.buttons_layout.addWidget(self._create_text_button(
-            "ICON_UPLOAD", "Install", self.tr.t("buttons.install"), self._on_download
+            "ICON_UPLOAD", self.tr.t("buttons.install"), self.tr.t("buttons.install"), self._on_download
         ))
         self.buttons_layout.addWidget(self._create_text_button(
-            "ICON_WORLD", "Browser", self.tr.t("tooltips.open_workshop"), self._on_open_browser
+            "ICON_WORLD", self.tr.t("buttons.open_workshop"), self.tr.t("tooltips.open_workshop"), self._on_open_browser
         ))
         self.buttons_layout.addStretch()
 
@@ -438,6 +473,180 @@ class DetailsPanel(QWidget):
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.details_layout.addWidget(label)
         return label
+    
+    def _add_description_section(self, description: str):
+        self._original_description = description if description else ""
+        self._translated_description = ""
+        self._is_translated = False
+        
+        header_widget = QWidget()
+        header_widget.setStyleSheet("background: transparent; border: none;")
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(8)
+        
+        title_label = QLabel(self.tr.t("labels.description"))
+        title_label.setStyleSheet("font-weight: bold; color: white; font-size: 14px; background: transparent; border: none;")
+        header_layout.addWidget(title_label)
+        
+        if description and description.strip():
+            self._translate_button = QPushButton()
+            self._translate_button.setToolTip(self.tr.t("tooltips.translate_description"))
+            self._translate_button.setFixedSize(22, 22)
+            self._translate_button.setIcon(get_icon("ICON_TRANSLATE"))
+            self._translate_button.setIconSize(QSize(21, 21))
+            self._translate_button.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    border-radius: 6px;
+                    border: none;
+                }
+                QPushButton:hover {
+                    background-color: rgba(78, 140, 255, 0.3);
+                }
+            """)
+            self._translate_button.clicked.connect(self._on_translate_clicked)
+            header_layout.addWidget(self._translate_button)
+        
+        header_layout.addStretch()
+        self.details_layout.addWidget(header_widget)
+        
+        display_text = description if description else self.tr.t("labels.no_description")
+        self._description_label = self._add_description_label(display_text)
+    
+    def _on_translate_clicked(self):
+        if not self._original_description:
+            return
+        
+        if self._is_translated:
+            self._description_label.setText(self._original_description)
+            self._is_translated = False
+            if self._translate_button:
+                self._translate_button.setToolTip(self.tr.t("tooltips.translate_description"))
+            return
+        
+        if self._translated_description:
+            self._description_label.setText(self._translated_description)
+            self._is_translated = True
+            if self._translate_button:
+                self._translate_button.setToolTip(self.tr.t("tooltips.show_original"))
+            return
+        
+        target_lang = self.tr.get_language()
+        
+        if self._translation_worker and self._translation_worker.isRunning():
+            self._translation_worker.terminate()
+        
+        self._translation_worker = TranslationWorker(self._original_description, target_lang)
+        self._translation_worker.finished.connect(self._on_translation_finished)
+        self._translation_worker.error.connect(self._on_translation_error)
+        
+        if self._translate_button:
+            self._translate_button.setEnabled(False)
+        self._description_label.setText(self.tr.t("labels.translating"))
+        
+        self._translation_worker.start()
+    
+    def _on_translation_finished(self, original: str, translated: str):
+        if original != self._original_description:
+            return
+        
+        self._translated_description = translated
+        self._is_translated = True
+        
+        if self._description_label:
+            self._description_label.setText(translated)
+        
+        if self._translate_button:
+            self._translate_button.setEnabled(True)
+            self._translate_button.setToolTip(self.tr.t("tooltips.show_original"))
+        
+        self._translation_worker = None
+    
+    def _on_translation_error(self, error_msg: str):
+        print(f"[DetailsPanel] Translation error: {error_msg}")
+        
+        if self._description_label:
+            self._description_label.setText(self._original_description)
+        
+        if self._translate_button:
+            self._translate_button.setEnabled(True)
+            self._translate_button.setToolTip(self.tr.t("tooltips.translate_description"))
+        
+        self._show_notification(self.tr.t("messages.translation_error"))
+        self._translation_worker = None
+
+    def _translate_tag_key(self, key: str) -> str:
+        key_mapping = {
+            "Type": "labels.type",
+            "Resolution": "labels.resolution",
+            "Category": "labels.category",
+            "Age Rating": "labels.age",
+            "Content Descriptors": "labels.content_descriptors",
+            "Script Type": "labels.script_type",
+            "Asset Type": "labels.asset_type",
+            "Asset Genre": "labels.asset_genre",
+            "Genre": "labels.genre",
+            "Miscellaneous": "labels.miscellaneous",
+        }
+        if key in key_mapping:
+            translated = self.tr.t(key_mapping[key])
+            if translated != key_mapping[key]:
+                return translated
+        return key
+
+    def _translate_single_tag_value(self, key: str, value: str) -> str:
+        if not value:
+            return value
+        
+        value_mappings = {
+            "Type": "filters.type",
+            "Resolution": "filters.resolution",
+            "Category": "filters.category",
+            "Age Rating": "filters.age_rating",
+            "Script Type": "filters.script_type",
+            "Asset Type": "filters.asset_type",
+            "Asset Genre": "filters.asset_genre",
+            "Genre": "filters.genre_tags",
+        }
+        
+        if key in value_mappings:
+            base_path = value_mappings[key]
+            translated = self.tr.t(f"{base_path}.{value}")
+            if translated != f"{base_path}.{value}":
+                return translated
+            if key == "Resolution":
+                safe_value = value.replace(" ", "_").replace("x", "x")
+                translated = self.tr.t(f"{base_path}.{safe_value}")
+                if translated != f"{base_path}.{safe_value}":
+                    return translated
+            if value == "":
+                translated = self.tr.t(f"{base_path}.empty")
+                if translated != f"{base_path}.empty":
+                    return translated
+        
+        translated = self.tr.t(f"filters.content_descriptors.{value}")
+        if translated != f"filters.content_descriptors.{value}":
+            return translated
+        
+        for tag_type in ["misc_tags", "genre_tags"]:
+            translated = self.tr.t(f"filters.{tag_type}.{value}")
+            if translated != f"filters.{tag_type}.{value}":
+                return translated
+        
+        return value
+
+    def _translate_tag_value(self, key: str, value: str) -> str:
+        """Translate tag value, handling comma-separated lists."""
+        if not value:
+            return value
+        
+        if "," in value:
+            items = [item.strip() for item in value.split(",")]
+            translated_items = [self._translate_single_tag_value(key, item) for item in items]
+            return ", ".join(translated_items)
+        
+        return self._translate_single_tag_value(key, value)
 
     def _setup_installed_details(self):
         self._clear_details()
@@ -449,10 +658,9 @@ class DetailsPanel(QWidget):
         self._add_detail_label(self.tr.t("labels.installed", date=format_timestamp(mtime)), "📅")
 
         self._add_separator()
-        self._add_section_title(self.tr.t("labels.description"))
-
+        
         description = self._project_data.get("description", "")
-        self._add_description_label(description if description else self.tr.t("labels.no_description"))
+        self._add_description_section(description)
 
         self.details_layout.addStretch()
 
@@ -467,7 +675,7 @@ class DetailsPanel(QWidget):
             if stars_text:
                 count_part = f"  ({num_ratings})" if num_ratings else ""
                 rating_label = QLabel(
-                    f'<span style="color: #a3a3a3;">✨ Rating:&nbsp;&nbsp;</span>'
+                    f'<span style="color: #a3a3a3;">✨ {self.tr.t("labels.rating")}&nbsp;&nbsp;</span>'
                     f'<span style="color: #f5c518;">{stars_text}{count_part}</span>'
                 )
                 rating_label.setStyleSheet(
@@ -478,17 +686,23 @@ class DetailsPanel(QWidget):
         if item.file_size:
             self._add_detail_label(self.tr.t("labels.size", size=item.file_size), "📦")
         if item.posted_date:
-            self._add_detail_label(f"Posted: {item.posted_date}", "📅")
+            self._add_detail_label(self.tr.t("labels.posted", date=item.posted_date), "📅")
         if item.updated_date:
-            self._add_detail_label(f"Updated: {item.updated_date}", "🔄")
+            self._add_detail_label(self.tr.t("labels.updated", date=item.updated_date), "🔄")
         if item.author:
-            self._add_detail_label(f"Author: {item.author}", "👤")
+            self._add_detail_label(self.tr.t("labels.author", author=item.author), "👤")
 
         if item.tags:
             self._add_separator()
-            self._add_section_title("Tags:")
+            self._add_section_title(self.tr.t("labels.tags"))
             for key, value in item.tags.items():
-                tag_text = f"• {key}" if isinstance(value, bool) else f"• {key}: {value}"
+                translated_key = self._translate_tag_key(key)
+                translated_value = self._translate_tag_value(key, value) if not isinstance(value, bool) else ""
+                clean_key = translated_key.rstrip(':')
+                if translated_value:
+                    tag_text = f"• {clean_key}: {translated_value}"
+                else:
+                    tag_text = f"• {clean_key}"
                 tag_label = QLabel(tag_text)
                 tag_label.setStyleSheet("color: #dcdcdc; font-size: 13px; background: transparent; border: none;")
                 tag_label.setWordWrap(True)
@@ -496,9 +710,7 @@ class DetailsPanel(QWidget):
 
         if item.description:
             self._add_separator()
-            self._add_section_title(self.tr.t("labels.description"))
-            desc_text = item.description
-            self._add_description_label(desc_text)
+            self._add_description_section(item.description)
 
         self.details_layout.addStretch()
 
@@ -563,7 +775,7 @@ class DetailsPanel(QWidget):
         except Exception as e:
             print(f"[DetailsPanel] Load local preview error: {e}")
             self.preview_label.clear()
-            self.preview_label.setText("Error")
+            self.preview_label.setText(self.tr.t("messages.error"))
 
     def _load_remote_preview(self, url: str):
         if not url:
@@ -727,7 +939,7 @@ class DetailsPanel(QWidget):
                 if hasattr(main_window, 'refresh_wallpapers'):
                     main_window.refresh_wallpapers()
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to delete:\n{str(e)}")
+                QMessageBox.critical(self, self.tr.t("dialog.error"), f"Failed to delete:\n{str(e)}")
 
         QTimer.singleShot(200, perform_deletion)
 
@@ -736,7 +948,7 @@ class DetailsPanel(QWidget):
             self._show_notification(self.tr.t("messages.no_wallpaper_selected"))
             return
 
-        output_dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", str(Path.home()))
+        output_dir = QFileDialog.getExistingDirectory(self, self.tr.t("messages.select_output_directory"), str(Path.home()))
         if not output_dir:
             return
 

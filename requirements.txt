@@ -3,3 +3,4 @@ PyQt6-WebEngine>=6.4.0
 pynput>=1.7.6
 psutil>=5.9.0
 tendo>=0.3.0
+deep_translator>=1.11.4

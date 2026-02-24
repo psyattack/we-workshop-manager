@@ -697,9 +697,21 @@ class WorkshopParser(QObject):
 
     def cleanup(self):
         try:
-            if hasattr(self, '_webview'):
+            if hasattr(self, '_webview') and self._webview is not None:
                 self._webview.setPage(None)
-            if hasattr(self, '_container'):
+                self._webview.deleteLater()
+                self._webview = None
+            
+            if hasattr(self, '_page') and self._page is not None:
+                self._page.deleteLater()
+                self._page = None
+            
+            if hasattr(self, '_profile') and self._profile is not None:
+                self._profile.deleteLater()
+                self._profile = None
+
+            if hasattr(self, '_container') and self._container is not None:
                 self._container.deleteLater()
+                self._container = None
         except RuntimeError:
             pass

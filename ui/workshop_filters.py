@@ -133,12 +133,39 @@ class CompactFilterBar(QWidget):
     refresh_requested = pyqtSignal(WorkshopFilters)
     search_requested = pyqtSignal(str)
     
-    def __init__(self, theme_manager, parent=None):
+    def __init__(self, theme_manager, translator, parent=None):
         super().__init__(parent)
         self.theme = theme_manager
-        self.config = FilterConfig()
+        self.tr = translator
         self._current_filters = WorkshopFilters()
         self._setup_ui()
+    
+    def _get_sort_options(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_sort_options(self.tr.t)
+    
+    def _get_time_periods(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_time_periods(self.tr.t)
+    
+    def _get_categories(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_categories(self.tr.t)
+    
+    def _get_types(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_types(self.tr.t)
+    
+    def _get_age_ratings(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_age_ratings(self.tr.t)
+    
+    def _get_resolutions(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_resolutions(self.tr.t)
+    
+    def _get_asset_types(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_asset_types(self.tr.t)
+    
+    def _get_asset_genres(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_asset_genres(self.tr.t)
+    
+    def _get_script_types(self) -> Dict[str, str]:
+        return FilterConfig.get_translated_script_types(self.tr.t)
     
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -171,7 +198,7 @@ class CompactFilterBar(QWidget):
         layout.setSpacing(8)
         
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search...")
+        self.search_input.setPlaceholderText(self.tr.t("labels.search_placeholder"))
         self.search_input.setFixedWidth(200)
         self.search_input.setFixedHeight(26)
         self.search_input.setStyleSheet(self._input_style())
@@ -179,7 +206,7 @@ class CompactFilterBar(QWidget):
         layout.addWidget(self.search_input)
         
         search_btn = QPushButton()
-        search_btn.setToolTip("Search")
+        search_btn.setToolTip(self.tr.t("tooltips.search"))
         search_btn.setIcon(get_icon("ICON_SEARCH"))
         search_btn.setIconSize(QSize(18, 18))
         search_btn.setFixedSize(26, 26)
@@ -198,27 +225,27 @@ class CompactFilterBar(QWidget):
         
         layout.addSpacing(10)
         
-        layout.addWidget(self._label("Sort:"))
-        self.sort_combo = self._create_combo(self.config.SORT_OPTIONS, 130)
+        layout.addWidget(self._label(self.tr.t("labels.sort")))
+        self.sort_combo = self._create_combo(self._get_sort_options(), 130)
         self.sort_combo.currentTextChanged.connect(self._on_sort_changed)
         layout.addWidget(self.sort_combo)
 
-        layout.addWidget(self._label("Period:"))
-        self.time_combo = self._create_combo(self.config.TIME_PERIODS, 100)
+        layout.addWidget(self._label(self.tr.t("labels.period")))
+        self.time_combo = self._create_combo(self._get_time_periods(), 100)
         self.time_combo.setCurrentIndex(1)
         self.time_combo.currentTextChanged.connect(self._emit_filters)
         layout.addWidget(self.time_combo)
         
         layout.addStretch()
         
-        self.expand_btn = QPushButton("▼ More Filters")
+        self.expand_btn = QPushButton(self.tr.t("labels.more_filters"))
         self.expand_btn.setFixedSize(100, 26)
         self.expand_btn.setStyleSheet(self._button_style("#5B8DEF"))
         self.expand_btn.clicked.connect(self._toggle_expanded)
         layout.addWidget(self.expand_btn)
         
         refresh_btn = QPushButton()
-        refresh_btn.setToolTip("Refresh")
+        refresh_btn.setToolTip(self.tr.t("tooltips.refresh"))
         refresh_btn.setIcon(get_icon("ICON_REFRASH"))
         refresh_btn.setIconSize(QSize(18, 18))
         refresh_btn.setFixedSize(26, 26)
@@ -250,29 +277,29 @@ class CompactFilterBar(QWidget):
         layout.setContentsMargins(10, 4, 10, 4)
         layout.setSpacing(10)
 
-        layout.addWidget(self._label("Category:"))
-        self.category_combo = self._create_combo(self.config.CATEGORIES, 100)
+        layout.addWidget(self._label(self.tr.t("labels.category")))
+        self.category_combo = self._create_combo(self._get_categories(), 100)
         self.category_combo.currentTextChanged.connect(self._emit_filters)
         layout.addWidget(self.category_combo)
 
-        layout.addWidget(self._label("Type:"))
-        self.type_combo = self._create_combo(self.config.TYPES, 100)
+        layout.addWidget(self._label(self.tr.t("labels.type")))
+        self.type_combo = self._create_combo(self._get_types(), 100)
         self.type_combo.currentTextChanged.connect(self._emit_filters)
         layout.addWidget(self.type_combo)
         
-        layout.addWidget(self._label("Age:"))
-        self.age_combo = self._create_combo(self.config.AGE_RATINGS, 100)
+        layout.addWidget(self._label(self.tr.t("labels.age")))
+        self.age_combo = self._create_combo(self._get_age_ratings(), 100)
         self.age_combo.currentTextChanged.connect(self._emit_filters)
         layout.addWidget(self.age_combo)
 
-        layout.addWidget(self._label("Resolution:"))
-        self.resolution_combo = self._create_combo(self.config.RESOLUTIONS, 110)
+        layout.addWidget(self._label(self.tr.t("labels.resolution")))
+        self.resolution_combo = self._create_combo(self._get_resolutions(), 110)
         self.resolution_combo.currentTextChanged.connect(self._emit_filters)
         layout.addWidget(self.resolution_combo)
         
         layout.addStretch()
         
-        clear_btn = QPushButton("✕ Clear")
+        clear_btn = QPushButton(self.tr.t("labels.clear"))
         clear_btn.setFixedSize(65, 24)
         clear_btn.setStyleSheet(self._button_style("#666"))
         clear_btn.clicked.connect(self._clear_filters)
@@ -297,18 +324,18 @@ class CompactFilterBar(QWidget):
         combo_layout.setContentsMargins(0, 0, 0, 0)
         combo_layout.setSpacing(10)
 
-        combo_layout.addWidget(self._label("Asset Type:"))
-        self.asset_type_combo = self._create_combo(self.config.ASSET_TYPES, 110)
+        combo_layout.addWidget(self._label(self.tr.t("labels.asset_type")))
+        self.asset_type_combo = self._create_combo(self._get_asset_types(), 110)
         self.asset_type_combo.currentTextChanged.connect(self._emit_filters)
         combo_layout.addWidget(self.asset_type_combo)
 
-        combo_layout.addWidget(self._label("Asset Genre:"))
-        self.asset_genre_combo = self._create_combo(self.config.ASSET_GENRES, 130)
+        combo_layout.addWidget(self._label(self.tr.t("labels.asset_genre")))
+        self.asset_genre_combo = self._create_combo(self._get_asset_genres(), 130)
         self.asset_genre_combo.currentTextChanged.connect(self._emit_filters)
         combo_layout.addWidget(self.asset_genre_combo)
 
-        combo_layout.addWidget(self._label("Script Type:"))
-        self.script_type_combo = self._create_combo(self.config.SCRIPT_TYPES, 120)
+        combo_layout.addWidget(self._label(self.tr.t("labels.script_type")))
+        self.script_type_combo = self._create_combo(self._get_script_types(), 120)
         self.script_type_combo.currentTextChanged.connect(self._emit_filters)
         combo_layout.addWidget(self.script_type_combo)
 
@@ -319,7 +346,7 @@ class CompactFilterBar(QWidget):
         misc_layout = QHBoxLayout(misc_frame)
         misc_layout.setContentsMargins(0, 0, 0, 0)
         misc_layout.setSpacing(6)
-        misc_layout.addWidget(self._label("Miscellaneous:", bold=True))
+        misc_layout.addWidget(self._label(self.tr.t("labels.miscellaneous"), bold=True))
 
         misc_scroll = QScrollArea()
         misc_scroll.setWidgetResizable(True)
@@ -332,8 +359,10 @@ class CompactFilterBar(QWidget):
         misc_content_layout.setContentsMargins(0, 0, 0, 0)
         misc_content_layout.setSpacing(4)
         self.misc_checkboxes = {}
-        for tag in self.config.MISC_TAGS:
-            cb = StateTagCheckBox(tag, self.theme)
+        misc_translations = FilterConfig.get_translated_misc_tags(self.tr.t)
+        for tag in FilterConfig.MISC_TAG_KEYS:
+            translated_tag = misc_translations.get(tag, tag)
+            cb = StateTagCheckBox(translated_tag, self.theme)
             cb.state_changed_tri.connect(self._emit_filters)
             self.misc_checkboxes[tag] = cb
             misc_content_layout.addWidget(cb)
@@ -345,7 +374,7 @@ class CompactFilterBar(QWidget):
         genre_layout = QHBoxLayout(genre_frame)
         genre_layout.setContentsMargins(0, 0, 0, 0)
         genre_layout.setSpacing(6)
-        genre_layout.addWidget(self._label("Genre:", bold=True))
+        genre_layout.addWidget(self._label(self.tr.t("labels.genre"), bold=True))
 
         genre_scroll = QScrollArea()
         genre_scroll.setWidgetResizable(True)
@@ -358,8 +387,10 @@ class CompactFilterBar(QWidget):
         genre_content_layout.setContentsMargins(0, 0, 0, 0)
         genre_content_layout.setSpacing(4)
         self.genre_checkboxes = {}
-        for tag in self.config.GENRE_TAGS:
-            cb = StateTagCheckBox(tag, self.theme)
+        genre_translations = FilterConfig.get_translated_genre_tags(self.tr.t)
+        for tag in FilterConfig.GENRE_TAG_KEYS:
+            translated_tag = genre_translations.get(tag, tag)
+            cb = StateTagCheckBox(translated_tag, self.theme)
             cb.state_changed_tri.connect(self._emit_filters)
             self.genre_checkboxes[tag] = cb
             genre_content_layout.addWidget(cb)
@@ -372,11 +403,11 @@ class CompactFilterBar(QWidget):
         incompatible_layout = QHBoxLayout(incompatible_frame)
         incompatible_layout.setContentsMargins(0, 0, 0, 0)
         incompatible_layout.setSpacing(6)
-        incompatible_layout.addWidget(self._label("Other:", bold=True))
+        incompatible_layout.addWidget(self._label(self.tr.t("labels.other"), bold=True))
         
-        self.incompatible_checkbox = QCheckBox("Incompatible items")
+        self.incompatible_checkbox = QCheckBox(self.tr.t("labels.incompatible_items"))
         self.incompatible_checkbox.setStyleSheet(self._checkbox_style())
-        self.incompatible_checkbox.setToolTip("Some items cannot be included in the game. However, you can find them by checking the box here.")
+        self.incompatible_checkbox.setToolTip(self.tr.t("tooltips_extended.incompatible_items"))
         self.incompatible_checkbox.stateChanged.connect(self._emit_filters)
         incompatible_layout.addWidget(self.incompatible_checkbox)
         incompatible_layout.addStretch()
@@ -482,7 +513,7 @@ class CompactFilterBar(QWidget):
     def _toggle_expanded(self):
         expanding = not self.tags_animated.is_expanded()
         self.tags_animated.toggle(expanding)
-        self.expand_btn.setText("▲ Less Filters" if expanding else "▼ More Filters")
+        self.expand_btn.setText(self.tr.t("labels.less_filters") if expanding else self.tr.t("labels.more_filters"))
     
     def _on_sort_changed(self):
         is_trend = self.sort_combo.currentData() == "trend"
@@ -511,7 +542,8 @@ class CompactFilterBar(QWidget):
         self.script_type_combo.setCurrentIndex(0)
 
         self.incompatible_checkbox.setChecked(False)
-        self._emit_filters()
+        filters = self.get_current_filters()
+        self.refresh_requested.emit(filters)
     
     def _on_refresh(self):
         filters = self.get_current_filters()

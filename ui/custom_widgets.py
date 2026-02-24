@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout,
     QComboBox, QFrame, QGraphicsDropShadowEffect, QApplication, QMessageBox
 )
+import sys
+import subprocess
 
 class NotificationLabel(QLabel):
     def __init__(self, message: str, parent=None):
@@ -88,7 +90,7 @@ class ModernSettingsPopup(QWidget):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(16)
         
-        header = QLabel("SETTINGS")
+        header = QLabel(self.tr.t("settings.title"))
         header.setStyleSheet(f"""
             font-size: 20px;
             font-weight: 800;
@@ -103,7 +105,7 @@ class ModernSettingsPopup(QWidget):
         divider.setStyleSheet(f"background-color: {self.theme.get_color('border')}; max-height: 2px;")
         layout.addWidget(divider)
 
-        section_label = QLabel("🎨 Theme (In Dev)")
+        section_label = QLabel(self.tr.t("settings.theme_dev"))
         section_label.setStyleSheet(f"""
             font-size: 13px;
             font-weight: 700;
@@ -114,11 +116,11 @@ class ModernSettingsPopup(QWidget):
         """)
         layout.addWidget(section_label)
 
-        self._add_section(layout, "👤 Account", self._create_account_combo())
+        self._add_section(layout, self.tr.t("settings.account"), self._create_account_combo())
         
-        self._add_section(layout, "🌍 Language", self._create_language_combo())
+        self._add_section(layout, self.tr.t("settings.language"), self._create_language_combo())
         
-        self._add_section(layout, "⚙️ Other: " + self.tr.t("labels.minimize_on_apply"), self._create_minimize_combo())
+        self._add_section(layout, self.tr.t("settings.other") + ": " + self.tr.t("labels.minimize_on_apply"), self._create_minimize_combo())
         
         layout.addStretch()
     
@@ -139,7 +141,7 @@ class ModernSettingsPopup(QWidget):
         combo = QComboBox()
         last_loggin_acc = 1
         for i in range(len(self.accounts.get_accounts()) - last_loggin_acc):
-            combo.addItem(f"Account {i + 1}")
+            combo.addItem(f"{self.tr.t('labels.account')} {i + 1}")
         combo.setCurrentIndex(self.config.get_account_number())
         combo.currentIndexChanged.connect(lambda idx: self.config.set_account_number(idx))
         combo.setStyleSheet(self._combo_style())
@@ -147,7 +149,7 @@ class ModernSettingsPopup(QWidget):
     
     def _create_theme_combo(self):
         combo = QComboBox()
-        combo.addItems(["🌙 Dark", "☀️ Light"])
+        combo.addItems([self.tr.t("labels.dark"), self.tr.t("labels.light")])
         combo.setCurrentIndex(0 if self.config.get_theme() == "dark" else 1)
         combo.currentIndexChanged.connect(self._on_theme_changed)
         combo.setStyleSheet(self._combo_style())
@@ -224,11 +226,56 @@ class ModernSettingsPopup(QWidget):
         self.config.set_language(lang)
         self.tr.set_language(lang)
 
-        QMessageBox.information(
-            self,
-            "Language Changed",
-            "Please restart the application for language changes to take effect."
-        )
+        has_downloads = False
+        has_extractions = False
+        dm = None
+        
+        if self.main_window and hasattr(self.main_window, 'dm'):
+            dm = self.main_window.dm
+            has_downloads = len(dm.downloading) > 0
+            has_extractions = len(dm.extracting) > 0
+        
+        if has_downloads or has_extractions:
+            if has_downloads and has_extractions:
+                msg = self.tr.t("messages.restart_with_tasks")
+            elif has_downloads:
+                msg = self.tr.t("messages.restart_with_downloads_only")
+            else:
+                msg = self.tr.t("messages.restart_with_extractions_only")
+        else:
+            msg = self.tr.t("messages.restart_now_question")
+        
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(self.tr.t("messages.language_changed"))
+        msg_box.setText(msg)
+        msg_box.setIcon(QMessageBox.Icon.Question)
+        
+        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), QMessageBox.ButtonRole.YesRole)
+        no_btn = msg_box.addButton(self.tr.t("buttons.no"), QMessageBox.ButtonRole.NoRole)
+        msg_box.setDefaultButton(yes_btn)
+        
+        msg_box.exec()
+        
+        if msg_box.clickedButton() == yes_btn:
+            if dm:
+                dm.cleanup_all()
+
+            if self.main_window and hasattr(self.main_window, 'workshop_tab'):
+                self.main_window.workshop_tab.cleanup()
+
+            self._restart_app()
+    
+    def _restart_app(self):
+        if getattr(sys, 'frozen', False):
+            executable = sys.executable
+            args = ["--restart"]
+        else:
+            executable = sys.executable
+            args = sys.argv + ["--restart"]
+        
+        subprocess.Popen([executable] + args)
+
+        QApplication.quit()
     
     def _on_minimize_changed(self, index):
         value = index == 1

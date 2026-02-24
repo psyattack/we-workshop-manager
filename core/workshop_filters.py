@@ -1,10 +1,32 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Callable, Optional
 
 @dataclass
 class FilterConfig:
-    """Complete filter configuration for Workshop"""
-    
+
+    SORT_KEYS = ["trend", "mostrecent", "lastupdated", "totaluniquesubscribers"]
+    TIME_PERIOD_KEYS = ["1", "7", "30", "90", "180", "365", "-1"]
+    CATEGORY_KEYS = ["", "Wallpaper", "Preset", "Asset"]
+    TYPE_KEYS = ["", "Scene", "Video", "Application", "Web"]
+    AGE_RATING_KEYS = ["", "Everyone", "Questionable", "Mature"]
+    RESOLUTION_KEYS = ["", "1920 x 1080", "2560 x 1440", "3840 x 2160", "1280 x 720", 
+                       "1366 x 768", "Ultrawide 2560 x 1080", "Ultrawide 3440 x 1440", 
+                       "Portrait 1080 x 1920", "Dynamic resolution", "Other resolution"]
+    MISC_TAG_KEYS = ["Approved", "Audio responsive", "3D", "Customizable",
+                     "Puppet Warp", "HDR", "Media Integration", "User Shortcut",
+                     "Video Texture", "Asset Pack"]
+    GENRE_TAG_KEYS = ["Abstract", "Animal", "Anime", "Cartoon", "CGI", "Cyberpunk",
+                      "Fantasy", "Game", "Girls", "Guys", "Landscape", "Medieval",
+                      "Memes", "MMD", "Music", "Nature", "Pixel art", "Relaxing",
+                      "Retro", "Sci-Fi", "Sports", "Technology", "Television",
+                      "Vehicle", "Unspecified"]
+    ASSET_TYPE_KEYS = ["", "Particle", "Image", "Sound", "Model", "Text", 
+                       "Sprite", "Fullscreen", "Composite", "Script", "Effect"]
+    ASSET_GENRE_KEYS = ["", "Audio Visualizer", "Background", "Character", "Clock",
+                        "Fire", "Interactive", "Magic", "Post Processing", "Smoke", "Space"]
+    SCRIPT_TYPE_KEYS = ["", "Boolean", "Number", "Vec2", "Vec3", "Vec4", 
+                        "String", "No Animation", "Oversized"]
+
     SORT_OPTIONS = {
         "trend": "Popular",
         "mostrecent": "Most Recent",
@@ -111,6 +133,95 @@ class FilterConfig:
         "No Animation": "No Animation",
         "Oversized": "Oversized"
     }
+    
+    @classmethod
+    def get_translated_sort_options(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.SORT_KEYS:
+            translated = translator(f"filters.sort.{key}")
+            result[key] = translated if translated != f"filters.sort.{key}" else cls.SORT_OPTIONS[key]
+        return result
+    
+    @classmethod
+    def get_translated_time_periods(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.TIME_PERIOD_KEYS:
+            translated = translator(f"filters.time_period.{key}")
+            result[key] = translated if translated != f"filters.time_period.{key}" else cls.TIME_PERIODS[key]
+        return result
+    
+    @classmethod
+    def get_translated_categories(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.CATEGORY_KEYS:
+            translated = translator(f"filters.category.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.category.{key if key else 'empty'}" else cls.CATEGORIES[key]
+        return result
+    
+    @classmethod
+    def get_translated_types(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.TYPE_KEYS:
+            translated = translator(f"filters.type.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.type.{key if key else 'empty'}" else cls.TYPES[key]
+        return result
+    
+    @classmethod
+    def get_translated_age_ratings(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.AGE_RATING_KEYS:
+            translated = translator(f"filters.age_rating.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.age_rating.{key if key else 'empty'}" else cls.AGE_RATINGS[key]
+        return result
+    
+    @classmethod
+    def get_translated_resolutions(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.RESOLUTION_KEYS:
+            safe_key = key.replace(" ", "_").replace("x", "x") if key else "empty"
+            translated = translator(f"filters.resolution.{safe_key}")
+            result[key] = translated if translated != f"filters.resolution.{safe_key}" else cls.RESOLUTIONS[key]
+        return result
+    
+    @classmethod
+    def get_translated_misc_tags(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.MISC_TAG_KEYS:
+            translated = translator(f"filters.misc_tags.{key}")
+            result[key] = translated if translated != f"filters.misc_tags.{key}" else key
+        return result
+    
+    @classmethod
+    def get_translated_genre_tags(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.GENRE_TAG_KEYS:
+            translated = translator(f"filters.genre_tags.{key}")
+            result[key] = translated if translated != f"filters.genre_tags.{key}" else key
+        return result
+    
+    @classmethod
+    def get_translated_asset_types(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.ASSET_TYPE_KEYS:
+            translated = translator(f"filters.asset_type.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.asset_type.{key if key else 'empty'}" else cls.ASSET_TYPES[key]
+        return result
+    
+    @classmethod
+    def get_translated_asset_genres(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.ASSET_GENRE_KEYS:
+            translated = translator(f"filters.asset_genre.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.asset_genre.{key if key else 'empty'}" else cls.ASSET_GENRES[key]
+        return result
+    
+    @classmethod
+    def get_translated_script_types(cls, translator: Callable) -> Dict[str, str]:
+        result = {}
+        for key in cls.SCRIPT_TYPE_KEYS:
+            translated = translator(f"filters.script_type.{key if key else 'empty'}")
+            result[key] = translated if translated != f"filters.script_type.{key if key else 'empty'}" else cls.SCRIPT_TYPES[key]
+        return result
 
 @dataclass
 class WorkshopFilters:

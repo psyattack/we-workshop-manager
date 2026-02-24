@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 from core.image_cache import ImageCache
 from core.workshop_parser import WorkshopParser, WorkshopItem, WorkshopPage
 from core.workshop_filters import WorkshopFilters
-from ui.workshop_filters import CompactFilterBar
+from ui.workshop_filters import CompactFilterBar, AnimatedContainer
 from ui.grid_items import (
     WorkshopGridItem, SkeletonGridItem, SmallCircularProgress,
     parse_file_size_to_bytes,
@@ -75,9 +75,10 @@ class ToggleSwitch(QWidget):
         p.end()
 
 class PreviewPopup(QWidget):
-    def __init__(self, theme_manager, parent=None):
+    def __init__(self, theme_manager, translator, parent=None):
         super().__init__(parent)
         self.theme = theme_manager
+        self.tr = translator
         self.setWindowFlags(
             Qt.WindowType.ToolTip
             | Qt.WindowType.FramelessWindowHint
@@ -114,7 +115,7 @@ class PreviewPopup(QWidget):
     def show_preview(self, preview_url: str, global_pos: QPoint):
         if not preview_url:
             self._stop_current_movie()
-            self.preview_label.setText("No preview")
+            self.preview_label.setText(self.tr.t("labels.no_preview"))
             self.show()
             return
         x_pos = global_pos.x() - self.width() - 10
@@ -140,7 +141,7 @@ class PreviewPopup(QWidget):
             ))
             return
         self._stop_current_movie()
-        self.preview_label.setText("Loading...")
+        self.preview_label.setText(self.tr.t("labels.loading_dots"))
         weak_self = weakref.ref(self)
         expected_url = preview_url
 
@@ -151,7 +152,7 @@ class PreviewPopup(QWidget):
             if self_ref._current_url != expected_url:
                 return
             if data is None:
-                self_ref._show_error("Load failed")
+                self_ref._show_error(self_ref.tr.t("messages.load_failed"))
                 return
             if is_gif:
                 self_ref._play_gif_from_data(data)
@@ -316,7 +317,7 @@ class WorkshopTab(QWidget):
         self.resize_timer.setSingleShot(True)
         self.resize_timer.timeout.connect(self._recalculate_grid)
 
-        self.preview_popup = PreviewPopup(self.theme, self)
+        self.preview_popup = PreviewPopup(self.theme, self.tr, self)
 
     def _setup_parser(self):
         self.parser = WorkshopParser(self.accounts, self)
@@ -367,8 +368,7 @@ class WorkshopTab(QWidget):
         layout.setContentsMargins(15, 10, 5, 10)
         layout.setSpacing(0)
 
-        from ui.workshop_filters import AnimatedContainer
-        self.filter_bar = CompactFilterBar(self.theme, self)
+        self.filter_bar = CompactFilterBar(self.theme, self.tr, self)
         self.filter_bar.filters_changed.connect(self._on_filters_changed)
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
         
@@ -433,7 +433,7 @@ class WorkshopTab(QWidget):
         layout.setContentsMargins(12, 0, 12, 0)
         layout.setSpacing(8)
 
-        self.results_label = QLabel("Loading...")
+        self.results_label = QLabel(self.tr.t("labels.loading_dots"))
         self.results_label.setStyleSheet(f"""
             color: {self.theme.get_color('text_secondary')};
             font-size: 10px;
@@ -442,7 +442,7 @@ class WorkshopTab(QWidget):
         layout.addWidget(self.results_label)
         layout.addStretch()
 
-        self.filter_toggle_label = QLabel("Filters")
+        self.filter_toggle_label = QLabel(self.tr.t("labels.filters"))
         self.filter_toggle_label.setStyleSheet(f"""
             color: {self.theme.get_color('text_secondary')};
             font-size: 10px;
@@ -472,17 +472,17 @@ class WorkshopTab(QWidget):
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(12, 4, 12, 4)
 
-        self.first_btn = self._create_page_btn("« First")
+        self.first_btn = self._create_page_btn("ICON_ARROW_DOUBLE_LEFT")
         self.first_btn.clicked.connect(lambda: self._go_to_page(1))
         layout.addWidget(self.first_btn)
 
-        self.prev_btn = self._create_page_btn("‹ Prev")
+        self.prev_btn = self._create_page_btn("ICON_ARROW_LEFT")
         self.prev_btn.clicked.connect(lambda: self._go_to_page(self.current_page - 1))
         layout.addWidget(self.prev_btn)
 
         layout.addStretch()
 
-        self.page_label1 = QLabel("Page")
+        self.page_label1 = QLabel(self.tr.t("labels.page"))
         self.page_label1.setStyleSheet(f"""
             color: {self.theme.get_color('text_primary')};
             font-weight: 600;
@@ -493,7 +493,7 @@ class WorkshopTab(QWidget):
 
         self.page_input = QLineEdit()
         self.page_input.setFixedWidth(50)
-        self.page_input.setPlaceholderText("Page")
+        self.page_input.setPlaceholderText(self.tr.t("labels.page"))
         self.page_input.setStyleSheet(f"""
             QLineEdit {{
                 background-color: {self.theme.get_color('bg_tertiary')};
@@ -511,7 +511,7 @@ class WorkshopTab(QWidget):
         self.page_input.returnPressed.connect(self._on_page_input)
         layout.addWidget(self.page_input)
 
-        self.page_label2 = QLabel("of 1")
+        self.page_label2 = QLabel(self.tr.t("labels.of", total=1))
         self.page_label2.setStyleSheet(f"""
             color: {self.theme.get_color('text_primary')};
             font-weight: 600;
@@ -522,35 +522,32 @@ class WorkshopTab(QWidget):
 
         layout.addStretch()
 
-        self.next_btn = self._create_page_btn("Next ›")
+        self.next_btn = self._create_page_btn("ICON_ARROW_RIGHT")
         self.next_btn.clicked.connect(lambda: self._go_to_page(self.current_page + 1))
         layout.addWidget(self.next_btn)
 
-        self.last_btn = self._create_page_btn("Last »")
+        self.last_btn = self._create_page_btn("ICON_ARROW_DOUBLE_RIGHT")
         self.last_btn.clicked.connect(lambda: self._go_to_page(self.total_pages))
         layout.addWidget(self.last_btn)
 
         return bar
 
-    def _create_page_btn(self, text: str) -> QPushButton:
-        btn = QPushButton(text)
-        btn.setFixedSize(70, 28)
+    def _create_page_btn(self, icon_name: str) -> QPushButton:
+        btn = QPushButton()
+        btn.setIcon(get_icon(icon_name))
+        btn.setIconSize(QSize(18, 18))
+        btn.setFixedSize(32, 28)
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {self.theme.get_color('primary')};
-                color: white;
+                background-color: rgba(0, 0, 0, 0.2);
                 border: none;
                 border-radius: 6px;
-                font-weight: 600;
-                font-size: 11px;
-                padding: 0px;
             }}
             QPushButton:hover {{
-                background-color: {self.theme.get_color('primary_hover')};
+                background-color: {self.theme.get_color('primary')};
             }}
             QPushButton:disabled {{
-                background-color: {self.theme.get_color('bg_tertiary')};
-                color: {self.theme.get_color('text_disabled')};
+                background-color: transparent;
             }}
         """)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -565,7 +562,7 @@ class WorkshopTab(QWidget):
             self.page_input.clear()
         except ValueError:
             self.page_input.clear()
-            NotificationLabel.show_notification(self, "Invalid page number")
+            NotificationLabel.show_notification(self, self.tr.t("messages.invalid_page_number"))
 
     def _go_to_page(self, page: int):
         if self._is_loading_page:
@@ -686,7 +683,7 @@ class WorkshopTab(QWidget):
         self._clear_skeleton_grid()
 
         if not items:
-            label = QLabel("No wallpapers found")
+            label = QLabel(self.tr.t("labels.no_wallpapers_found"))
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet(f"""
                 color: {self.theme.get_color('text_secondary')};
@@ -794,7 +791,7 @@ class WorkshopTab(QWidget):
                 pass
 
     def _update_pagination(self):
-        self.page_label2.setText(f"of {self.total_pages}")
+        self.page_label2.setText(self.tr.t("labels.of", total=self.total_pages))
         self.page_input.setText(str(self.current_page))
         self._update_pagination_buttons()
 
@@ -805,12 +802,12 @@ class WorkshopTab(QWidget):
             end_item = min(start_item + current_count - 1, total_items)
             if total_items > 0:
                 self.results_label.setText(
-                    f"Showing {start_item}-{end_item} of {total_items:,} wallpapers"
+                    self.tr.t("labels.showing_wallpapers", start=start_item, end=end_item, total=total_items)
                 )
             else:
-                self.results_label.setText("No wallpapers found")
+                self.results_label.setText(self.tr.t("labels.no_wallpapers_found"))
         else:
-            self.results_label.setText("Loading...")
+            self.results_label.setText(self.tr.t("labels.loading_dots"))
 
     def _update_pagination_buttons(self):
         can_go_back = self.current_page > 1 and not self._is_loading_page
@@ -928,7 +925,8 @@ class WorkshopTab(QWidget):
         )
         status_text = info.get("status", "")
         file_size_bytes = self._file_size_cache.get(pubfileid, 0)
-        mini_progress.update_from_status(status_text, file_size_bytes)
+        is_extraction = (task_type == "extract")
+        mini_progress.update_from_status(status_text, file_size_bytes, is_extraction)
         bg_layout.addWidget(mini_progress)
 
         if task_type == "download":
@@ -936,7 +934,7 @@ class WorkshopTab(QWidget):
         else:
             prefix = self.tr.t("labels.extract_prefix", id=pubfileid)
 
-        display_status = status_text[:45] if status_text else "0B"
+        display_status = status_text[:45] if status_text else self.tr.t("labels.starting")
         text = f"<b>{prefix}</b><br><small>{display_status}</small>"
 
         text_label = QLabel(text)
