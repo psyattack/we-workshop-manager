@@ -58,7 +58,7 @@
     "no_tasks": "Нет активных задач",
     "download_prefix": "Загрузка: {id}",
     "extract_prefix": "Извлечение: {id}",
-    "other": "Прочее",
+    "other": "Прочее:",
     "minimize_on_apply": "Свернуть при установке",
     "disabled": "Отключено",
     "enabled": "Включено",

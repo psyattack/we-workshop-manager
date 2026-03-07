@@ -58,7 +58,7 @@
     "no_tasks": "No active tasks",
     "download_prefix": "Download: {id}",
     "extract_prefix": "Extract: {id}",
-    "other": "Other",
+    "other": "Other:",
     "minimize_on_apply": "Minimize on Apply",
     "disabled": "Disabled",
     "enabled": "Enabled",

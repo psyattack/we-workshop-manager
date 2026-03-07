@@ -534,7 +534,7 @@ class DetailsPanel(QWidget):
                     border: none;
                 }}
                 QPushButton:hover {{
-                    background-color: {self.theme.get_color('primary')}4D;
+                    background-color: {self.theme.get_color('primary')};
                 }}
             """)
             self._translate_button.clicked.connect(self._on_translate_clicked)
