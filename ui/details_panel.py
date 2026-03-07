@@ -10,9 +10,9 @@ from PyQt6.QtCore import Qt, QSize, QTimer, QByteArray, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap, QMovie, QMouseEvent
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QScrollArea, QMessageBox, QFileDialog, QApplication
+    QPushButton, QScrollArea, QFileDialog, QApplication
 )
-from ui.notifications import NotificationLabel
+from ui.notifications import NotificationLabel, MessageBox
 from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
 from core.image_cache import ImageCache
@@ -920,20 +920,19 @@ class DetailsPanel(QWidget):
             return
 
         if self.we.is_wallpaper_current(Path(self.folder_path)):
-            QMessageBox.warning(
-                self,
+            MessageBox.warning(
+                None,
                 self.tr.t("dialog.warning"),
                 self.tr.t("messages.cannot_delete_active")
             )
             return
 
-        reply = QMessageBox.question(
-            self,
+        reply = MessageBox.question(
+            None,
             self.tr.t("dialog.confirm_deletion"),
-            self.tr.t("messages.confirm_delete"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            self.tr.t("messages.confirm_delete")
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        if reply != MessageBox.StandardButton.Yes:
             return
 
         pubfileid = self.current_pubfileid
@@ -975,7 +974,7 @@ class DetailsPanel(QWidget):
                 if hasattr(main_window, 'refresh_wallpapers'):
                     main_window.refresh_wallpapers()
             except Exception as e:
-                QMessageBox.critical(self, self.tr.t("dialog.error"), f"Failed to delete:\n{str(e)}")
+                MessageBox.critical(self, self.tr.t("dialog.error"), f"Failed to delete:\n{str(e)}")
 
         QTimer.singleShot(200, perform_deletion)
 

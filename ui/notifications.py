@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
-    QLabel, QGraphicsDropShadowEffect
+    QLabel, QGraphicsDropShadowEffect, QMessageBox
 )
 
 class NotificationLabel(QLabel):
@@ -70,3 +70,137 @@ class NotificationLabel(QLabel):
                 return current.theme
             current = current.parent() if hasattr(current, 'parent') else None
         return None
+
+class MessageBox(QMessageBox):
+    Icon = QMessageBox.Icon
+    StandardButton = QMessageBox.StandardButton
+    ButtonRole = QMessageBox.ButtonRole
+    
+    def __init__(self, theme_manager, title, text, icon=QMessageBox.Icon.Information, parent=None):
+        super().__init__(parent)
+
+        self.theme = theme_manager
+        self._setup_colors()
+
+        self.setWindowTitle(title)
+        self.setText(text)
+        self.setIcon(icon)
+
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+
+        self._apply_style()
+
+    def _setup_colors(self):
+        if self.theme:
+            self.c_bg_primary = self.theme.get_color('bg_primary')
+            self.c_bg_secondary = self.theme.get_color('bg_secondary')
+            self.c_bg_tertiary = self.theme.get_color('bg_tertiary')
+            self.c_border = self.theme.get_color('border')
+            self.c_border_light = self.theme.get_color('border_light')
+            self.c_text_primary = self.theme.get_color('text_primary')
+            self.c_text_secondary = self.theme.get_color('text_secondary')
+            self.c_primary = self.theme.get_color('primary')
+            self.c_primary_hover = self.theme.get_color('primary_hover')
+            self.c_accent_red = self.theme.get_color('accent_red')
+        else:
+            self.c_bg_primary = '#0F111A'
+            self.c_bg_secondary = '#1A1D2E'
+            self.c_bg_tertiary = '#252938'
+            self.c_border = '#2A2F42'
+            self.c_border_light = '#3A3F52'
+            self.c_text_primary = '#FFFFFF'
+            self.c_text_secondary = '#B4B7C3'
+            self.c_primary = '#4A7FD9'
+            self.c_primary_hover = '#5B8FE9'
+            self.c_accent_red = '#EF5B5B'
+
+    def _apply_style(self):
+        self.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {self.c_bg_secondary};
+                border: 2px solid {self.c_border_light};
+            }}
+            QMessageBox QLabel {{
+                color: {self.c_text_primary};
+                background: transparent;
+                font-size: 13px;
+            }}
+            QMessageBox QPushButton {{
+                background-color: {self.c_primary};
+                color: {self.c_text_primary};
+                border: none;
+                border-radius: 8px;
+                padding: 8px 20px;
+                font-weight: 600;
+                min-width: 80px;
+            }}
+            QMessageBox QPushButton:hover {{
+                background-color: {self.c_primary_hover};
+            }}
+        """)
+
+    @staticmethod
+    def _find_theme_manager(widget):
+        current = widget
+        while current:
+            if hasattr(current, 'theme'):
+                return current.theme
+            current = current.parent() if hasattr(current, 'parent') else None
+        return None
+
+    @staticmethod
+    def show(parent, title: str, text: str, icon=QMessageBox.Icon.Information, 
+             buttons=QMessageBox.StandardButton.Ok, default_button=None, theme_manager=None):
+        if theme_manager is None and parent:
+            theme_manager = MessageBox._find_theme_manager(parent)
+        
+        msg_box = MessageBox(theme_manager, title, text, icon, parent)
+        msg_box.setStandardButtons(buttons)
+        
+        if default_button:
+            msg_box.setDefaultButton(default_button)
+        
+        return msg_box.exec()
+
+    @staticmethod
+    def information(parent, title: str, text: str, buttons=QMessageBox.StandardButton.Ok, 
+                    theme_manager=None):
+        return MessageBox.show(
+            parent, title, text, QMessageBox.Icon.Information, 
+            buttons, theme_manager=theme_manager
+        )
+
+    @staticmethod
+    def warning(parent, title: str, text: str, buttons=QMessageBox.StandardButton.Ok,
+                theme_manager=None):
+        return MessageBox.show(
+            parent, title, text, QMessageBox.Icon.Warning,
+            buttons, theme_manager=theme_manager
+        )
+
+    @staticmethod
+    def critical(parent, title: str, text: str, buttons=QMessageBox.StandardButton.Ok,
+                 theme_manager=None):
+        return MessageBox.show(
+            parent, title, text, QMessageBox.Icon.Critical,
+            buttons, theme_manager=theme_manager
+        )
+
+    @staticmethod
+    def question(parent, title: str, text: str, 
+                 buttons=QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                 default_button=QMessageBox.StandardButton.Yes, theme_manager=None):
+        return MessageBox.show(
+            parent, title, text, QMessageBox.Icon.Question,
+            buttons, default_button, theme_manager
+        )
+
+    @staticmethod
+    def confirm(parent, title: str, text: str, theme_manager=None):
+        result = MessageBox.question(
+            parent, title, text,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+            theme_manager
+        )
+        return result == QMessageBox.StandardButton.Yes

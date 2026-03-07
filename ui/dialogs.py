@@ -1,11 +1,12 @@
-from PyQt6.QtCore import Qt, QSize
-from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-    QPushButton, QTextEdit, QFrame, QGraphicsDropShadowEffect, QWidget, QMessageBox,
+    QPushButton, QTextEdit, QFrame, QGraphicsDropShadowEffect, QWidget,
     QComboBox, QLineEdit, QScrollArea, QTabWidget
 )
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QColor
 from resources.icons import get_icon, get_pixmap
+from ui.notifications import MessageBox
 import re
 from utils.helpers import restart_application
 
@@ -218,7 +219,7 @@ class BatchDownloadDialog(CustomDialog):
             self._show_warning(self.tr.t("dialog.warning"), self.tr.t("messages.invalid_input"))
 
     def _show_warning(self, title, message):
-        msg_box = MessageBox(self.theme, title, message, QMessageBox.Icon.Warning, self)
+        msg_box = MessageBox(self.theme, title, message, MessageBox.Icon.Warning, self)
         msg_box.exec()
 
     def get_pubfileids(self):
@@ -290,69 +291,6 @@ class InfoDialog(CustomDialog):
         """)
         ok_btn.clicked.connect(self.accept)
         self.content_layout.addWidget(ok_btn)
-
-class MessageBox(QMessageBox):
-    def __init__(self, theme_manager, title, text, icon=QMessageBox.Icon.Information, parent=None):
-        super().__init__(parent)
-
-        self.theme = theme_manager
-        self._setup_colors()
-
-        self.setWindowTitle(title)
-        self.setText(text)
-        self.setIcon(icon)
-
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
-
-        self._apply_style()
-
-    def _setup_colors(self):
-        if self.theme:
-            self.c_bg_primary = self.theme.get_color('bg_primary')
-            self.c_bg_secondary = self.theme.get_color('bg_secondary')
-            self.c_bg_tertiary = self.theme.get_color('bg_tertiary')
-            self.c_border = self.theme.get_color('border')
-            self.c_border_light = self.theme.get_color('border_light')
-            self.c_text_primary = self.theme.get_color('text_primary')
-            self.c_text_secondary = self.theme.get_color('text_secondary')
-            self.c_primary = self.theme.get_color('primary')
-            self.c_primary_hover = self.theme.get_color('primary_hover')
-        else:
-            self.c_bg_primary = '#0F111A'
-            self.c_bg_secondary = '#1A1D2E'
-            self.c_bg_tertiary = '#252938'
-            self.c_border = '#2A2F42'
-            self.c_border_light = '#3A3F52'
-            self.c_text_primary = '#FFFFFF'
-            self.c_text_secondary = '#B4B7C3'
-            self.c_primary = '#4A7FD9'
-            self.c_primary_hover = '#5B8FE9'
-
-    def _apply_style(self):
-        self.setStyleSheet(f"""
-            QMessageBox {{
-                background-color: {self.c_bg_secondary};
-                border: 2px solid {self.c_border_light};
-                border-radius: 12px;
-            }}
-            QMessageBox QLabel {{
-                color: {self.c_text_primary};
-                background: transparent;
-                font-size: 13px;
-            }}
-            QMessageBox QPushButton {{
-                background-color: {self.c_primary};
-                color: {self.c_text_primary};
-                border: none;
-                border-radius: 8px;
-                padding: 8px 20px;
-                font-weight: 600;
-                min-width: 80px;
-            }}
-            QMessageBox QPushButton:hover {{
-                background-color: {self.c_primary_hover};
-            }}
-        """)
 
 class CollapsibleSection(QWidget):
     def __init__(self, title: str, parent=None, expanded: bool = True, theme_manager=None):
@@ -468,7 +406,6 @@ class CollapsibleSection(QWidget):
         self._update_header_text()
         self._content_area.setVisible(expanded)
 
-
 class SettingsField(QWidget):
     def __init__(self, label_text: str, control_widget: QWidget, description: str = None,
                  stacked: bool = False, parent=None, theme_manager=None):
@@ -549,7 +486,6 @@ class SettingsField(QWidget):
         else:
             self.c_text_secondary = '#B4B7C3'
             self.c_text_disabled = '#6B6E7C'
-
 
 class SettingsPopup(CustomDialog):
     def __init__(self, config, accounts, translator, theme_manager, main_window, parent=None):
@@ -841,7 +777,7 @@ class SettingsPopup(CustomDialog):
                 self.theme,
                 self.tr.t("dialog.warning"),
                 self.tr.t("messages.fill_all_fields"),
-                QMessageBox.Icon.Warning,
+                MessageBox.Icon.Warning,
                 self
             )
             msg_box.exec()
@@ -851,11 +787,11 @@ class SettingsPopup(CustomDialog):
             self.theme,
             self.tr.t("settings.restart_required"),
             self.tr.t("settings.restart_message"),
-            QMessageBox.Icon.Question,
+            MessageBox.Icon.Question,
             self
         )
-        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), QMessageBox.ButtonRole.YesRole)
-        no_btn = msg_box.addButton(self.tr.t("buttons.no"), QMessageBox.ButtonRole.NoRole)
+        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), MessageBox.ButtonRole.YesRole)
+        no_btn = msg_box.addButton(self.tr.t("buttons.no"), MessageBox.ButtonRole.NoRole)
         msg_box.setDefaultButton(yes_btn)
 
         msg_box.exec()
@@ -869,10 +805,10 @@ class SettingsPopup(CustomDialog):
             self.theme,
             self.tr.t("settings.reset_button"),
             self.tr.t("settings.reset_success"),
-            QMessageBox.Icon.Information,
+            MessageBox.Icon.Information,
             self
         )
-        msg_box.addButton(self.tr.t("buttons.ok"), QMessageBox.ButtonRole.AcceptRole)
+        msg_box.addButton(self.tr.t("buttons.ok"), MessageBox.ButtonRole.AcceptRole)
         msg_box.exec()
 
         self._clear_cookies()
@@ -904,11 +840,11 @@ class SettingsPopup(CustomDialog):
             self.theme,
             self.tr.t("messages.restart_title"),
             self.tr.t("messages.restart_theme_message"),
-            QMessageBox.Icon.Question,
+            MessageBox.Icon.Question,
             self
         )
-        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), QMessageBox.ButtonRole.YesRole)
-        no_btn = msg_box.addButton(self.tr.t("buttons.no"), QMessageBox.ButtonRole.NoRole)
+        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), MessageBox.ButtonRole.YesRole)
+        no_btn = msg_box.addButton(self.tr.t("buttons.no"), MessageBox.ButtonRole.NoRole)
         msg_box.exec()
 
         if msg_box.clickedButton() == yes_btn:
@@ -942,11 +878,11 @@ class SettingsPopup(CustomDialog):
             self.theme,
             self.tr.t("messages.language_changed"),
             msg,
-            QMessageBox.Icon.Question,
+            MessageBox.Icon.Question,
             self
         )
-        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), QMessageBox.ButtonRole.YesRole)
-        no_btn = msg_box.addButton(self.tr.t("buttons.no"), QMessageBox.ButtonRole.NoRole)
+        yes_btn = msg_box.addButton(self.tr.t("buttons.yes"), MessageBox.ButtonRole.YesRole)
+        no_btn = msg_box.addButton(self.tr.t("buttons.no"), MessageBox.ButtonRole.NoRole)
         msg_box.setDefaultButton(yes_btn)
 
         msg_box.exec()

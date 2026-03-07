@@ -21,7 +21,8 @@ except:
 
 import subprocess
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication, QMessageBox, QFileDialog
+from PyQt6.QtWidgets import QApplication, QFileDialog
+from ui.notifications import MessageBox
 from core.config_manager import ConfigManager
 from core.accounts import AccountManager
 from core.download_manager import DownloadManager
@@ -53,7 +54,7 @@ def install_dotnet_runtime(translator) -> bool:
             installer_path = installers[0]
     
     if not installer_path or not installer_path.exists():
-        QMessageBox.warning(
+        MessageBox.warning(
             None,
             translator.t("dialog.warning"),
             translator.t("messages.dotnet_installation_failed")
@@ -67,7 +68,7 @@ def install_dotnet_runtime(translator) -> bool:
         )
         return True
     except Exception as e:
-        QMessageBox.critical(
+        MessageBox.critical(
             None,
             translator.t("dialog.error"),
             translator.t("messages.failed_start_installer", error=str(e))
@@ -98,7 +99,7 @@ def setup_wallpaper_engine(config: ConfigManager, translator) -> str:
             config.set_directory(directory)
             return directory
         
-        QMessageBox.warning(
+        MessageBox.warning(
             None,
             translator.t("dialog.warning"),
             translator.t("messages.invalid_we_directory")
@@ -114,32 +115,34 @@ def main():
     
     # .NET Runtime
     if not check_dotnet_runtime():
-        msg_box = QMessageBox()
-        msg_box.setWindowTitle(translator.t("dialog.dotnet_required"))
-        msg_box.setText(translator.t("messages.dotnet_required"))
+        msg_box = MessageBox(
+            None,
+            translator.t("dialog.dotnet_required"),
+            translator.t("messages.dotnet_required"),
+            MessageBox.Icon.Warning
+        )
         msg_box.setInformativeText(translator.t("messages.dotnet_install_now"))
-        msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        msg_box.setDefaultButton(QMessageBox.StandardButton.Yes)
-        msg_box.setIcon(QMessageBox.Icon.Warning)
+        msg_box.setStandardButtons(MessageBox.StandardButton.Yes | MessageBox.StandardButton.No)
+        msg_box.setDefaultButton(MessageBox.StandardButton.Yes)
         
         response = msg_box.exec()
         
-        if response == QMessageBox.StandardButton.Yes:
+        if response == MessageBox.StandardButton.Yes:
             if install_dotnet_runtime(translator):
-                QMessageBox.information(
+                MessageBox.information(
                     None,
                     translator.t("dialog.installation_started"),
                     translator.t("messages.dotnet_installation_started")
                 )
             else:
-                QMessageBox.warning(
+                MessageBox.warning(
                     None,
                     translator.t("dialog.warning"),
                     translator.t("messages.dotnet_warning")
                 )
                 sys.exit(0)
         else:
-            QMessageBox.information(
+            MessageBox.information(
                 None,
                 translator.t("dialog.warning"),
                 translator.t("messages.dotnet_warning")

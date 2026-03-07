@@ -3,9 +3,10 @@ from PyQt6.QtCore import Qt, QSize, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QTabBar, QStackedWidget, QMessageBox, QApplication,
+    QLabel, QPushButton, QTabBar, QStackedWidget, QApplication,
     QFrame, QGraphicsDropShadowEffect
 )
+from ui.notifications import MessageBox
 from ui.workshop_tab import WorkshopTab
 from ui.wallpapers_tab import WallpapersTab
 from ui.dialogs import BatchDownloadDialog, InfoDialog, SettingsPopup
@@ -374,14 +375,13 @@ class MainWindow(QMainWindow):
             else:
                 msg = self.tr.t("messages.exit_with_extractions_only")
 
-            reply = QMessageBox.question(
+            reply = MessageBox.question(
                 self,
                 self.tr.t("dialog.exit"),
-                msg,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                msg
             )
 
-            if reply != QMessageBox.StandardButton.Yes:
+            if reply != MessageBox.StandardButton.Yes:
                 return
 
         self.dm.cleanup_all()
