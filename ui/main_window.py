@@ -337,11 +337,11 @@ class MainWindow(QMainWindow):
             self.workshop_tab.show_downloads_popup(btn_pos)
 
     def _show_settings(self):
-        self.settings_popup = SettingsPopup(self.config, self.accounts, self.tr, self.theme, self)
+        self.settings_popup = SettingsPopup(self.config, self.accounts, self.tr, self.theme, self, self)
         self.settings_popup.exec()
 
     def _show_batch_download(self):
-        dialog = BatchDownloadDialog(self.tr, self)
+        dialog = BatchDownloadDialog(self.tr, self, self.theme)
         if dialog.exec() == dialog.DialogCode.Accepted:
             pubfileids = dialog.get_pubfileids()
 
@@ -359,7 +359,7 @@ class MainWindow(QMainWindow):
                 self.dm.start_download(pid, account_index)
 
     def _show_info(self):
-        dialog = InfoDialog(self.tr, self)
+        dialog = InfoDialog(self.tr, self, self.theme)
         dialog.exec()
 
     def _on_close(self):
