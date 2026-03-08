@@ -39,7 +39,7 @@ class WorkshopPage:
 
 class LRUCache:
 
-    def __init__(self, max_pages: int = 20, max_items: int = 100):
+    def __init__(self, max_pages: int = 20, max_items: int = 600):
         self.max_pages = max_pages
         self.max_items = max_items
         self._pages: OrderedDict[str, WorkshopPage] = OrderedDict()
@@ -96,10 +96,11 @@ class WorkshopParser(QObject):
 
     DEBUG_WEBVIEW_ENABLED = False  # DEBUG
 
-    def __init__(self, account_manager, parent=None):
+    def __init__(self, account_manager, parent=None, profile_name: str = "Workshop_Parser"):
         super().__init__(parent)
 
         self.accounts = account_manager
+        self._profile_name = profile_name
         self._current_page_data: Optional[WorkshopPage] = None
         self._current_filters: Optional[WorkshopFilters] = None
         self._current_url: str = ""
@@ -118,16 +119,16 @@ class WorkshopParser(QObject):
         self._max_polls = self.FETCH_TIMEOUT_MS // self.POLL_INTERVAL_MS
         self._details_request_id = 0
 
-        self._cache = LRUCache(max_pages=30, max_items=150)
+        self._cache = LRUCache()
 
         self._setup_webview()
 
     def _setup_webview(self):
-        debug_width = 1200 # DEBUG
-        debug_height = 800 # DEBUG
+        debug_width = 1200
+        debug_height = 800
         self._container = QWidget()
         
-        if self.DEBUG_WEBVIEW_ENABLED: # DEBUG
+        if self.DEBUG_WEBVIEW_ENABLED:
             self._container.setFixedSize(debug_width, debug_height)
             self._container.show()
             print(f"[WorkshopParser:DEBUG] WebView container shown ({debug_width}x{debug_height})")
@@ -135,10 +136,10 @@ class WorkshopParser(QObject):
             self._container.setFixedSize(1, 1)
             self._container.hide()
 
-        profile_path = Path.cwd() / "Cookies"
-        self._profile = QWebEngineProfile("Workshop_Parser", self._container)
+        profile_path = Path.cwd() / "Cookies" / self._profile_name
+        self._profile = QWebEngineProfile(self._profile_name, self._container)
         self._profile.setPersistentStoragePath(str(profile_path))
-        self._profile.setCachePath(str(profile_path))
+        self._profile.setCachePath(str(profile_path / "cache"))
         self._profile.setPersistentCookiesPolicy(
             QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies
         )
@@ -147,7 +148,7 @@ class WorkshopParser(QObject):
         self._webview = QWebEngineView(self._container)
         self._webview.setPage(self._page)
 
-        if self.DEBUG_WEBVIEW_ENABLED: # DEBUG
+        if self.DEBUG_WEBVIEW_ENABLED:
             layout = QVBoxLayout(self._container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.addWidget(self._webview)
@@ -264,7 +265,9 @@ class WorkshopParser(QObject):
                     updated_date: '',
                     tags: {{}},
                     rating_star_file: '',
-                    num_ratings: ''
+                    num_ratings: '',
+                    author: '',
+                    author_url: ''
                 }};
 
                 const titleEl = doc.querySelector('.workshopItemTitle');
@@ -278,29 +281,63 @@ class WorkshopParser(QObject):
                     if (el && el.src) {{ result.preview_url = el.src; break; }}
                 }}
 
-                // ── Rating stars ──────────────────────────────────────
+                const authorLink = doc.querySelector('.friendBlockContent, .workshopItemAuthorName a, .creatorsBlock .friendBlock a');
+                if (authorLink) {{
+                    result.author_url = authorLink.href || '';
+                }}
+                
+                const authorNameEl = doc.querySelector('.friendBlockContent');
+                if (authorNameEl) {{
+                    const textNodes = [];
+                    for (const node of authorNameEl.childNodes) {{
+                        if (node.nodeType === Node.TEXT_NODE) {{
+                            const text = node.textContent.trim();
+                            if (text) textNodes.push(text);
+                        }}
+                    }}
+                    if (textNodes.length > 0) {{
+                        result.author = textNodes[0];
+                    }}
+                }}
+                
+                if (!result.author) {{
+                    const authorEl = doc.querySelector('.workshopItemAuthorName a');
+                    if (authorEl) {{
+                        result.author = authorEl.innerText.trim();
+                        if (!result.author_url) result.author_url = authorEl.href || '';
+                    }}
+                }}
+                
+                if (!result.author) {{
+                    const creatorsBlock = doc.querySelector('.creatorsBlock');
+                    if (creatorsBlock) {{
+                        const nameEl = creatorsBlock.querySelector('.friendBlockContent');
+                        if (nameEl) {{
+                            const text = nameEl.innerText.trim().split('\\n')[0].trim();
+                            if (text) result.author = text;
+                        }}
+                    }}
+                }}
+
                 const ratingImg = doc.querySelector(
                     '#detailsHeaderRight > div > div.fileRatingDetails img'
                 );
                 if (ratingImg) {{
                     const src = ratingImg.getAttribute('src') || '';
                     if (src) {{
-                        // "https://…/4-star_large.png?v=2" → "4-star_large"
                         const urlPath = src.split('?')[0];
                         const filename = urlPath.split('/').pop() || '';
                         result.rating_star_file = filename.replace('.png', '')
-                                                          .replace('.jpg', '')
-                                                          .replace('.gif', '');
+                                                        .replace('.jpg', '')
+                                                        .replace('.gif', '');
                     }}
                 }}
 
-                // ── Number of ratings ─────────────────────────────────
                 const numRatingsEl = doc.querySelector(
                     '#detailsHeaderRight > div > div.numRatings'
                 );
                 if (numRatingsEl) {{
                     const rawText = numRatingsEl.innerText.trim();
-                    // "Оценок: 154" / "154 ratings" → "154"
                     const numMatch = rawText.match(/(\\d[\\d\\s,\\.]*)/);
                     if (numMatch) {{
                         result.num_ratings = numMatch[1].replace(/[\\s,\\.]/g, '');
@@ -696,8 +733,8 @@ class WorkshopParser(QObject):
             tags=result.get("tags", {}),
             rating_star_file=result.get("rating_star_file", ""),
             num_ratings=result.get("num_ratings", ""),
-            author=existing.author if existing else "",
-            author_url=existing.author_url if existing else ""
+            author=result.get("author", "") or (existing.author if existing else ""),
+            author_url=result.get("author_url", "") or (existing.author_url if existing else "")
         )
 
         self._cache.set_item(pubfileid, item)

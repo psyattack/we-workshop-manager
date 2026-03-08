@@ -11,9 +11,9 @@ class ImageCache(QObject):
     
     _instance: Optional['ImageCache'] = None
     
-    MAX_PIXMAP_CACHE = 100
-    MAX_GIF_CACHE = 30
-    MAX_MEMORY_MB = 150
+    MAX_PIXMAP_CACHE = 400
+    MAX_GIF_CACHE = 200
+    MAX_MEMORY_MB = 300
     
     def __new__(cls):
         if cls._instance is None:

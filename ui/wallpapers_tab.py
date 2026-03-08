@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve, QSize
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QEasingCurve
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QComboBox, QScrollArea, QGridLayout, QSplitter,
@@ -497,7 +497,6 @@ class LocalFilterBar(QWidget):
         self.age_combo.setCurrentIndex(0)
         self.resolution_combo.setCurrentIndex(0)
         self._current_filters.sort_order = "desc"
-        self.order_btn.setText("↓")
         
         for cb in self.misc_checkboxes.values():
             cb.reset()

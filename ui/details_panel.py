@@ -17,6 +17,7 @@ from resources.icons import get_icon
 from utils.helpers import human_readable_size, format_timestamp, get_directory_size, get_folder_mtime
 from core.image_cache import ImageCache
 from utils.translation_helper import DescriptionTranslator
+from datetime import datetime
 
 class TranslationWorker(QThread):
     finished = pyqtSignal(str, str)
@@ -69,6 +70,11 @@ class DetailsPanel(QWidget):
         self._translation_worker: Optional[TranslationWorker] = None
         self._description_label: Optional[QLabel] = None
         self._translate_button: Optional[QPushButton] = None
+
+        self._pending_metadata_fetch: bool = False
+        self._metadata_fetch_pubfileid: str = ""
+        self._is_parser_connected: bool = False
+        self._retry_timer: Optional[QTimer] = None
 
         self._setup_ui()
         self.setVisible(False)
@@ -246,6 +252,151 @@ class DetailsPanel(QWidget):
         }
         return mapping.get(rating_star_file, "")
 
+    def _get_main_parser(self):
+        main_window = self.window()
+        if main_window and hasattr(main_window, 'workshop_tab'):
+            workshop_tab = main_window.workshop_tab
+            if hasattr(workshop_tab, 'parser'):
+                return workshop_tab.parser
+        return None
+
+    def _get_workshop_details_panel(self):
+        main_window = self.window()
+        if main_window and hasattr(main_window, 'workshop_tab'):
+            workshop_tab = main_window.workshop_tab
+            if hasattr(workshop_tab, 'details_panel'):
+                return workshop_tab.details_panel
+        return None
+
+    def _is_workshop_tab_initialized(self) -> bool:
+        main_window = self.window()
+        if main_window and hasattr(main_window, 'workshop_tab'):
+            workshop_tab = main_window.workshop_tab
+            if hasattr(workshop_tab, '_current_page_data') and workshop_tab._current_page_data is not None:
+                return True
+            if hasattr(workshop_tab, '_initial_load_done'):
+                return workshop_tab._initial_load_done
+        return False
+
+    def _is_parser_busy_with_priority(self, parser) -> bool:
+        if not self._is_workshop_tab_initialized():
+            return True
+        
+        if parser._is_loading_page:
+            return True
+        
+        if parser._request_type == "browse" and parser.is_loading():
+            return True
+        
+        return False
+
+    def _connect_to_parser(self, parser):
+        if self._is_parser_connected:
+            return
+        
+        parser.item_details_loaded.connect(self._on_metadata_loaded)
+        parser.error_occurred.connect(self._on_metadata_load_error)
+        parser.page_loaded.connect(self._on_workshop_page_loaded)
+        self._is_parser_connected = True
+
+    def _disconnect_from_parser(self, parser):
+        if not self._is_parser_connected:
+            return
+        
+        try:
+            parser.item_details_loaded.disconnect(self._on_metadata_loaded)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            parser.error_occurred.disconnect(self._on_metadata_load_error)
+        except (TypeError, RuntimeError):
+            pass
+        try:
+            parser.page_loaded.disconnect(self._on_workshop_page_loaded)
+        except (TypeError, RuntimeError):
+            pass
+        self._is_parser_connected = False
+
+    def _on_workshop_page_loaded(self, page_data):
+        if self._pending_metadata_fetch and self._metadata_fetch_pubfileid:
+            QTimer.singleShot(100, lambda: self._retry_fetch(self._metadata_fetch_pubfileid))
+
+    def _lock_workshop_details_panel(self, lock: bool):
+        workshop_panel = self._get_workshop_details_panel()
+        if workshop_panel and workshop_panel is not self:
+            workshop_panel._external_lock = lock
+
+    def _is_externally_locked(self) -> bool:
+        return getattr(self, '_external_lock', False)
+
+    def _fetch_metadata_from_workshop(self, pubfileid: str):
+        parser = self._get_main_parser()
+        if not parser:
+            return
+        
+        self._metadata_fetch_pubfileid = pubfileid
+        self._pending_metadata_fetch = True
+        
+        self._connect_to_parser(parser)
+        
+        if self._is_parser_busy_with_priority(parser):
+            self._schedule_retry(pubfileid)
+            return
+        
+        self._lock_workshop_details_panel(True)
+        parser.load_item_details(pubfileid, use_cache=False)
+
+    def _schedule_retry(self, pubfileid: str):
+        if self._retry_timer is not None:
+            self._retry_timer.stop()
+            self._retry_timer.deleteLater()
+        
+        self._retry_timer = QTimer(self)
+        self._retry_timer.setSingleShot(True)
+        self._retry_timer.timeout.connect(lambda: self._retry_fetch(pubfileid))
+        self._retry_timer.start(500)
+
+    def _retry_fetch(self, pubfileid: str):
+        if not self._pending_metadata_fetch:
+            return
+        
+        if pubfileid != self._metadata_fetch_pubfileid:
+            return
+        
+        parser = self._get_main_parser()
+        if not parser:
+            self._pending_metadata_fetch = False
+            return
+        
+        if self._is_parser_busy_with_priority(parser):
+            self._schedule_retry(pubfileid)
+            return
+        
+        self._lock_workshop_details_panel(True)
+        parser.load_item_details(pubfileid, use_cache=False)
+
+    def _on_metadata_loaded(self, item):
+        if not self._pending_metadata_fetch:
+            return
+        
+        if item.pubfileid != self._metadata_fetch_pubfileid:
+            return
+        
+        self._pending_metadata_fetch = False
+        self._lock_workshop_details_panel(False)
+        
+        self._save_workshop_metadata(item)
+        
+        if self._mode == self.MODE_INSTALLED and self.current_pubfileid == item.pubfileid:
+            self._setup_installed_details()
+
+    def _on_metadata_load_error(self, error_msg: str):
+        if not self._pending_metadata_fetch:
+            return
+        
+        self._pending_metadata_fetch = False
+        self._lock_workshop_details_panel(False)
+
     def set_installed_folder(self, folder_path: str):
         self._reset_state()
 
@@ -266,7 +417,17 @@ class DetailsPanel(QWidget):
         if not self._try_copy_from_grid_item(self.current_pubfileid):
             self._load_local_preview(folder_path)
 
+        metadata = None
+        if self.config:
+            metadata = self.config.get_wallpaper_metadata(self.current_pubfileid)
+        
+        if not metadata:
+            QTimer.singleShot(200, lambda: self._fetch_metadata_from_workshop(self.current_pubfileid))
+
     def set_workshop_item(self, item):
+        if self._is_externally_locked():
+            return
+        
         self._reset_state()
 
         self._mode = self.MODE_WORKSHOP
@@ -285,8 +446,6 @@ class DetailsPanel(QWidget):
 
         if not self._try_copy_from_grid_item(item.pubfileid):
             self._load_remote_preview(item.preview_url)
-
-        self._save_workshop_metadata(item)
 
     def _save_workshop_metadata(self, item):
         if not self.config or not item.pubfileid:
@@ -331,8 +490,6 @@ class DetailsPanel(QWidget):
         self.config.set_wallpaper_metadata(item.pubfileid, metadata)
 
     def _parse_date_to_timestamp(self, date_str: str) -> int:
-        import time
-        from datetime import datetime
         
         if not date_str:
             return 0
@@ -369,14 +526,27 @@ class DetailsPanel(QWidget):
             if self._current_item:
                 self.set_workshop_item(self._current_item)
             else:
-                parent = self.parent()
-                while parent and not hasattr(parent, 'parser'):
-                    parent = parent.parent()
-                if parent and hasattr(parent, 'parser'):
-                    parent.parser.load_item_details(self.current_pubfileid)
+                parser = self._get_main_parser()
+                if parser:
+                    parser.load_item_details(self.current_pubfileid)
 
     def release_resources(self):
         self._reset_preview()
+        self._cancel_pending_fetch()
+        
+        parser = self._get_main_parser()
+        if parser:
+            self._disconnect_from_parser(parser)
+
+    def _cancel_pending_fetch(self):
+        if self._retry_timer is not None:
+            self._retry_timer.stop()
+            self._retry_timer.deleteLater()
+            self._retry_timer = None
+        
+        if self._pending_metadata_fetch:
+            self._pending_metadata_fetch = False
+            self._lock_workshop_details_panel(False)
 
     @property
     def large_preview(self):
@@ -390,6 +560,9 @@ class DetailsPanel(QWidget):
         if self._translation_worker and self._translation_worker.isRunning():
             self._translation_worker.terminate()
             self._translation_worker = None
+
+        self._cancel_pending_fetch()
+        self._metadata_fetch_pubfileid = ""
 
         self._current_item = None
         self._current_preview_url = ""
@@ -815,6 +988,12 @@ class DetailsPanel(QWidget):
                 self._add_separator()
                 self._add_description_section(description)
         else:
+            size_bytes = get_directory_size(self.folder_path)
+            self._add_detail_label(self.tr.t("labels.size", size=human_readable_size(size_bytes)), "📦")
+            
+            mtime = get_folder_mtime(self.folder_path)
+            self._add_detail_label(self.tr.t("labels.installed", date=format_timestamp(mtime)), "📅")
+            
             description = self._project_data.get("description", "")
             if description and description.strip():
                 self._add_separator()

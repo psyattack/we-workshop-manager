@@ -661,6 +661,10 @@ class WorkshopTab(QWidget):
 
     def _on_download_completed(self, pubfileid: str, success: bool):
         if success:
+            if self.we.is_installed(pubfileid):
+                cached_item = self.parser.get_cached_item(pubfileid)
+                if cached_item:
+                    self._save_workshop_metadata_on_download(cached_item)
             self._update_item_statuses()
             if self.selected_pubfileid == pubfileid:
                 self.details_panel.refresh_after_state_change()
@@ -1021,6 +1025,74 @@ class WorkshopTab(QWidget):
         self.dm.cancel_download(pubfileid)
         QTimer.singleShot(100, self._update_downloads_list)
         self._update_item_statuses()
+
+    def _save_workshop_metadata_on_download(self, item):
+        if not self.config or not item.pubfileid:
+            return
+        
+        rating = 0
+        rating_star_file = getattr(item, 'rating_star_file', '')
+        if rating_star_file:
+            rating_map = {
+                "5-star_large": 5,
+                "4-star_large": 4,
+                "3-star_large": 3,
+                "2-star_large": 2,
+                "1-star_large": 1,
+            }
+            rating = rating_map.get(rating_star_file, 0)
+        
+        posted_timestamp = 0
+        updated_timestamp = 0
+        
+        if item.posted_date:
+            posted_timestamp = self._parse_date_to_timestamp(item.posted_date)
+        if item.updated_date:
+            updated_timestamp = self._parse_date_to_timestamp(item.updated_date)
+        
+        metadata = {
+            "title": item.title or item.pubfileid,
+            "tags": item.tags or {},
+            "rating": rating,
+            "num_ratings": getattr(item, 'num_ratings', ''),
+            "rating_star_file": rating_star_file,
+            "file_size": item.file_size or "",
+            "posted_date": posted_timestamp,
+            "posted_date_str": item.posted_date or "",
+            "updated_date": updated_timestamp,
+            "updated_date_str": item.updated_date or "",
+            "author": item.author or "",
+            "description": item.description or "",
+            "preview_url": item.preview_url or "",
+        }
+        
+        self.config.set_wallpaper_metadata(item.pubfileid, metadata)
+
+    def _parse_date_to_timestamp(self, date_str: str) -> int:
+        from datetime import datetime
+        
+        if not date_str:
+            return 0
+        
+        formats = [
+            "%d %b, %Y @ %I:%M%p",
+            "%d %b @ %I:%M%p",
+            "%b %d, %Y @ %I:%M%p",
+            "%b %d @ %I:%M%p",
+            "%Y-%m-%d",
+            "%d.%m.%Y",
+        ]
+
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(date_str.strip(), fmt)
+                if dt.year == 1900:
+                    dt = dt.replace(year=datetime.now().year)
+                return int(dt.timestamp())
+            except ValueError:
+                continue
+        
+        return 0
 
     def cleanup(self):
         if hasattr(self, '_status_timer'):
