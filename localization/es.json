@@ -143,6 +143,8 @@
     "language_description": "Cambiar el idioma de la interfaz",
     "behavior": "Comportamiento",
     "minimize_description": "Minimizar la ventana después de aplicar el fondo de pantalla",
+    "preload_next_page": "Precargar siguiente página (BETA)",
+    "preload_description": "Precargar la siguiente página del taller en segundo plano para una navegación más rápida",
     "tab_general": "General",
     "account_selection": "Selección de cuenta",
     "account_description": "Seleccionar una cuenta (para descargar)",
@@ -153,7 +155,7 @@
     "login_description": "Ingrese sus credenciales de Steam para autenticarse en el Taller"
   },
   "info": {
-    "version": "WE Workshop Manager v1.3.5",
+    "version": "WE Workshop Manager v1.3.7",
     "description": "Esta aplicación le permite descargar y gestionar fácilmente fondos de pantalla de Wallpaper Engine desde Steam Workshop.",
     "developed": "Desarrollado con ❤️ gratis."
   },

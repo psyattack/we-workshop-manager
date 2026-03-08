@@ -143,6 +143,8 @@
     "language_description": "Change the interface language",
     "behavior": "Behavior",
     "minimize_description": "Minimize the window after applying wallpaper",
+    "preload_next_page": "Preload Next Page (BETA)",
+    "preload_description": "Preload the next workshop page in background for faster navigation",
     "tab_general": "General",
     "account_selection": "Account selection",
     "account_description": "Select an account (to download)",
@@ -153,7 +155,7 @@
     "login_description": "Enter your Steam credentials for authentication in the Workshop"
   },
   "info": {
-    "version": "WE Workshop Manager v1.3.5",
+    "version": "WE Workshop Manager v1.3.7",
     "description": "This application allows you to easily download and manage Wallpaper Engine wallpapers from Steam Workshop.",
     "developed": "Developed with ❤️ free."
   },

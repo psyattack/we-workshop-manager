@@ -35,6 +35,8 @@
 
 WE Workshop Managerは、Python/PyQt6制成的桌面アプリケーションで、Steamクライアントを実行せずにWallpaper EngineのSteam Workshopから壁紙を簡単にダウンロード、インストール、管理できます。
 
+### <strong>バージョン1.3.7以降、Workshopページは新しいPreload Next Page（BETA）機能でブラウザよりも高速に読み込まれます！</strong>
+
 ### 🔑主な機能:
 
 - 🌐Steam Workshopを閲覧し、**ワンクリック**で壁纸をダウンロード

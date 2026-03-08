@@ -554,10 +554,30 @@ class SettingsPopup(CustomDialog):
             theme_manager=self.theme
         ))
 
+        preload_combo = self._create_preload_combo()
+        behavior_section.add_widget(SettingsField(
+            self.tr.t("settings.preload_next_page") if self.tr.t("settings.preload_next_page") != "settings.preload_next_page" else "Preload Next Page",
+            preload_combo,
+            description=self.tr.t("settings.preload_description") if self.tr.t("settings.preload_description") != "settings.preload_description" else "Preload the next workshop page in background for faster navigation",
+            theme_manager=self.theme
+        ))
+
         layout.addWidget(behavior_section)
 
         layout.addStretch()
         self.tab_widget.addTab(tab, self.tr.t("settings.tab_general") if self.tr.t("settings.tab_general") != "settings.tab_general" else "General")
+
+    def _create_preload_combo(self):
+        combo = QComboBox()
+        combo.addItems([self.tr.t("labels.disabled"), self.tr.t("labels.enabled")])
+        combo.setCurrentIndex(1 if self.config.get_preload_next_page() else 0)
+        combo.currentIndexChanged.connect(self._on_preload_changed)
+        combo.setStyleSheet(self._combo_style())
+        return combo
+
+    def _on_preload_changed(self, index):
+        value = index == 1
+        self.config.set_preload_next_page(value)
 
     def _create_account_tab(self):
         tab = self._create_scrollable_tab()

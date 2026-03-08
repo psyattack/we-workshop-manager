@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Callable
 from pathlib import Path
 from collections import OrderedDict
-
 from PyQt6.QtCore import QObject, QUrl, pyqtSignal, QTimer
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -88,13 +87,14 @@ class WorkshopParser(QObject):
     login_successful = pyqtSignal()
     login_failed = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
+    preload_completed = pyqtSignal(str)
 
     FETCH_TIMEOUT_MS = 10000
     POLL_INTERVAL_MS = 50
     LOGIN_CHECK_INTERVAL_MS = 500
     LOGIN_TIMEOUT_MS = 30000
 
-    DEBUG_WEBVIEW_ENABLED = False  # DEBUG
+    DEBUG_WEBVIEW_ENABLED = False
 
     def __init__(self, account_manager, parent=None, profile_name: str = "Workshop_Parser"):
         super().__init__(parent)
@@ -118,6 +118,9 @@ class WorkshopParser(QObject):
         self._poll_count = 0
         self._max_polls = self.FETCH_TIMEOUT_MS // self.POLL_INTERVAL_MS
         self._details_request_id = 0
+
+        self._preload_request_id = 0
+        self._is_preloading = False
 
         self._cache = LRUCache()
 
@@ -202,6 +205,236 @@ class WorkshopParser(QObject):
         self.page_loading_started.emit()
 
         self._webview.load(QUrl(url))
+
+    def preload_next_page(self, current_filters: WorkshopFilters, callback: Optional[Callable[[bool], None]] = None):
+        if self._is_preloading:
+            if callback:
+                callback(False)
+            return
+
+        next_page = current_filters.page + 1
+        
+        next_filters = WorkshopFilters(
+            search=current_filters.search,
+            sort=current_filters.sort,
+            days=current_filters.days,
+            category=current_filters.category,
+            type_tag=current_filters.type_tag,
+            age_rating=current_filters.age_rating,
+            resolution=current_filters.resolution,
+            misc_tags=list(current_filters.misc_tags),
+            genre_tags=list(current_filters.genre_tags),
+            excluded_misc_tags=list(current_filters.excluded_misc_tags),
+            excluded_genre_tags=list(current_filters.excluded_genre_tags),
+            asset_type=current_filters.asset_type,
+            asset_genre=current_filters.asset_genre,
+            script_type=current_filters.script_type,
+            required_flags=list(current_filters.required_flags),
+            page=next_page
+        )
+        
+        next_url = next_filters.build_url()
+
+        cached = self._cache.get_page(next_url)
+        if cached:
+            if callback:
+                callback(True)
+            return
+
+        self._is_preloading = True
+        self._preload_request_id += 1
+        current_request_id = self._preload_request_id
+        self._preload_poll_count = 0
+
+        self._fetch_page_in_background(next_url, next_filters, current_request_id, callback)
+
+    def _fetch_page_in_background(self, url: str, filters: WorkshopFilters, request_id: int, callback: Optional[Callable[[bool], None]]):
+        js_code = f"""
+        (async function() {{
+            window.__workshopPreloadResult = null;
+            window.__workshopPreloadLoading = true;
+            window.__workshopPreloadRequestId = {request_id};
+
+            try {{
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(
+                    '{url}',
+                    {{ credentials: 'include', signal: controller.signal }}
+                );
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {{
+                    window.__workshopPreloadResult = {{ error: 'HTTP ' + response.status }};
+                    window.__workshopPreloadLoading = false;
+                    return;
+                }}
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const result = {{
+                    items: [],
+                    current_page: 1,
+                    total_pages: 1,
+                    total_items: 0
+                }};
+
+                const containers = doc.querySelectorAll('.workshopItem, .workshopItemCollection');
+                result.items = Array.from(containers).map(item => {{
+                    try {{
+                        const link = item.querySelector('a[href*="filedetails"]');
+                        if (!link) return null;
+                        const href = link.href || '';
+                        const idMatch = href.match(/id=(\\d+)/);
+                        if (!idMatch) return null;
+                        const pubfileid = idMatch[1];
+
+                        let title = '';
+                        const titleEl = item.querySelector('.workshopItemTitle');
+                        if (titleEl) title = titleEl.innerText.trim();
+
+                        let previewUrl = '';
+                        const imgEl = item.querySelector('img');
+                        if (imgEl) previewUrl = imgEl.src || imgEl.dataset.src || '';
+
+                        let author = '';
+                        let authorUrl = '';
+                        const authorEl = item.querySelector('.workshopItemAuthorName a');
+                        if (authorEl) {{
+                            author = authorEl.innerText.trim();
+                            authorUrl = authorEl.href || '';
+                        }}
+
+                        return {{
+                            pubfileid,
+                            title: title || ('Wallpaper ' + pubfileid),
+                            preview_url: previewUrl,
+                            author,
+                            author_url: authorUrl
+                        }};
+                    }} catch (e) {{
+                        return null;
+                    }}
+                }}).filter(Boolean);
+
+                const urlParams = new URLSearchParams('{url}'.split('?')[1] || '');
+                result.current_page = parseInt(urlParams.get('p') || '1');
+
+                const pagingInfo = doc.querySelector('.workshopBrowsePagingInfo');
+                if (pagingInfo) {{
+                    const text = pagingInfo.innerText;
+                    const match = text.match(/(\\d+)[\\s\\-–](\\d+)\\s+(?:of|из)\\s+([\\d,\\. ]+)/i);
+                    if (match) {{
+                        const start = parseInt(match[1].replace(/[,\\.\\s]/g, ''));
+                        const end = parseInt(match[2].replace(/[,\\.\\s]/g, ''));
+                        const total = parseInt(match[3].replace(/[,\\.\\s]/g, ''));
+                        result.total_items = total;
+                        const itemsPerPage = end - start + 1;
+                        result.total_pages = Math.ceil(total / itemsPerPage);
+                    }}
+                }}
+
+                if (result.items.length > 0 && result.total_items === 0) {{
+                    const itemsPerPage = 15;
+                    result.total_items = Math.max(result.items.length, result.current_page * itemsPerPage);
+                    result.total_pages = Math.max(result.current_page, Math.ceil(result.total_items / itemsPerPage));
+                }}
+
+                result.current_page = Math.min(result.current_page, result.total_pages);
+                result.total_pages = Math.max(1, result.total_pages);
+
+                window.__workshopPreloadResult = result;
+            }} catch (err) {{
+                window.__workshopPreloadResult = {{ error: err.name === 'AbortError' ? 'Timeout' : err.message }};
+            }}
+
+            window.__workshopPreloadLoading = false;
+        }})();
+        """
+
+        self._page.runJavaScript(js_code)
+        self._poll_preload_result(url, filters, request_id, callback)
+
+    def _poll_preload_result(self, url: str, filters: WorkshopFilters, request_id: int, callback: Optional[Callable[[bool], None]]):
+        if request_id != self._preload_request_id:
+            return
+
+        self._preload_poll_count += 1
+        if self._preload_poll_count > self._max_polls:
+            self._is_preloading = False
+            if callback:
+                callback(False)
+            return
+
+        js = f"""
+        (function() {{
+            if (window.__workshopPreloadRequestId !== {request_id}) {{
+                return {{ cancelled: true }};
+            }}
+            if (window.__workshopPreloadLoading === false) {{
+                const result = window.__workshopPreloadResult;
+                window.__workshopPreloadResult = null;
+                return result;
+            }}
+            return null;
+        }})();
+        """
+        self._page.runJavaScript(js, lambda result: self._check_preload_result(result, url, filters, request_id, callback))
+
+    def _check_preload_result(self, result, url: str, filters: WorkshopFilters, request_id: int, callback: Optional[Callable[[bool], None]]):
+        if request_id != self._preload_request_id:
+            return
+
+        if result is None:
+            QTimer.singleShot(self.POLL_INTERVAL_MS, lambda: self._poll_preload_result(url, filters, request_id, callback))
+        elif isinstance(result, dict) and result.get("cancelled"):
+            self._is_preloading = False
+            if callback:
+                callback(False)
+        elif isinstance(result, dict) and "error" in result:
+            self._is_preloading = False
+            if callback:
+                callback(False)
+        else:
+            self._on_preload_parsed(result, url, filters, callback)
+
+    def _on_preload_parsed(self, result, url: str, filters: WorkshopFilters, callback: Optional[Callable[[bool], None]]):
+        self._is_preloading = False
+
+        if not result or not result.get("items"):
+            if callback:
+                callback(False)
+            return
+
+        items = []
+        for item_data in result.get("items", []):
+            item = WorkshopItem(
+                pubfileid=item_data.get("pubfileid", ""),
+                title=item_data.get("title", ""),
+                preview_url=item_data.get("preview_url", ""),
+                author=item_data.get("author", ""),
+                author_url=item_data.get("author_url", "")
+            )
+            items.append(item)
+            self._cache.set_item(item.pubfileid, item)
+
+        page_data = WorkshopPage(
+            items=items,
+            current_page=result.get("current_page", 1),
+            total_pages=max(1, result.get("total_pages", 1)),
+            total_items=result.get("total_items", 0),
+            filters=filters
+        )
+
+        self._cache.set_page(url, page_data)
+        self.preload_completed.emit(url)
+
+        if callback:
+            callback(True)
 
     def load_item_details(self, pubfileid: str, use_cache: bool = True):
         if use_cache:

@@ -15,7 +15,8 @@ class ConfigManager:
                     "theme": "dark"
                 },
                 "behavior": {
-                    "minimize_on_apply": False
+                    "minimize_on_apply": False,
+                    "preload_next_page": True
                 }
             }
         },
@@ -117,6 +118,12 @@ class ConfigManager:
 
     def set_minimize_on_apply(self, value: bool) -> None:
         self.set("settings.general.behavior.minimize_on_apply", value)
+
+    def get_preload_next_page(self) -> bool:
+        return self.get("settings.general.behavior.preload_next_page", True)
+
+    def set_preload_next_page(self, value: bool) -> None:
+        self.set("settings.general.behavior.preload_next_page", value)
 
     def get_wallpaper_metadata(self, pubfileid: str) -> Optional[Dict]:
         metadata = self.get("wallpaper_metadata", {})

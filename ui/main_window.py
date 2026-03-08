@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, QSize, pyqtSignal, QTimer
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QTabBar, QStackedWidget, QApplication,
+    QLabel, QPushButton, QStackedWidget, QApplication,
     QFrame, QGraphicsDropShadowEffect
 )
 from ui.notifications import MessageBox
@@ -12,6 +12,107 @@ from ui.wallpapers_tab import WallpapersTab
 from ui.dialogs import BatchDownloadDialog, InfoDialog, SettingsPopup
 from resources.icons import get_icon
 from utils.helpers import clear_cache_if_needed
+
+class GlowingTabBar(QWidget):
+    currentChanged = pyqtSignal(int)
+
+    def __init__(self, theme_manager, parent=None):
+        super().__init__(parent)
+        self.theme = theme_manager
+        self._current_index = 0
+        self._tabs = []
+        self._buttons = []
+
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(15, 12, 15, 12)
+        self._layout.setSpacing(8)
+
+    def addTab(self, text: str):
+        index = len(self._tabs)
+        self._tabs.append(text)
+
+        btn = QPushButton(text)
+        btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        btn.setCheckable(True)
+        btn.setChecked(index == self._current_index)
+        btn.clicked.connect(lambda checked, i=index: self._on_tab_clicked(i))
+
+        self._update_button_style(btn, index == self._current_index)
+        self._buttons.append(btn)
+        self._layout.addWidget(btn)
+
+    def _on_tab_clicked(self, index: int):
+        if index != self._current_index:
+            self.setCurrentIndex(index)
+
+    def setCurrentIndex(self, index: int):
+        if 0 <= index < len(self._buttons):
+            old_index = self._current_index
+            self._current_index = index
+
+            for i, btn in enumerate(self._buttons):
+                is_active = (i == index)
+                btn.setChecked(is_active)
+                self._update_button_style(btn, is_active)
+
+            if old_index != index:
+                self.currentChanged.emit(index)
+
+    def currentIndex(self) -> int:
+        return self._current_index
+
+    def _update_button_style(self, btn: QPushButton, is_active: bool):
+        primary = self.theme.get_color('primary')
+        text_primary = self.theme.get_color('text_primary')
+        text_secondary = self.theme.get_color('text_secondary')
+        border = self.theme.get_color('border')
+        bg_tertiary = self.theme.get_color('bg_tertiary')
+
+        if is_active:
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {primary};
+                    color: {text_primary};
+                    border: 2px solid {primary};
+                    border-radius: 20px;
+                    padding: 10px 24px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    min-width: 100px;
+                }}
+                QPushButton:hover {{
+                    background-color: {primary};
+                }}
+            """)
+
+            shadow = QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(25)
+            shadow.setColor(QColor(primary))
+            shadow.setOffset(0, 0)
+            btn.setGraphicsEffect(shadow)
+        else:
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: {text_secondary};
+                    border: 2px solid {border};
+                    border-radius: 20px;
+                    padding: 10px 24px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    min-width: 100px;
+                }}
+                QPushButton:hover {{
+                    background-color: {bg_tertiary};
+                    color: {text_primary};
+                    border-color: {primary};
+                }}
+            """)
+            btn.setGraphicsEffect(None)
+
+    def update_theme(self):
+        for i, btn in enumerate(self._buttons):
+            self._update_button_style(btn, i == self._current_index)
 
 class MainWindow(QMainWindow):
     download_completed = pyqtSignal(str)
@@ -188,20 +289,12 @@ class MainWindow(QMainWindow):
             }}
         """)
         layout = QHBoxLayout(nav_bar)
-        layout.setContentsMargins(20, 10, 20, 10)
-        layout.setSpacing(15)
+        layout.setContentsMargins(5, 0, 15, 0)
+        layout.setSpacing(5)
 
-        self.tab_bar = QTabBar()
-        self.tab_bar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.tab_bar.setDrawBase(False)
+        self.tab_bar = GlowingTabBar(self.theme)
         self.tab_bar.addTab(self.tr.t("tabs.workshop"))
         self.tab_bar.addTab(self.tr.t("tabs.wallpapers"))
-        self.tab_bar.setExpanding(False)
-        self.tab_bar.setStyleSheet(f"""
-            QTabBar {{
-                background-color: {self.theme.get_color('bg_elevated')};
-            }}
-        """)
         layout.addWidget(self.tab_bar)
 
         actions_layout = QHBoxLayout()
@@ -247,7 +340,7 @@ class MainWindow(QMainWindow):
         btn = QPushButton()
         btn.setIcon(get_icon(icon_name))
         btn.setIconSize(QSize(22, 22))
-        btn.setFixedSize(44, 44)
+        btn.setFixedSize(68, 44)
         btn.setToolTip(tooltip)
         btn.setStyleSheet(f"""
             QPushButton {{

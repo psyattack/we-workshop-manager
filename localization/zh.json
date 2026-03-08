@@ -143,6 +143,8 @@
     "language_description": "更改界面语言",
     "behavior": "行为",
     "minimize_description": "应用壁纸后最小化窗口",
+    "preload_next_page": "预加载页面 (BETA)",
+    "preload_description": "在后台预加载下一个创意工坊页面以加快导航速度",
     "tab_general": "常规",
     "account_selection": "账户选择",
     "account_description": "选择账户(用于下载)",
@@ -153,7 +155,7 @@
     "login_description": "输入您的Steam凭据以在创意工坊中进行身份验证"
   },
   "info": {
-    "version": "WE Workshop Manager v1.3.5",
+    "version": "WE Workshop Manager v1.3.7",
     "description": "这款应用程序让您可以轻松地从Steam创意工坊下载和管理Wallpaper Engine壁纸。",
     "developed": "免费开发 ❤️"
   },

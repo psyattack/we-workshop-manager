@@ -634,6 +634,20 @@ class WorkshopTab(QWidget):
         if page_data.items and not self.selected_pubfileid:
             self._select_item(page_data.items[0].pubfileid)
 
+        self._try_preload_next_page()
+
+    def _try_preload_next_page(self):
+        if not self.config.get_preload_next_page():
+            return
+        
+        if not self._current_page_data or not self._current_page_data.filters:
+            return
+        
+        if self.current_page >= self.total_pages:
+            return
+        
+        self.parser.preload_next_page(self._current_page_data.filters)
+
     def _on_item_details_loaded(self, item: WorkshopItem):
         self._is_loading_details = False
         if item.preview_url:
