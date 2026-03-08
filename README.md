@@ -1,6 +1,17 @@
 # WE Workshop Manager
 
 <p align="center">
+  <a href="README.md">🇷🇺 Русский</a> |
+  <a href="docs/README.en.md">🇬🇧 English</a> |
+  <a href="docs/README.de.md">🇩🇪 Deutsch</a> |
+  <a href="docs/README.es.md">🇪🇸 Español</a> |
+  <a href="docs/README.fr.md">🇫🇷 Français</a> |
+  <a href="docs/README.ja.md">🇯🇵 日本語</a> |
+  <a href="docs/README.pt.md">🇧🇷 Português</a> |
+  <a href="docs/README.zh.md">🇨🇳 中文</a>
+</p>
+
+<p align="center">
   <img src="screenshots/screen_main.png" alt="WE Workshop Manager" width="700">
 </p>
 
@@ -30,7 +41,7 @@ WE Workshop Manager — это десктопное приложение на Py
 - 🗂️ Управление установленными обоями (применение, удаление, извлечение .pkg файлов и прочее)
 - 📊 Загрузка обоев по списку ID и\или URL
 - 🎯 Отслеживание статуса загрузки\извлечения обоев
-- 🌍 Русская и английская локализация
+- 🌍 Мультиязычность
 - ⚜️ Темы
 - 🔰 Множество других функций
 

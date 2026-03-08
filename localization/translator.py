@@ -4,8 +4,14 @@ from typing import Dict
 
 class Translator:
     SUPPORTED_LANGUAGES = {
+        'de': 'Deutsch',
         'en': 'English',
-        'ru': 'Русский'
+        'es': 'Español',
+        'fr': 'Français',
+        'ja': '日本語',
+        'pt': 'Português',
+        'ru': 'Русский',
+        'zh': '中文'
     }
     
     def __init__(self, lang: str = 'en'):

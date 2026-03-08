@@ -693,8 +693,13 @@ class SettingsPopup(CustomDialog):
 
     def _create_language_combo(self):
         combo = QComboBox()
-        combo.addItems(["English", "Русский"])
-        combo.setCurrentIndex(0 if self.config.get_language() == "en" else 1)
+        languages = list(self.tr.SUPPORTED_LANGUAGES.values())
+        combo.addItems(languages)
+        
+        current_lang = self.config.get_language()
+        lang_codes = list(self.tr.SUPPORTED_LANGUAGES.keys())
+        current_index = lang_codes.index(current_lang) if current_lang in lang_codes else 0
+        combo.setCurrentIndex(current_index)
         combo.currentIndexChanged.connect(self._on_language_changed)
         combo.setStyleSheet(self._combo_style())
         return combo
@@ -851,7 +856,8 @@ class SettingsPopup(CustomDialog):
             restart_application()
 
     def _on_language_changed(self, index):
-        lang = "en" if index == 0 else "ru"
+        lang_codes = list(self.tr.SUPPORTED_LANGUAGES.keys())
+        lang = lang_codes[index] if index < len(lang_codes) else "en"
         self.config.set_language(lang)
         self.tr.set_language(lang)
 

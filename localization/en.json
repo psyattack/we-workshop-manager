@@ -25,9 +25,11 @@
     "search": "Search",
     "refresh": "Refresh",
     "translate_description": "Translate description",
-    "show_original": "Show original"
+    "show_original": "Show original",
+    "sort_order": "Toggle sort order"
   },
   "labels": {
+    "wallpapers_filtered": "Showing {filtered} of {total} wallpapers",
     "wallpapers_count": "Wallpapers: {count}",
     "total_size": "Total size: {size}",
     "sort_date": "Sort by Date",
@@ -151,7 +153,7 @@
     "login_description": "Enter your Steam credentials for authentication in the Workshop"
   },
   "info": {
-    "version": "WE Workshop Manager v1.3.1",
+    "version": "WE Workshop Manager v1.3.3",
     "description": "This application allows you to easily download and manage Wallpaper Engine wallpapers from Steam Workshop.",
     "developed": "Developed with ❤️ free."
   },
@@ -159,6 +161,14 @@
     "incompatible_items": "Some items cannot be included. However, you can find them by checking the box here."
   },
   "filters": {
+    "local_sort": {
+      "install_date": "Install Date",
+      "name": "Name", 
+      "rating": "Rating",
+      "size": "Size",
+      "posted_date": "Posted Date",
+      "updated_date": "Updated Date"
+    },
     "sort": {
       "trend": "Popular",
       "mostrecent": "Most Recent",

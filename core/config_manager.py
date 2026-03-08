@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Dict
 
 class ConfigManager:
     DEFAULT_CONFIG = {
@@ -8,7 +8,8 @@ class ConfigManager:
         "account_number": 4,
         "theme": "dark",
         "language": "en",
-        "minimize_on_apply": False
+        "minimize_on_apply": False,
+        "wallpaper_metadata": {}
     }
     
     def __init__(self, config_path: str = "config.json"):
@@ -22,7 +23,6 @@ class ConfigManager:
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
-
                 config = self.DEFAULT_CONFIG.copy()
                 config.update(loaded)
                 return config
@@ -94,3 +94,24 @@ class ConfigManager:
     
     def set_minimize_on_apply(self, value: bool) -> None:
         self.set("minimize_on_apply", value)
+    
+    def get_wallpaper_metadata(self, pubfileid: str) -> Optional[Dict]:
+        metadata = self.get("wallpaper_metadata", {})
+        return metadata.get(pubfileid)
+    
+    def set_wallpaper_metadata(self, pubfileid: str, data: Dict) -> None:
+        metadata = self.get("wallpaper_metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        metadata[pubfileid] = data
+        self.set("wallpaper_metadata", metadata)
+    
+    def remove_wallpaper_metadata(self, pubfileid: str) -> None:
+        metadata = self.get("wallpaper_metadata", {})
+        if isinstance(metadata, dict) and pubfileid in metadata:
+            del metadata[pubfileid]
+            self.set("wallpaper_metadata", metadata)
+    
+    def get_all_wallpaper_metadata(self) -> Dict[str, Dict]:
+        metadata = self.get("wallpaper_metadata", {})
+        return metadata if isinstance(metadata, dict) else {}

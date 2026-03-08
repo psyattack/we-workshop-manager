@@ -25,9 +25,11 @@
     "search": "Поиск",
     "refresh": "Обновить",
     "translate_description": "Перевести описание",
-    "show_original": "Показать оригинал"
+    "show_original": "Показать оригинал",
+    "sort_order": "Переключить порядок сортировки"
   },
   "labels": {
+    "wallpapers_filtered": "Показано {filtered} из {total} обоев",
     "wallpapers_count": "Обоев: {count}",
     "total_size": "Общий размер: {size}",
     "sort_date": "По дате",
@@ -151,7 +153,7 @@
     "login_description": "Введите ваши учётные данные Steam для аутентификации в Workshop"
   },
   "info": {
-    "version": "WE Workshop Manager v1.3.1",
+    "version": "WE Workshop Manager v1.3.3",
     "description": "Это приложение позволяет легко загружать и управлять обоями Wallpaper Engine из Steam Мастерской.",
     "developed": "Разработано с ❤️ бесплатно."
   },
@@ -159,6 +161,14 @@
     "incompatible_items": "Некоторые элементы не могут быть включены. Однако вы можете найти их, установив этот флажок."
   },
   "filters": {
+    "local_sort": {
+      "install_date": "Дата установки",
+      "name": "Имя",
+      "rating": "Рейтинг",
+      "size": "Размер",
+      "posted_date": "Дата публикации",
+      "updated_date": "Дата обновления"
+    },
     "sort": {
       "trend": "Популярные",
       "mostrecent": "Недавние",

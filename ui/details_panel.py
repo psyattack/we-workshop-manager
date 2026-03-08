@@ -286,6 +286,77 @@ class DetailsPanel(QWidget):
         if not self._try_copy_from_grid_item(item.pubfileid):
             self._load_remote_preview(item.preview_url)
 
+        self._save_workshop_metadata(item)
+
+    def _save_workshop_metadata(self, item):
+        if not self.config or not item.pubfileid:
+            return
+        
+        rating = 0
+        rating_star_file = getattr(item, 'rating_star_file', '')
+        if rating_star_file:
+            rating_map = {
+                "5-star_large": 5,
+                "4-star_large": 4,
+                "3-star_large": 3,
+                "2-star_large": 2,
+                "1-star_large": 1,
+            }
+            rating = rating_map.get(rating_star_file, 0)
+        
+        posted_timestamp = 0
+        updated_timestamp = 0
+        
+        if item.posted_date:
+            posted_timestamp = self._parse_date_to_timestamp(item.posted_date)
+        if item.updated_date:
+            updated_timestamp = self._parse_date_to_timestamp(item.updated_date)
+        
+        metadata = {
+            "title": item.title or item.pubfileid,
+            "tags": item.tags or {},
+            "rating": rating,
+            "num_ratings": getattr(item, 'num_ratings', ''),
+            "rating_star_file": rating_star_file,
+            "file_size": item.file_size or "",
+            "posted_date": posted_timestamp,
+            "posted_date_str": item.posted_date or "",
+            "updated_date": updated_timestamp,
+            "updated_date_str": item.updated_date or "",
+            "author": item.author or "",
+            "description": item.description or "",
+            "preview_url": item.preview_url or "",
+        }
+        
+        self.config.set_wallpaper_metadata(item.pubfileid, metadata)
+
+    def _parse_date_to_timestamp(self, date_str: str) -> int:
+        import time
+        from datetime import datetime
+        
+        if not date_str:
+            return 0
+        
+        formats = [
+            "%d %b, %Y @ %I:%M%p",
+            "%d %b @ %I:%M%p",
+            "%b %d, %Y @ %I:%M%p",
+            "%b %d @ %I:%M%p",
+            "%Y-%m-%d",
+            "%d.%m.%Y",
+        ]
+        
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(date_str.strip(), fmt)
+                if dt.year == 1900:
+                    dt = dt.replace(year=datetime.now().year)
+                return int(dt.timestamp())
+            except ValueError:
+                continue
+        
+        return 0
+
     def refresh_after_state_change(self):
         if not self.current_pubfileid:
             return
@@ -682,16 +753,72 @@ class DetailsPanel(QWidget):
     def _setup_installed_details(self):
         self._clear_details()
 
-        size_bytes = get_directory_size(self.folder_path)
-        self._add_detail_label(self.tr.t("labels.size", size=human_readable_size(size_bytes)), "📦")
+        metadata = None
+        if self.config:
+            metadata = self.config.get_wallpaper_metadata(self.current_pubfileid)
 
-        mtime = get_folder_mtime(self.folder_path)
-        self._add_detail_label(self.tr.t("labels.installed", date=format_timestamp(mtime)), "📅")
+        if metadata:
+            rating_star_file = metadata.get('rating_star_file', '')
+            num_ratings = metadata.get('num_ratings', '')
+            
+            if rating_star_file:
+                stars_text = self._star_file_to_text(rating_star_file)
+                if stars_text:
+                    count_part = f"  ({num_ratings})" if num_ratings else ""
+                    rating_label = QLabel(
+                        f'<span style="color: {self.theme.get_color("text_secondary")};">✨ {self.tr.t("labels.rating")}&nbsp;&nbsp;</span>'
+                        f'<span style="color: #f5c518;">{stars_text}{count_part}</span>'
+                    )
+                    rating_label.setStyleSheet(
+                        "font-size: 14px; background: transparent; border: none;"
+                    )
+                    self.details_layout.addWidget(rating_label)
 
-        self._add_separator()
+            size_bytes = get_directory_size(self.folder_path)
+            self._add_detail_label(self.tr.t("labels.size", size=human_readable_size(size_bytes)), "📦")
 
-        description = self._project_data.get("description", "")
-        self._add_description_section(description)
+            if metadata.get('posted_date_str'):
+                self._add_detail_label(self.tr.t("labels.posted", date=metadata['posted_date_str']), "📅")
+            if metadata.get('updated_date_str'):
+                self._add_detail_label(self.tr.t("labels.updated", date=metadata['updated_date_str']), "🔄")
+
+            mtime = get_folder_mtime(self.folder_path)
+            self._add_detail_label(self.tr.t("labels.installed", date=format_timestamp(mtime)), "📅")
+
+            if metadata.get('author'):
+                self._add_detail_label(self.tr.t("labels.author", author=metadata['author']), "👤")
+
+            tags = metadata.get('tags', {})
+            if tags:
+                self._add_separator()
+                self._add_section_title(self.tr.t("labels.tags"))
+                for key, value in tags.items():
+                    translated_key = self._translate_tag_key(key)
+                    translated_value = self._translate_tag_value(key, value) if not isinstance(value, bool) else ""
+                    clean_key = translated_key.rstrip(':')
+                    if translated_value:
+                        tag_text = f"• {clean_key}: {translated_value}"
+                    else:
+                        tag_text = f"• {clean_key}"
+                    tag_label = QLabel(tag_text)
+                    tag_label.setStyleSheet(f"""
+                        color: {self.theme.get_color('text_primary')};
+                        font-size: 13px;
+                        background: transparent;
+                        border: none;
+                    """)
+                    tag_label.setWordWrap(True)
+                    self.details_layout.addWidget(tag_label)
+
+            description = metadata.get('description', '') or self._project_data.get("description", "")
+            if description and description.strip():
+                self._add_separator()
+                self._add_description_section(description)
+        else:
+            description = self._project_data.get("description", "")
+            if description and description.strip():
+                self._add_separator()
+                self._add_description_section(description)
 
         self.details_layout.addStretch()
 
@@ -960,6 +1087,10 @@ class DetailsPanel(QWidget):
                 folder = Path(folder_to_delete)
                 if folder.exists():
                     shutil.rmtree(folder)
+                
+                if self.config:
+                    self.config.remove_wallpaper_metadata(pubfileid)
+                
                 self._show_notification(self.tr.t("messages.wallpaper_deleted"))
 
                 if hasattr(main_window, 'workshop_tab'):
