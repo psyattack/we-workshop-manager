@@ -34,7 +34,7 @@ class DownloadManager(QObject):
         output_dir = self.we_directory / "projects" / "myprojects" / pubfileid
         
         command = [
-            "Plugins/DepotDownloaderMod/DepotDownloaderMod.exe",
+            "plugins/DepotDownloaderMod/DepotDownloaderMod.exe",
             "-app", "431960",
             "-pubfile", pubfileid,
             "-verify-all",
@@ -130,7 +130,7 @@ class DownloadManager(QObject):
         if not pkg_file:
             return False
         
-        repkg_exe = Path("Plugins/RePKG/RePKG.exe")
+        repkg_exe = Path("plugins/RePKG/RePKG.exe")
         if not repkg_exe.exists():
             return False
         

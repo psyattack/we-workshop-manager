@@ -36,6 +36,7 @@
 WE Workshop Manager é um aplicativo de desktop Python/PyQt6 que permite baixar, instalar e gerenciar facilmente wallpapers do Steam Workshop para Wallpaper Engine **sem precisar executar o cliente Steam**.
 
 ### <strong>Desde a versão 1.3.7, as páginas do Workshop carregam mais rápido que no navegador com o novo recurso Preload Next Page (BETA)!</strong>
+### <strong>Em desenvolvimento 2.0 - migração para Tauri (React) + Rust ou PyWebView. UI mais fresca, mais rápido, mais compacto.</strong>
 
 ### 🔑 Principais recursos:
 
@@ -64,6 +65,14 @@ WE Workshop Manager é um aplicativo de desktop Python/PyQt6 que permite baixar,
 ---
 
 ## 🚀 Instalação
+
+> [!IMPORTANT]
+> **Para executar a partir do código-fonte (Opção 2):**
+> - Instale [Python 3.10+](https://www.python.org/downloads) (testado no Python 3.14.2)
+> - Instale [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) ou [.NET 9](https://dotnet.microsoft.com/download/dotnet/9.0/runtime) Desktop Runtime
+>
+> **Para versão embalada (Opção 1):**
+> - Apenas o .NET Runtime mencionado acima
 
 ### 📦 Opção 1: Versão empacotada com PyInstaller
 
@@ -96,9 +105,8 @@ pip install -r requirements.txt
 
 | Componente | Onde colocar |
 |-------------|----------------|
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `Plugins/DepotDownloaderMod/` |
-| [RePKG](https://github.com/notscuffed/repkg/releases) | `Plugins/RePKG/` |
-| [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime) | Instalar globalmente |
+| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `plugins/DepotDownloaderMod/` |
+| [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
 
 #### 4. Executar o aplicativo
 
@@ -146,6 +154,8 @@ Este projeto está sob a licença **[MIT](LICENSE)**.
 
 - [ ] Busca difere parcialmente da versão do site
 - [ ] Retorno incorreto do estado da janela após minimizar
+- [ ] Diálogos brancos ao limpar filtros
+- [ ] PyInstaller --onefile quebra reinicialização, se compilar do código-fonte compile em --onedir (~500mb, então não upado no release)
 
 ---
 
@@ -157,7 +167,7 @@ Este projeto está sob a licença **[MIT](LICENSE)**.
 - [ ] Bandeja + modo silencioso
 - [ ] Funções originais do WE (Editor de presets, criar playlists, perfis, etc.)
 - [ ] Atualizações automáticas
-- [ ] Otimização da interface para diferentes tamanhos e formatos de tela
+- [ ] Otimização da interface para diferentes tamanhos e formatos de tela + capacidade de redimensionamento de janela
 
 > Se você tiver problemas ou sugestões de melhoria — crie uma [Issue](https://github.com/psyattack/we-workshop-manager/issues) no repositório.
 

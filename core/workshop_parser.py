@@ -139,7 +139,7 @@ class WorkshopParser(QObject):
             self._container.setFixedSize(1, 1)
             self._container.hide()
 
-        profile_path = Path.cwd() / "Cookies" / self._profile_name
+        profile_path = Path.cwd() / "cookies" / self._profile_name
         self._profile = QWebEngineProfile(self._profile_name, self._container)
         self._profile.setPersistentStoragePath(str(profile_path))
         self._profile.setCachePath(str(profile_path / "cache"))

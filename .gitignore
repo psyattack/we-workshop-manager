@@ -59,7 +59,7 @@ Desktop.ini
 *.tmp
 *.temp
 logs/
-Cookies/
+cookies/
 
 # Application runtime files
 *.exe
@@ -73,8 +73,7 @@ notes.txt
 assets/
 
 # Large binaries
-Packages/
-Plugins/
+plugins/
 
 # Backup files
 *~

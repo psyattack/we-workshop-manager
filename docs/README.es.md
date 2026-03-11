@@ -36,6 +36,7 @@
 WE Workshop Manager es una aplicación de escritorio Python/PyQt6 que te permite descargar, instalar y gestionar fácilmente fondos de pantalla del Steam Workshop para Wallpaper Engine **sin necesidad de ejecutar el cliente de Steam**.
 
 ### <strong>¡Desde la versión 1.3.7, las páginas de Workshop se cargan más rápido que en el navegador con la nueva función Preload Next Page (BETA)!</strong>
+### <strong>En desarrollo 2.0 - migración a Tauri (React) + Rust o PyWebView. UI más fresca, más rápido, más compacto.</strong>
 
 ### 🔑 Características principales:
 
@@ -64,6 +65,14 @@ WE Workshop Manager es una aplicación de escritorio Python/PyQt6 que te permite
 ---
 
 ## 🚀 Instalación
+
+> [!IMPORTANT]
+> **Para ejecutar desde el código fuente (Opción 2):**
+> - Instale [Python 3.10+](https://www.python.org/downloads) (probado en Python 3.14.2)
+> - Instale [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) o [.NET 9](https://dotnet.microsoft.com/download/dotnet/9.0/runtime) Desktop Runtime
+>
+> **Para la versión empaquetada (Opción 1):**
+> - Solo el .NET Runtime mencionado arriba
 
 ### 📦 Opción 1: Versión empaquetada con PyInstaller
 
@@ -96,9 +105,8 @@ pip install -r requirements.txt
 
 | Componente | Dónde colocar |
 |-------------|----------------|
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `Plugins/DepotDownloaderMod/` |
-| [RePKG](https://github.com/notscuffed/repkg/releases) | `Plugins/RePKG/` |
-| [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime) | Instalar globalmente |
+| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `plugins/DepotDownloaderMod/` |
+| [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
 
 #### 4. Ejecutar la aplicación
 
@@ -117,8 +125,7 @@ we-workshop-manager/
 ├── localization/          # Archivos de localización
 ├── resources/             # Recursos
 ├── utils/                 # Utilidades
-├── Plugins/               # Utilidades de DepotDownloaderMod y RePKG (descargar por separado)
-├── Packages/              # Instalador de .NET (instalar por separado)
+├── plugins/               # Utilidades de DepotDownloaderMod y RePKG (descargar por separado)
 ├── app.py                 # Punto de entrada
 └── requirements.txt       # Dependencias de Python
 ```
@@ -146,6 +153,8 @@ Este proyecto está bajo la licencia **[MIT](LICENSE)**.
 
 - [ ] La búsqueda difiere parcialmente de la versión del sitio web
 - [ ] Retorno incorrecto del estado de la ventana después de minimizar
+- [ ] Diálogos blancos al limpiar filtros
+- [ ] PyInstaller --onefile rompe el reinicio, si compila desde el código fuente compile en --onedir (~500mb, así que no subido al release)
 
 ---
 
@@ -157,7 +166,7 @@ Este proyecto está bajo la licencia **[MIT](LICENSE)**.
 - [ ] Bandeja + modo silencioso
 - [ ] Funciones originales de WE (Editor de presets, crear listas de reproducción, perfiles, etc.)
 - [ ] Actualizaciones automáticas
-- [ ] Optimización de la interfaz para diferentes tamaños y formatos de pantalla
+- [ ] Optimización de la interfaz para diferentes tamaños y formatos de pantalla + capacidad de cambiar tamaño de ventana
 
 > Si tienes problemas o sugerencias de mejora — crea un [Issue](https://github.com/psyattack/we-workshop-manager/issues) en el repositorio.
 

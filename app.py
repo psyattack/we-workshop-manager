@@ -19,7 +19,6 @@ except:
         sys.exit()
 # ----------------------------------
 
-import subprocess
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication, QFileDialog
 from ui.notifications import MessageBox
@@ -31,49 +30,6 @@ from core.theme_manager import ThemeManager
 from localization.translator import Translator
 from ui.main_window import MainWindow
 from resources.icons import get_icon
-
-def check_dotnet_runtime() -> bool:
-    try:
-        result = subprocess.run(
-            ["dotnet", "--list-runtimes"],
-            capture_output=True,
-            text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW
-        )
-        return "Microsoft.WindowsDesktop.App 9" in result.stdout
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        return False
-
-def install_dotnet_runtime(translator) -> bool:
-    packages_dir = Path("Packages")
-    installer_path = None
-    
-    if packages_dir.exists():
-        installers = list(packages_dir.glob("windowsdesktop-runtime-9.*-win-x64.exe"))
-        if installers:
-            installer_path = installers[0]
-    
-    if not installer_path or not installer_path.exists():
-        MessageBox.warning(
-            None,
-            translator.t("dialog.warning"),
-            translator.t("messages.dotnet_installation_failed")
-        )
-        return False
-    
-    try:
-        subprocess.Popen(
-            [str(installer_path)],
-            creationflags=subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-        )
-        return True
-    except Exception as e:
-        MessageBox.critical(
-            None,
-            translator.t("dialog.error"),
-            translator.t("messages.failed_start_installer", error=str(e))
-        )
-        return False
 
 def setup_wallpaper_engine(config: ConfigManager, translator) -> str:
     we_directory = config.get_directory()
@@ -113,42 +69,6 @@ def main():
     translator = Translator(config.get_language())
     theme_manager = ThemeManager()
     
-    # .NET Runtime
-    if not check_dotnet_runtime():
-        msg_box = MessageBox(
-            None,
-            translator.t("dialog.dotnet_required"),
-            translator.t("messages.dotnet_required"),
-            MessageBox.Icon.Warning
-        )
-        msg_box.setInformativeText(translator.t("messages.dotnet_install_now"))
-        msg_box.setStandardButtons(MessageBox.StandardButton.Yes | MessageBox.StandardButton.No)
-        msg_box.setDefaultButton(MessageBox.StandardButton.Yes)
-        
-        response = msg_box.exec()
-        
-        if response == MessageBox.StandardButton.Yes:
-            if install_dotnet_runtime(translator):
-                MessageBox.information(
-                    None,
-                    translator.t("dialog.installation_started"),
-                    translator.t("messages.dotnet_installation_started")
-                )
-            else:
-                MessageBox.warning(
-                    None,
-                    translator.t("dialog.warning"),
-                    translator.t("messages.dotnet_warning")
-                )
-                sys.exit(0)
-        else:
-            MessageBox.information(
-                None,
-                translator.t("dialog.warning"),
-                translator.t("messages.dotnet_warning")
-            )
-            sys.exit(0)
-
     we_directory = setup_wallpaper_engine(config, translator)
     
     # Inits

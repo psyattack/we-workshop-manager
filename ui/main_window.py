@@ -718,7 +718,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'workshop_tab'):
             self.workshop_tab.cleanup()
 
-        clear_cache_if_needed(Path("Cookies/Cache"), 200)
+        clear_cache_if_needed(Path("cookies/Cache"), 200)
 
         self.close()
 

@@ -36,6 +36,7 @@
 WE Workshop Manager — это десктопное приложение на Python/PyQt6, которое позволяет легко загружать, устанавливать и управлять обоями из Steam Workshop для Wallpaper Engine **без необходимости запускать клиент Steam**.
 
 ### <strong>С версии 1.3.7 страницы в Workshop загружаюстся даже быстрее чем в браузере с новой функцией Preload Next Page (BETA)!</strong>
+### <strong>В разработке 2.0 - миграция на Tauri (React) + Rust или PyWebView. Свежее UI, быстрее, компактнее.</strong>
 
 ### 🔑 Основные возможности:
 
@@ -65,6 +66,14 @@ WE Workshop Manager — это десктопное приложение на Py
 
 ## 🚀 Установка
 
+> [!IMPORTANT]
+> **Для запуска из исходников (Вариант 2):**
+> - Установите [Python 3.10+](https://www.python.org/downloads) (тестировалось на Python 3.14.2)
+> - Установите [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) или [.NET 9](https://dotnet.microsoft.com/download/dotnet/9.0/runtime) Desktop Runtime
+>
+> **Для упакованной версии (Вариант 1):**
+> - Только .NET Runtime указанный выше
+
 ### 📦 Вариант 1: Упакованная через PyInstaller версия
 
 Скачайте последнюю версию из раздела **[Releases](https://github.com/psyattack/we-workshop-manager/releases)**  
@@ -73,11 +82,6 @@ WE Workshop Manager — это десктопное приложение на Py
 ---
 
 ### 💻 Вариант 2: Запуск из исходного кода
-
-#### 0. Первоначальная настройка
-
-Установите Python версии 3.10 или выше с [оффициального сайта](https://www.python.org/downloads), если ещё не сделали это  
-Приложение тестировалось на версии Python 3.14.2
 
 #### 1. Клонирование репозитория
 
@@ -96,9 +100,8 @@ pip install -r requirements.txt
 
 | Компонент | Куда поместить |
 |-------------|----------------|
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `Plugins/DepotDownloaderMod/` |
-| [RePKG](https://github.com/notscuffed/repkg/releases) | `Plugins/RePKG/` |
-| [.NET 9 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0/runtime) | Установите глобально |
+| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `plugins/DepotDownloaderMod/` |
+| [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
 
 #### 4. Запуск приложения
 
@@ -117,8 +120,7 @@ we-workshop-manager/
 ├── localization/          # Файлы локализации
 ├── resources/             # Ресурсы
 ├── utils/                 # Вспомогательные утилиты
-├── Plugins/               # Утилиты DepotDownloaderMod и RePKG (загружать отдельно)
-├── Packages/              # Установщик .NET (устанавливать отдельно)
+├── plugins/               # Утилиты DepotDownloaderMod и RePKG (загружать отдельно)
 ├── app.py                 # Точка входа
 └── requirements.txt       # Зависимости Python
 ```
@@ -147,6 +149,7 @@ we-workshop-manager/
 - [ ] Поиск частично отличается от версии на сайте
 - [ ] Некорректное возвращение состояния окна после предварительного сворачивания
 - [ ] Белые диалоговые окна при очистке фильтров
+- [ ] PyInstaller --onefile ломает перезапуск, если будете собирать из исходников собирайте в --onedir (~500мб, поэтому не заливаю в релиз)
 
 ---
 
@@ -158,7 +161,7 @@ we-workshop-manager/
 - [ ] Трей + silent mode
 - [ ] Ряд оригинальных функций WE (Редактор пресетов, создание плейлистов, профили и тд.)
 - [ ] Автоматическое обновление
-- [ ] Оптимизация интерфейса под разные размеры и форматы экранов
+- [ ] Оптимизация интерфейса под разные размеры и форматы экранов + возможность resize окна
 
 > Если у вас возникли проблемы или есть предложения по улучшению — создайте [Issue](https://github.com/psyattack/we-workshop-manager/issues) в репозитории.
 
