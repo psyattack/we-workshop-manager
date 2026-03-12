@@ -156,7 +156,7 @@
     "tab_advanced": "Erweitert",
     "login_description": "Geben Sie Ihre Steam-Anmeldedaten für die Werkstatt-Authentifizierung ein",
     "debug": "Debug",
-    "debug_mode": "🔧 Debug-Modus",
+    "debug_mode": "Debug-Modus",
     "debug_description": "Debug-Modus für Webview-Tests aktivieren",
     "show_id_section": "ID-Abschnitt anzeigen",
     "show_id_description": "ID-Abschnitt in der Detailanzeige ein- oder ausblenden"

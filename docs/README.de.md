@@ -1,4 +1,4 @@
-# WEave (ehemals WE Workshop Manager)
+# WEave
 
 <p align="center">
   <a href="README.md">🇷🇺 Русский</a> |
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <strong>Teilweise Demonstration der Benutzeroberfläche</strong>
+  <strong>Hauptschnittstelle-Demonstration</strong>
 </p>
 
 <p align="center">
@@ -35,8 +35,7 @@
 
 WEave (ehemals WE Workshop Manager) ist eine Python/PyQt6 Desktop-Anwendung, die es Ihnen ermöglicht, Wallpaper aus dem Steam Workshop für Wallpaper Engine einfach herunterzuladen, zu installieren und zu verwalten **ohne den Steam-Client starten zu müssen**.
 
-### <strong>Seit Version 1.3.7 laden Workshop-Seiten mit der neuen Funktion Preload Next Page (BETA) sogar schneller als im Browser!</strong>
-### <strong>In Entwicklung 2.0 - Migration auf Tauri (React) + Rust oder PyWebView. Frisches UI, schneller, kompakter.</strong>
+### <strong>In Entwicklung 2.0 - Migration auf Tauri (React) + Rust oder PyWebView</strong>
 
 ### 🔑 Hauptfunktionen:
 
@@ -44,23 +43,21 @@ WEave (ehemals WE Workshop Manager) ist eine Python/PyQt6 Desktop-Anwendung, die
 - 🗂️ Installierte Wallpaper verwalten (anwenden, entfernen, .pkg-Dateien extrahieren, etc.)
 - 📊 Wallpaper nach Liste von IDs und/oder URLs herunterladen
 - 🎯 Download-/Extraktionsstatus von Wallpaper verfolgen
+- 🔧 Schnelles Laden von Seiten
 - 🌍 Mehrsprachig
 - ⚜️ Themes
 - 🔰 Viele weitere Funktionen
 
 > [!NOTE]  
 > - Wallpaper werden in den Standard-WE-Ordner heruntergeladen, **ähnlich einer normalen Installation**  
-> - Die erste Anmeldung kann lange dauern, bitte warten Sie, während Cookies erstellt werden  
-> - Die Workshop-Download-Geschwindigkeit hängt von Ihrer Internetverbindungsgeschwindigkeit ab, sowie von der Verfügbarkeit der Steam-Server (Wenn das Herunterladen zu lange dauert - melden Sie sich erneut an oder klicken Sie auf die Schaltfläche "Aktualisieren")
+> - Die erste Anmeldung kann lange dauern, bitte warten Sie, während das Systemkonto angemeldet wird  
+> - Die Workshop-Download-Geschwindigkeit hängt von Ihrer Internetverbindungsgeschwindigkeit ab, sowie von der Verfügbarkeit der Steam-Server
+> - Wenn die App "bestimmte" Inhalte im Workshop nicht anzeigt, bedeutet dies, dass das Systemkonto aus irgendeinem Grund nicht angemeldet wurde. Sie müssen sich in den App-Einstellungen (Allgemein) in ein beliebiges Steam-Konto (ohne Steam Guard und mit den gewünschten Inhaltseinstellungen) anmelden.
+> - Wenn Wallpaper nicht geladen werden - versuchen Sie, ein anderes Konto aus der Liste in den Einstellungen (Konto) auszuwählen.
 
 > [!WARNING]  
 > - Die App verwendet **öffentliche Konten** zum Herunterladen aus dem Workshop  
 > - Die App **modifiziert nicht** den originalen Wallpaper Engine- oder Steam-Client  
-> - Der Autor **unterstützt nicht** die Verwendung dieser Software für finanzielle Gewinne, verwenden Sie sie nur als Alternative mit zusätzlichen Funktionen oder wenn Sie aufgrund regionaler Einschränkungen keine lizenzierte Version erwerben können :)  
-
-> [!TIP]   
-> - Wenn die App jemals die Anzeige von "bestimmten" Inhalten im Workshop verweigert, bedeutet dies, dass das Systemkonto aus irgendeinem Grund nicht angemeldet wurde. Sie müssen sich in den App-Einstellungen in ein beliebiges Steam-Konto (ohne Steam Guard und mit den gewünschten Inhaltseinstellungen) anmelden.  
-> - Ähnlich beim Herunterladen, wenn Wallpaper nicht geladen werden - versuchen Sie, ein anderes Konto aus der Liste auszuwählen.
 
 ---
 
@@ -106,7 +103,7 @@ pip install -r requirements.txt
 #### 4. Führen Sie die Anwendung aus
 
 ```bash
-python app.py
+python main.py
 ```
 
 ---
@@ -115,13 +112,16 @@ python app.py
 
 ```
 we-workshop-manager/
-├── core/                  # Kernlogik
-├── ui/                    # Benutzeroberfläche
-├── localization/          # Lokalisierungsdateien
-├── utils/                 # Hilfsprogramme
-├── plugins/               # DepotDownloaderMod und RePKG Utilities (separat herunterladen)
-├── app.py                 # Einstiegspunkt
-└── requirements.txt       # Python-Abhängigkeiten
+├── bootstrap/              # Anwendungsinitialisierung
+├── domain/                 # Modelle und Datenstrukturen
+├── services/               # Anwendungsdienste
+├── infrastructure/         # Integrationen und externe Logik
+├── ui/                     # Benutzeroberfläche
+├── shared/                 # Gemeinsame Hilfsprogramme
+├── localization/           # Übersetzungen
+├── plugins/                # Externe Werkzeuge (separat herunterladen)
+├── main.py                 # Einstiegspunkt
+└── requirements.txt        # Python-Abhängigkeiten
 ```
 
 ---
@@ -147,7 +147,7 @@ Dieses Projekt ist unter der **[MIT](LICENSE)**-Lizenz lizenziert.
 
 - [ ] Falsches Fensterzustand-Rückgabe nach dem Vor-Minimieren
 - [x] Weiße Dialoge beim Löschen von Filtern
-- [ ] PyInstaller --onefile bricht Neustart, beim Bauen aus Quellen in --onedir bauen (~500mb, daher nicht im Release)
+- [ ] PyInstaller --onefile bricht Neustart, beim Bauen aus Quellen in --onedir bauen (~500mb)
 
 ---
 

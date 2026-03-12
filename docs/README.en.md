@@ -1,4 +1,4 @@
-# WEave (formerly WE Workshop Manager)
+# WEave
 
 <p align="center">
   <a href="README.md">🇷🇺 Русский</a> |
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <strong>Partial interface demonstration</strong>
+  <strong>Main interface demonstration</strong>
 </p>
 
 <p align="center">
@@ -35,8 +35,7 @@
 
 WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that allows you to easily download, install, and manage wallpapers from Steam Workshop for Wallpaper Engine **without needing to run the Steam client**.
 
-### <strong>Since version 1.3.7, Workshop pages load even faster than in the browser with the new Preload Next Page (BETA) feature!</strong>
-### <strong>In development 2.0 - migration to Tauri (React) + Rust or PyWebView. Fresh UI, faster, more compact.</strong>
+### <strong>In development 2.0 - migration to Tauri (React) + Rust or PyWebView</strong>
 
 ### 🔑 Key Features:
 
@@ -44,23 +43,21 @@ WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that 
 - 🗂️ Manage installed wallpapers (apply, remove, extract .pkg files, etc.)
 - 📊 Download wallpapers by list of IDs and/or URLs
 - 🎯 Track download/extraction status of wallpapers
+- 🔧 Fast page loading
 - 🌍 Multilingual support
 - ⚜️ Themes
 - 🔰 Many other features
 
 > [!NOTE]  
 > - Wallpapers are downloaded to the default WE folder, **similar to a regular installation**  
-> - The first login may take a while, please wait while Cookies are being created  
-> - Workshop download speed depends on your internet connection speed, as well as Steam server availability (If it takes too long to download - log in again or click the Refresh button)
+> - The first login may take a while, please wait while the system account is logging in
+> - Workshop download speed depends on your internet connection speed, as well as Steam server availability
+> - If the app doesn't show "specific" content in Workshop, it means the system account hasn't logged in for some reason. You need to log into any Steam account (without Steam Guard and with the content settings you need) in the app settings (General).
+> - If wallpapers don't load - try selecting another account from the list in settings (Account).
 
 > [!WARNING]  
 > - The app uses **public accounts** to download from the workshop  
 > - The app **does not modify** the original Wallpaper Engine or Steam client  
-> - The author **does not support** using this software for monetary gain, use it only as an alternative with additional functionality or if you cannot purchase a licensed version due to regional restrictions :)  
-
-> [!TIP]   
-> - If ever the app refuses to show "specific" content in the workshop, it means the system account hasn't logged in for some reason. You need to log into any steam account (without steam guard and with the content settings you need) in the app settings.  
-> - Similarly with downloading, if wallpapers don't load - try selecting another account from the list.
 
 ---
 
@@ -106,7 +103,7 @@ pip install -r requirements.txt
 #### 4. Run the application
 
 ```bash
-python app.py
+python main.py
 ```
 
 ---
@@ -115,13 +112,16 @@ python app.py
 
 ```
 we-workshop-manager/
-├── core/                  # Core logic
-├── ui/                    # Interface
-├── localization/          # Localization files
-├── utils/                 # Utility scripts
-├── plugins/               # DepotDownloaderMod and RePKG utilities (download separately)
-├── app.py                 # Entry point
-└── requirements.txt       # Python dependencies
+├── bootstrap/              # Application initialization
+├── domain/                 # Models and data structures
+├── services/               # Application services
+├── infrastructure/         # Integrations and external logic
+├── ui/                     # Interface
+├── shared/                 # Common utilities
+├── localization/           # Translations
+├── plugins/                # External tools (downloaded separately)
+├── main.py                 # Entry point
+└── requirements.txt        # Python dependencies
 ```
 
 ---
@@ -147,7 +147,7 @@ This project is licensed under the **[MIT](LICENSE)** license.
 
 - [ ] Incorrect window state return after pre-minimizing
 - [x] White dialogs when clearing filters
-- [ ] PyInstaller --onefile breaks restart, if building from source build in --onedir (~500mb, so not uploaded to release)
+- [ ] PyInstaller --onefile breaks restart, if building from source build in --onedir (~500mb)
 
 ---
 

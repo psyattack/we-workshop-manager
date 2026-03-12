@@ -156,7 +156,7 @@
     "tab_advanced": "高级",
     "login_description": "输入您的Steam凭据以在创意工坊中进行身份验证",
     "debug": "调试",
-    "debug_mode": "🔧 调试模式",
+    "debug_mode": "调试模式",
     "debug_description": "启用调试模式以进行WebView测试",
     "show_id_section": "显示ID部分",
     "show_id_description": "在详情面板中显示或隐藏ID部分"

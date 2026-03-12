@@ -156,7 +156,7 @@
     "tab_advanced": "Advanced",
     "login_description": "Enter your Steam credentials for authentication in the Workshop",
     "debug": "Debug",
-    "debug_mode": "🔧 Debug Mode",
+    "debug_mode": "Debug Mode",
     "debug_description": "Enable debug mode for webview testing",
     "show_id_section": "Show ID Section",
     "show_id_description": "Show or hide the ID section in details panel"

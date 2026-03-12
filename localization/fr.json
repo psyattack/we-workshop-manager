@@ -156,7 +156,7 @@
     "tab_advanced": "Avancé",
     "login_description": "Entrez vos identifiants Steam pour l'authentification dans l'Workshop",
     "debug": "Débogage",
-    "debug_mode": "🔧 Mode débogage",
+    "debug_mode": "Mode débogage",
     "debug_description": "Activer le mode débogage pour les tests webview",
     "show_id_section": "Afficher la section ID",
     "show_id_description": "Afficher ou masquer la section ID dans le panneau des détails"

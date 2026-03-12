@@ -156,7 +156,7 @@
     "tab_advanced": "Avançado",
     "login_description": "Digite suas credenciais da Steam para autenticação na Oficina",
     "debug": "Depuração",
-    "debug_mode": "🔧 Modo de depuração",
+    "debug_mode": "Modo de depuração",
     "debug_description": "Ativar o modo de depuração para testes de webview",
     "show_id_section": "Mostrar seção de ID",
     "show_id_description": "Mostrar ou ocultar a seção de ID no painel de detalhes"

@@ -156,7 +156,7 @@
     "tab_advanced": "Дополнительно",
     "login_description": "Введите ваши учётные данные Steam для аутентификации в Workshop",
     "debug": "Отладка",
-    "debug_mode": "🔧 Режим отладки",
+    "debug_mode": "Режим отладки",
     "debug_description": "Включить режим отладки для тестирования webview",
     "show_id_section": "Показать раздел ID",
     "show_id_description": "Показать или скрыть раздел ID на панели деталей"

@@ -156,7 +156,7 @@
     "tab_advanced": "高度な設定",
     "login_description": "ワークショップ認証用のSteam認証情報を入力",
     "debug": "デバッグ",
-    "debug_mode": "🔧 デバッグモード",
+    "debug_mode": "デバッグモード",
     "debug_description": "WebViewテスト用のデバッグモードを有効にする",
     "show_id_section": "IDセクションを表示",
     "show_id_description": "詳細パネルのIDセクションを表示または非表示にする"
