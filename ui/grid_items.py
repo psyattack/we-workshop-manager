@@ -393,7 +393,7 @@ class BaseGridItem(QWidget):
             self.preview_label.setStyleSheet(f"background-color: {self._get_bg_color()};")
             
             icon_size = max(24, int(self.item_size * 0.17))
-            pixmap = get_pixmap("ICON_IMAGE", icon_size)
+            pixmap = get_pixmap("ICON_WALLPAPER", icon_size)
             self.preview_label.setPixmap(pixmap)
             self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         except RuntimeError:

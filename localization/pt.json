@@ -129,9 +129,9 @@
   },
   "settings": {
     "title": "CONFIGURAÇÕES",
-    "theme_dev": "🎨 Tema",
-    "account": "👤 Conta",
-    "language": "🌍 Idioma",
+    "theme_dev": "Tema",
+    "account": "Conta",
+    "language": "Idioma",
     "steam_login": "Login Steam",
     "login_placeholder": "Login",
     "password_placeholder": "Senha",
@@ -157,7 +157,9 @@
     "login_description": "Digite suas credenciais da Steam para autenticação na Oficina",
     "debug": "Depuração",
     "debug_mode": "🔧 Modo de depuração",
-    "debug_description": "Ativar o modo de depuração para testes de webview"
+    "debug_description": "Ativar o modo de depuração para testes de webview",
+    "show_id_section": "Mostrar seção de ID",
+    "show_id_description": "Mostrar ou ocultar a seção de ID no painel de detalhes"
   },
   "info": {
     "description": "Este aplicativo permite baixar e gerenciar facilmente papéis de parede do Wallpaper Engine na Steam Oficina.",

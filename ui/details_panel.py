@@ -451,22 +451,49 @@ class DetailsPanel(QWidget):
         layout.addWidget(self.title_container)
 
     def _create_id_section(self, layout):
+        self.id_widget = QWidget()
+        self.id_widget.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self.theme.get_color('bg_secondary')};
+                border-radius: 8px;
+            }}
+            QWidget:hover {{
+                background-color: {self.theme.get_color('primary')};
+            }}
+        """)
+        self.id_widget.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        id_layout = QHBoxLayout(self.id_widget)
+        id_layout.setContentsMargins(8, 4, 8, 4)
+        id_layout.setSpacing(6)
+        
+        icon_label = QLabel()
+        icon_label.setPixmap(get_pixmap("ICON_ID", width=22, height=18))
+        icon_label.setFixedSize(18, 16)
+        icon_label.setStyleSheet("background: transparent; border: none;")
+        id_layout.addWidget(icon_label)
+        
         self.id_label = QLabel()
         self.id_label.setStyleSheet(f"""
             QLabel {{
                 color: {self.theme.get_color('text_secondary')};
                 font-size: 14px;
-                background-color: {self.theme.get_color('bg_secondary')};
-                padding: 4px 8px;
-                border-radius: 8px;
-            }}
-            QLabel:hover {{
-                background-color: {self.theme.get_color('primary')};
+                background: transparent;
+                border: none;
             }}
         """)
-        self.id_label.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.id_label.mousePressEvent = self._on_id_clicked
-        layout.addWidget(self.id_label)
+        id_layout.addWidget(self.id_label)
+        id_layout.addStretch()
+        
+        self.id_widget.mousePressEvent = self._on_id_clicked
+        layout.addWidget(self.id_widget)
+        
+        self._update_id_section_visibility()
+
+    def _update_id_section_visibility(self):
+        if self.config:
+            show_id = self.config.get_show_id_section()
+            self.id_widget.setVisible(show_id)  
 
     def _create_details_section(self, layout):
         self.details_container = QWidget()
@@ -693,7 +720,7 @@ class DetailsPanel(QWidget):
         self._project_data = self._load_project_json(folder_path)
 
         self.title_label.setText(self._project_data.get("title", Path(folder_path).name))
-        self.id_label.setText(self.tr.t("labels.id", id=self.current_pubfileid))
+        self.id_label.setText(self.current_pubfileid)
 
         self._setup_installed_buttons()
         self._setup_installed_details()
@@ -723,7 +750,7 @@ class DetailsPanel(QWidget):
         self.setVisible(True)
 
         self.title_label.setText(item.title or item.pubfileid)
-        self.id_label.setText(self.tr.t("labels.id", id=item.pubfileid))
+        self.id_label.setText(self.current_pubfileid)
 
         self._setup_workshop_buttons()
         self._setup_workshop_details(item)
@@ -923,7 +950,7 @@ class DetailsPanel(QWidget):
             }}
         """)
         
-        pixmap = get_pixmap("ICON_IMAGE", 48)
+        pixmap = get_pixmap("ICON_WALLPAPER", 48)
         self.preview_label.setPixmap(pixmap)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -1544,12 +1571,16 @@ class DetailsPanel(QWidget):
             return
         try:
             self._stop_loading_animation()
+            label_size = self.preview_label.size()
             scaled = pixmap.scaled(
-                self.preview_label.size(),
+                label_size,
                 Qt.AspectRatioMode.KeepAspectRatioByExpanding,
                 Qt.TransformationMode.SmoothTransformation
             )
-            rounded = self._create_rounded_pixmap(scaled, radius=8)
+            x = (scaled.width() - label_size.width()) // 2
+            y = (scaled.height() - label_size.height()) // 2
+            cropped = scaled.copy(x, y, label_size.width(), label_size.height())
+            rounded = self._create_rounded_pixmap(cropped, radius=8)
             self.preview_label.setPixmap(rounded)
             self.preview_label.setStyleSheet(f"""
                 QLabel {{
@@ -1607,7 +1638,17 @@ class DetailsPanel(QWidget):
             return
         current_pixmap = self.movie.currentPixmap()
         if not current_pixmap.isNull():
-            rounded = self._create_rounded_pixmap(current_pixmap, radius=8)
+            label_size = self.preview_label.size()
+            x = (current_pixmap.width() - label_size.width()) // 2
+            y = (current_pixmap.height() - label_size.height()) // 2
+            if x < 0:
+                x = 0
+            if y < 0:
+                y = 0
+            crop_w = min(current_pixmap.width(), label_size.width())
+            crop_h = min(current_pixmap.height(), label_size.height())
+            cropped = current_pixmap.copy(x, y, crop_w, crop_h)
+            rounded = self._create_rounded_pixmap(cropped, radius=8)
             self.preview_label.setPixmap(rounded)
 
     def _on_open_folder(self):

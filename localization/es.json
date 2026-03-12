@@ -129,9 +129,9 @@
   },
   "settings": {
     "title": "CONFIGURACIÓN",
-    "theme_dev": "🎨 Tema",
-    "account": "👤 Cuenta",
-    "language": "🌍 Idioma",
+    "theme_dev": "Tema",
+    "account": "Cuenta",
+    "language": "Idioma",
     "steam_login": "Iniciar sesión en Steam",
     "login_placeholder": "Usuario",
     "password_placeholder": "Contraseña",
@@ -157,7 +157,9 @@
     "login_description": "Ingrese sus credenciales de Steam para autenticarse en el Taller",
     "debug": "Depuración",
     "debug_mode": "🔧 Modo de depuración",
-    "debug_description": "Activar el modo de depuración para pruebas de webview"
+    "debug_description": "Activar el modo de depuración para pruebas de webview",
+    "show_id_section": "Mostrar sección de ID",
+    "show_id_description": "Mostrar u ocultar la sección de ID en el panel de detalles"
   },
   "info": {
     "description": "Esta aplicación le permite descargar y gestionar fácilmente fondos de pantalla de Wallpaper Engine desde Steam Workshop.",

@@ -129,9 +129,9 @@
   },
   "settings": {
     "title": "PARAMÈTRES",
-    "theme_dev": "🎨 Thème",
-    "account": "👤 Compte",
-    "language": "🌍 Langue",
+    "theme_dev": "Thème",
+    "account": "Compte",
+    "language": "Langue",
     "steam_login": "Connexion Steam",
     "login_placeholder": "Identifiant",
     "password_placeholder": "Mot de passe",
@@ -157,7 +157,9 @@
     "login_description": "Entrez vos identifiants Steam pour l'authentification dans l'Workshop",
     "debug": "Débogage",
     "debug_mode": "🔧 Mode débogage",
-    "debug_description": "Activer le mode débogage pour les tests webview"
+    "debug_description": "Activer le mode débogage pour les tests webview",
+    "show_id_section": "Afficher la section ID",
+    "show_id_description": "Afficher ou masquer la section ID dans le panneau des détails"
   },
   "info": {
     "description": "Cette application vous permet de télécharger et gérer facilement les fonds d'écran Wallpaper Engine depuis Steam Workshop.",

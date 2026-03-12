@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QTextEdit, QFrame, QGraphicsDropShadowEffect, QWidget,
     QComboBox, QLineEdit, QScrollArea, QTabWidget, QCheckBox
 )
-from PyQt6.QtCore import Qt, QSize, QPoint, QTimer, QEvent, pyqtSignal
-from PyQt6.QtGui import QColor
+from PyQt6.QtCore import Qt, QSize, QPoint, QTimer, QEvent, pyqtSignal, QPropertyAnimation, QEasingCurve, QRectF, pyqtProperty
+from PyQt6.QtGui import QColor, QPainter, QBrush, QPen
 from core.resources import get_icon, get_pixmap
 from core.constants import APP_FULL_NAME
 from ui.notifications import MessageBox
@@ -14,6 +14,106 @@ import re
 import webbrowser
 from utils.helpers import restart_application
 from ui.workshop_tab import PreviewPopup
+
+
+class AnimatedToggle(QWidget):
+    toggled = pyqtSignal(bool)
+    
+    def __init__(self, parent=None, theme_manager=None):
+        super().__init__(parent)
+        self.theme = theme_manager
+        self._checked = False
+        self._circle_position = 3.0
+        self._background_color = QColor(self._get_color('bg_tertiary'))
+        
+        self.setFixedSize(44, 24)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        self._position_animation = QPropertyAnimation(self, b"circle_position")
+        self._position_animation.setDuration(200)
+        self._position_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        
+        self._color_animation = QPropertyAnimation(self, b"background_color")
+        self._color_animation.setDuration(200)
+        self._color_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
+    
+    def _get_color(self, color_name: str) -> str:
+        if self.theme:
+            return self.theme.get_color(color_name)
+        colors = {
+            'bg_tertiary': '#252938',
+            'primary': '#4A7FD9',
+            'border': '#2A2F42',
+        }
+        return colors.get(color_name, '#FFFFFF')
+    
+    def get_circle_position(self) -> float:
+        return self._circle_position
+    
+    def set_circle_position(self, pos: float):
+        self._circle_position = pos
+        self.update()
+    
+    circle_position = pyqtProperty(float, get_circle_position, set_circle_position)
+    
+    def get_background_color(self) -> QColor:
+        return self._background_color
+    
+    def set_background_color(self, color: QColor):
+        self._background_color = color
+        self.update()
+    
+    background_color = pyqtProperty(QColor, get_background_color, set_background_color)
+    
+    def isChecked(self) -> bool:
+        return self._checked
+    
+    def setChecked(self, checked: bool):
+        if self._checked == checked:
+            return
+        self._checked = checked
+        self._animate()
+    
+    def toggle(self):
+        self._checked = not self._checked
+        self._animate()
+        self.toggled.emit(self._checked)
+    
+    def _animate(self):
+        self._position_animation.stop()
+        self._color_animation.stop()
+        
+        if self._checked:
+            self._position_animation.setStartValue(self._circle_position)
+            self._position_animation.setEndValue(self.width() - 21.0)
+            self._color_animation.setStartValue(self._background_color)
+            self._color_animation.setEndValue(QColor(self._get_color('primary')))
+        else:
+            self._position_animation.setStartValue(self._circle_position)
+            self._position_animation.setEndValue(3.0)
+            self._color_animation.setStartValue(self._background_color)
+            self._color_animation.setEndValue(QColor(self._get_color('bg_tertiary')))
+        
+        self._position_animation.start()
+        self._color_animation.start()
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle()
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        painter.setPen(QPen(QColor(self._get_color('border')), 1))
+        painter.setBrush(QBrush(self._background_color))
+        painter.drawRoundedRect(QRectF(0, 0, self.width(), self.height()), 12, 12)
+        
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QBrush(QColor("#FFFFFF")))
+        circle_y = (self.height() - 18) / 2
+        painter.drawEllipse(QRectF(self._circle_position, circle_y, 18, 18))
+
 
 class CustomDialog(QDialog):
     def __init__(self, title: str = "Dialog", parent=None, theme_manager=None):
@@ -139,6 +239,7 @@ class CustomDialog(QDialog):
 
     def mouseReleaseEvent(self, event):
         self.old_pos = None
+
 
 class DownloadsDialog(CustomDialog):
     download_cancelled = pyqtSignal(str)
@@ -369,6 +470,7 @@ class DownloadsDialog(CustomDialog):
         self.download_cancelled.emit(pubfileid)
         QTimer.singleShot(100, self._update_list)
 
+
 class BatchDownloadDialog(CustomDialog):
     def __init__(self, translator, parent=None, theme_manager=None):
         super().__init__(translator.t("dialog.batch_download"), parent, theme_manager)
@@ -464,6 +566,7 @@ class BatchDownloadDialog(CustomDialog):
     def get_pubfileids(self):
         return self.pubfileids
 
+
 class InfoDialog(CustomDialog):
     def __init__(self, translator, parent=None, theme_manager=None):
         super().__init__(translator.t("dialog.about"), parent, theme_manager)
@@ -473,7 +576,7 @@ class InfoDialog(CustomDialog):
         self.adjustSize()
 
         icon = QLabel()
-        icon.setPixmap(get_pixmap("ICON_APP", size=128))
+        icon.setPixmap(get_pixmap("ICON_APP", size=100))
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet("""
             border: none;
@@ -530,6 +633,7 @@ class InfoDialog(CustomDialog):
         """)
         ok_btn.clicked.connect(self.accept)
         self.content_layout.addWidget(ok_btn)
+
 
 class CollapsibleSection(QWidget):
     def __init__(self, title: str, parent=None, expanded: bool = True, theme_manager=None):
@@ -645,6 +749,7 @@ class CollapsibleSection(QWidget):
         self._update_header_text()
         self._content_area.setVisible(expanded)
 
+
 class SettingsField(QWidget):
     def __init__(self, label_text: str, control_widget: QWidget, description: str = None,
                  stacked: bool = False, parent=None, theme_manager=None):
@@ -715,8 +820,16 @@ class SettingsField(QWidget):
                 left.addWidget(desc)
 
             layout.addLayout(left, 1)
-            control_widget.setFixedWidth(160)
-            layout.addWidget(control_widget, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            
+            if isinstance(control_widget, AnimatedToggle):
+                layout.addWidget(control_widget, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            elif isinstance(control_widget, QComboBox):
+                control_widget.setFixedWidth(140)
+                control_widget.setFixedHeight(32)
+                layout.addWidget(control_widget, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            else:
+                control_widget.setFixedWidth(160)
+                layout.addWidget(control_widget, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
     def _setup_colors(self):
         if self.theme:
@@ -725,6 +838,7 @@ class SettingsField(QWidget):
         else:
             self.c_text_secondary = '#B4B7C3'
             self.c_text_disabled = '#6B6E7C'
+
 
 class SettingsPopup(CustomDialog):
     def __init__(self, config, accounts, translator, theme_manager, main_window, parent=None):
@@ -777,6 +891,14 @@ class SettingsPopup(CustomDialog):
             theme_manager=self.theme
         ))
 
+        show_id_toggle = self._create_show_id_toggle()
+        appearance_section.add_widget(SettingsField(
+            self.tr.t("settings.show_id_section") if self.tr.t("settings.show_id_section") != "settings.show_id_section" else "Show ID Section",
+            show_id_toggle,
+            description=self.tr.t("settings.show_id_description") if self.tr.t("settings.show_id_description") != "settings.show_id_description" else "Show or hide the ID section in details panel",
+            theme_manager=self.theme
+        ))
+
         layout.addWidget(appearance_section)
 
         behavior_section = CollapsibleSection(
@@ -785,18 +907,18 @@ class SettingsPopup(CustomDialog):
             theme_manager=self.theme
         )
 
-        minimize_combo = self._create_minimize_combo()
+        minimize_toggle = self._create_minimize_toggle()
         behavior_section.add_widget(SettingsField(
             self.tr.t("labels.minimize_on_apply"),
-            minimize_combo,
+            minimize_toggle,
             description=self.tr.t("settings.minimize_description") if self.tr.t("settings.minimize_description") != "settings.minimize_description" else "Minimize window after applying changes",
             theme_manager=self.theme
         ))
 
-        preload_combo = self._create_preload_combo()
+        preload_toggle = self._create_preload_toggle()
         behavior_section.add_widget(SettingsField(
             self.tr.t("settings.preload_next_page") if self.tr.t("settings.preload_next_page") != "settings.preload_next_page" else "Preload Next Page",
-            preload_combo,
+            preload_toggle,
             description=self.tr.t("settings.preload_description") if self.tr.t("settings.preload_description") != "settings.preload_description" else "Preload the next workshop page in background for faster navigation",
             theme_manager=self.theme
         ))
@@ -806,34 +928,50 @@ class SettingsPopup(CustomDialog):
         layout.addStretch()
         self.tab_widget.addTab(tab, self.tr.t("settings.tab_general") if self.tr.t("settings.tab_general") != "settings.tab_general" else "General")
 
-    def _create_preload_combo(self):
-        combo = QComboBox()
-        combo.addItems([self.tr.t("labels.disabled"), self.tr.t("labels.enabled")])
-        combo.setCurrentIndex(1 if self.config.get_preload_next_page() else 0)
-        combo.currentIndexChanged.connect(self._on_preload_changed)
-        combo.setStyleSheet(self._combo_style())
-        return combo
+    def _create_show_id_toggle(self):
+        toggle = AnimatedToggle(theme_manager=self.theme)
+        toggle.setChecked(self.config.get_show_id_section())
+        toggle.toggled.connect(self._on_show_id_changed)
+        return toggle
 
-    def _on_preload_changed(self, index):
-        value = index == 1
-        self.config.set_preload_next_page(value)
+    def _on_show_id_changed(self, checked: bool):
+        self.config.set_show_id_section(checked)
+        if self.main_window:
+            if hasattr(self.main_window, 'wallpapers_tab') and hasattr(self.main_window.wallpapers_tab, 'details_panel'):
+                self.main_window.wallpapers_tab.details_panel._update_id_section_visibility()
+            if hasattr(self.main_window, 'workshop_tab') and hasattr(self.main_window.workshop_tab, 'details_panel'):
+                self.main_window.workshop_tab.details_panel._update_id_section_visibility()
 
-    def _create_debug_combo(self):
-        combo = QComboBox()
-        combo.addItems([self.tr.t("labels.disabled"), self.tr.t("labels.enabled")])
-        combo.setCurrentIndex(1 if self.config.get_debug_mode() else 0)
-        combo.currentIndexChanged.connect(self._on_debug_mode_changed)
-        combo.setStyleSheet(self._combo_style())
-        return combo
+    def _create_preload_toggle(self):
+        toggle = AnimatedToggle(theme_manager=self.theme)
+        toggle.setChecked(self.config.get_preload_next_page())
+        toggle.toggled.connect(self._on_preload_changed)
+        return toggle
 
-    def _on_debug_mode_changed(self, index):
-        value = index == 1
-        
+    def _on_preload_changed(self, checked: bool):
+        self.config.set_preload_next_page(checked)
+
+    def _create_minimize_toggle(self):
+        toggle = AnimatedToggle(theme_manager=self.theme)
+        toggle.setChecked(self.config.get_minimize_on_apply())
+        toggle.toggled.connect(self._on_minimize_changed)
+        return toggle
+
+    def _on_minimize_changed(self, checked: bool):
+        self.config.set_minimize_on_apply(checked)
+
+    def _create_debug_toggle(self):
+        toggle = AnimatedToggle(theme_manager=self.theme)
+        toggle.setChecked(self.config.get_debug_mode())
+        toggle.toggled.connect(self._on_debug_mode_changed)
+        return toggle
+
+    def _on_debug_mode_changed(self, checked: bool):
         current_value = self.config.get_debug_mode()
-        if value == current_value:
+        if checked == current_value:
             return
         
-        self.config.set_debug_mode(value)
+        self.config.set_debug_mode(checked)
         
         msg_box = MessageBox(
             self.theme,
@@ -888,11 +1026,11 @@ class SettingsPopup(CustomDialog):
             theme_manager=self.theme
         )
 
-        debug_combo = self._create_debug_combo()
+        debug_toggle = self._create_debug_toggle()
         debug_description = self.tr.t("settings.debug_description") if self.tr.t("settings.debug_description") != "settings.debug_description" else "Enable debug mode for webview testing"
         debug_section.add_widget(SettingsField(
             self.tr.t("settings.debug_mode"),
-            debug_combo,
+            debug_toggle,
             description=debug_description,
             theme_manager=self.theme
         ))
@@ -988,14 +1126,6 @@ class SettingsPopup(CustomDialog):
         current_index = lang_codes.index(current_lang) if current_lang in lang_codes else 0
         combo.setCurrentIndex(current_index)
         combo.currentIndexChanged.connect(self._on_language_changed)
-        combo.setStyleSheet(self._combo_style())
-        return combo
-
-    def _create_minimize_combo(self):
-        combo = QComboBox()
-        combo.addItems([self.tr.t("labels.disabled"), self.tr.t("labels.enabled")])
-        combo.setCurrentIndex(1 if self.config.get_minimize_on_apply() else 0)
-        combo.currentIndexChanged.connect(self._on_minimize_changed)
         combo.setStyleSheet(self._combo_style())
         return combo
 
@@ -1189,33 +1319,62 @@ class SettingsPopup(CustomDialog):
 
             restart_application()
 
-    def _on_minimize_changed(self, index):
-        value = index == 1
-        self.config.set_minimize_on_apply(value)
-
     def _combo_style(self):
         return f"""
             QComboBox {{
                 background-color: {self.c_bg_tertiary};
                 color: {self.c_text_primary};
-                border: 2px solid {self.c_border};
-                border-radius: 8px;
-                padding: 8px 12px;
-                font-size: 13px;
-                font-weight: 600;
+                border: 1px solid {self.c_border};
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-size: 12px;
+                font-weight: 500;
+                min-height: 18px;
             }}
             QComboBox:hover {{
                 border-color: {self.c_primary};
+                background-color: {self.c_bg_secondary};
+            }}
+            QComboBox:focus {{
+                border-color: {self.c_primary};
             }}
             QComboBox::drop-down {{
+                width: 0px;
                 border: none;
             }}
+            QComboBox::down-arrow {{
+                width: 0px;
+                height: 0px;
+                image: none;
+            }}
+            QComboBox:on {{
+                border-color: {self.c_primary};
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
+            }}
             QComboBox QAbstractItemView {{
-                background-color: {self.c_bg_secondary};
+                background-color: {self.c_bg_tertiary};
                 color: {self.c_text_primary};
                 selection-background-color: {self.c_primary};
-                border: 2px solid {self.c_border_light};
-                border-radius: 6px;
+                selection-color: {self.c_text_primary};
+                border: 1px solid {self.c_primary};
+                border-top: none;
+                border-bottom-left-radius: 6px;
+                border-bottom-right-radius: 6px;
+                padding: 4px;
+                outline: none;
+            }}
+            QComboBox QAbstractItemView::item {{
+                padding: 6px 10px;
+                border-radius: 4px;
+                margin: 2px 4px;
+                min-height: 20px;
+            }}
+            QComboBox QAbstractItemView::item:hover {{
+                background-color: {self.c_bg_secondary};
+            }}
+            QComboBox QAbstractItemView::item:selected {{
+                background-color: {self.c_primary};
             }}
         """
 

@@ -129,9 +129,9 @@
   },
   "settings": {
     "title": "设置",
-    "theme_dev": "🎨 主题",
-    "account": "👤 账户",
-    "language": "🌍 语言",
+    "theme_dev": "主题",
+    "account": "账户",
+    "language": "语言",
     "steam_login": "Steam登录",
     "login_placeholder": "用户名",
     "password_placeholder": "密码",
@@ -157,7 +157,9 @@
     "login_description": "输入您的Steam凭据以在创意工坊中进行身份验证",
     "debug": "调试",
     "debug_mode": "🔧 调试模式",
-    "debug_description": "启用调试模式以进行WebView测试"
+    "debug_description": "启用调试模式以进行WebView测试",
+    "show_id_section": "显示ID部分",
+    "show_id_description": "在详情面板中显示或隐藏ID部分"
   },
   "info": {
     "description": "这款应用程序让您可以轻松地从Steam创意工坊下载和管理Wallpaper Engine壁纸。",

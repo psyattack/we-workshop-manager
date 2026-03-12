@@ -12,7 +12,8 @@ class ConfigManager:
             "general": {
                 "appearance": {
                     "language": "en",
-                    "theme": "dark"
+                    "theme": "dark",
+                    "show_id_section": True
                 },
                 "behavior": {
                     "minimize_on_apply": False,
@@ -154,3 +155,9 @@ class ConfigManager:
     def get_all_wallpaper_metadata(self) -> Dict[str, Dict]:
         metadata = self.get("wallpaper_metadata", {})
         return metadata if isinstance(metadata, dict) else {}
+
+    def get_show_id_section(self) -> bool:
+        return self.get("settings.general.appearance.show_id_section", True)
+
+    def set_show_id_section(self, value: bool) -> None:
+        self.set("settings.general.appearance.show_id_section", value)
