@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QEvent, QPoint, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QPainter, QPainterPath
-from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QVBoxLayout
+from PyQt6.QtWidgets import QApplication, QDialog, QFrame, QGraphicsDropShadowEffect, QVBoxLayout
 
 
 class PopupPanel(QDialog):
@@ -48,6 +48,12 @@ class PopupPanel(QDialog):
         self.container = QFrame(self)
         self.container.setObjectName("popupPanelContainer")
         self.container.setStyleSheet("background: transparent; border: none;")
+
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 8)
+        shadow.setColor(QColor(0, 0, 0, 110))
+        self.container.setGraphicsEffect(shadow)
 
         self._content_layout = QVBoxLayout(self.container)
         self._content_layout.setContentsMargins(0, 0, 0, 0)
