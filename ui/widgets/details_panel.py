@@ -1,4 +1,3 @@
-
 import json
 import os
 import shutil
@@ -49,6 +48,8 @@ class DetailsPanel(QWidget):
     MODE_WORKSHOP = 2
 
     panel_collapse_requested = pyqtSignal()
+
+    CONTENT_WIDTH = 300
 
     def __init__(
         self,
@@ -105,11 +106,11 @@ class DetailsPanel(QWidget):
         self.setMaximumWidth(310)
 
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 10, 0, 10)
-        main_layout.setSpacing(14)
+        main_layout.setContentsMargins(5, 8, 5, 8)
+        main_layout.setSpacing(8)
 
         preview_container = QWidget()
-        preview_container.setFixedSize(310, 275)
+        preview_container.setFixedSize(self.CONTENT_WIDTH, 275)
 
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(0, 0, 0, 0)
@@ -117,7 +118,7 @@ class DetailsPanel(QWidget):
 
         self.preview_label = QLabel()
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setFixedSize(310, 275)
+        self.preview_label.setFixedSize(self.CONTENT_WIDTH, 275)
         self.preview_label.setStyleSheet(
             f"""
             QLabel {{
@@ -150,7 +151,7 @@ class DetailsPanel(QWidget):
         self.collapse_btn.clicked.connect(self._on_collapse_clicked)
         self.collapse_btn.raise_()
 
-        main_layout.addWidget(preview_container)
+        main_layout.addWidget(preview_container, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._create_action_buttons(main_layout)
         self._create_title_section(main_layout)
@@ -160,8 +161,8 @@ class DetailsPanel(QWidget):
         self.setStyleSheet(
             f"""
             QWidget {{
-                background-color: {self.theme.get_color('bg_secondary')};
-                border-left: 1px solid {self.theme.get_color('border')};
+                background-color: transparent;
+                border: none;
             }}
 
             QToolTip {{
@@ -180,21 +181,25 @@ class DetailsPanel(QWidget):
 
     def _create_action_buttons(self, layout) -> None:
         self.buttons_widget = QWidget()
+        self.buttons_widget.setFixedWidth(self.CONTENT_WIDTH)
+
         self.buttons_layout = QHBoxLayout(self.buttons_widget)
         self.buttons_layout.setContentsMargins(0, 0, 0, 0)
         self.buttons_layout.setSpacing(10)
+
         self.buttons_widget.setStyleSheet("QWidget { background: transparent; border: none; }")
-        layout.addWidget(self.buttons_widget)
+        layout.addWidget(self.buttons_widget, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _create_title_section(self, layout) -> None:
         self.title_container = QWidget()
         self.title_container.setObjectName("titleContainer")
-        self.title_container.setFixedHeight(80)
+        self.title_container.setFixedSize(self.CONTENT_WIDTH, 74)
         self.title_container.setStyleSheet(
             f"""
             #titleContainer {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: rgba(0, 0, 0, 0.2);
                 border-radius: 12px;
+                border: 1px solid {self.theme.get_color('border')};
             }}
             """
         )
@@ -217,7 +222,7 @@ class DetailsPanel(QWidget):
         title_content.setStyleSheet("background: transparent; border: none;")
 
         title_layout = QHBoxLayout(title_content)
-        title_layout.setContentsMargins(5, 0, 5, 0)
+        title_layout.setContentsMargins(8, 4, 8, 4)
 
         self.title_label = QLabel()
         self.title_label.setStyleSheet(
@@ -226,6 +231,7 @@ class DetailsPanel(QWidget):
             font-size: 18px;
             color: {self.theme.get_color('text_primary')};
             background: transparent;
+            border: none;
             """
         )
         self.title_label.setWordWrap(True)
@@ -234,15 +240,18 @@ class DetailsPanel(QWidget):
 
         self.title_scroll.setWidget(title_content)
         container_layout.addWidget(self.title_scroll)
-        layout.addWidget(self.title_container)
+
+        layout.addWidget(self.title_container, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _create_id_section(self, layout) -> None:
         self.id_widget = QWidget()
+        self.id_widget.setFixedWidth(self.CONTENT_WIDTH)
         self.id_widget.setStyleSheet(
             f"""
             QWidget {{
-                background-color: {self.theme.get_color('bg_secondary')};
-                border-radius: 8px;
+                background-color: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
+                border: 1px solid {self.theme.get_color('border')};
             }}
 
             QWidget:hover {{
@@ -277,7 +286,7 @@ class DetailsPanel(QWidget):
         id_layout.addStretch()
 
         self.id_widget.mousePressEvent = self._on_id_clicked
-        layout.addWidget(self.id_widget)
+        layout.addWidget(self.id_widget, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self._update_id_section_visibility()
 
@@ -294,11 +303,13 @@ class DetailsPanel(QWidget):
     def _create_details_section(self, layout) -> None:
         self.details_container = QWidget()
         self.details_container.setObjectName("detailsContainer")
+        self.details_container.setFixedWidth(self.CONTENT_WIDTH)
         self.details_container.setStyleSheet(
             f"""
             #detailsContainer {{
                 background-color: {self.theme.get_color('bg_secondary')};
                 border-radius: 8px;
+                border: none;
             }}
 
             #detailsContainer * {{
@@ -342,7 +353,8 @@ class DetailsPanel(QWidget):
 
         self.details_scroll.setWidget(details_content)
         container_layout.addWidget(self.details_scroll)
-        layout.addWidget(self.details_container)
+
+        layout.addWidget(self.details_container, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _get_main_parser(self):
         main_window = self.window()
@@ -696,7 +708,7 @@ class DetailsPanel(QWidget):
 
         button = QPushButton()
         install_tooltip(button, tooltip, "bottom", self.theme)
-        button.setFixedSize(43, 35)
+        button.setFixedSize(41, 35)
         button.setIcon(get_icon(icon_name))
         button.setIconSize(QSize(22, 22))
         button.setStyleSheet(
@@ -720,7 +732,7 @@ class DetailsPanel(QWidget):
         install_tooltip(button, tooltip, "bottom", self.theme)
         button.setIcon(get_icon(icon_name))
         button.setIconSize(QSize(24, 24))
-        button.setFixedSize(150, 35)
+        button.setFixedSize(145, 35)
         button.setText(text)
         button.setStyleSheet(
             f"""

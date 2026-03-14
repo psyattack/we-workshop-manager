@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer, Qt, pyqtProperty
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
 from shared.filesystem import get_directory_size, get_folder_mtime
 from shared.formatting import human_readable_size
@@ -105,15 +105,31 @@ class WallpapersTab(QWidget):
     def _setup_ui(self) -> None:
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(5)
+        main_layout.setSpacing(10)
 
         self.left_panel = self._create_left_panel()
         main_layout.addWidget(self.left_panel, 1)
 
         self.details_container = AnimatedDetailsContainerLocal(self)
-        self.details_container.set_target_width(320)
+        self.details_container.set_target_width(312)
 
-        details_layout = QVBoxLayout(self.details_container)
+        details_outer_layout = QVBoxLayout(self.details_container)
+        details_outer_layout.setContentsMargins(0, 0, 0, 0)
+        details_outer_layout.setSpacing(0)
+
+        self.details_card = QFrame()
+        self.details_card.setObjectName("wallpapersDetailsCard")
+        self.details_card.setStyleSheet(
+            f"""
+            QFrame#wallpapersDetailsCard {{
+                background-color: {self.theme.get_color('bg_secondary')};
+                border: 1px solid {self.theme.get_color('border')};
+                border-radius: 16px;
+            }}
+            """
+        )
+
+        details_layout = QVBoxLayout(self.details_card)
         details_layout.setContentsMargins(0, 0, 0, 0)
 
         self.details_scroll = QScrollArea()
@@ -131,23 +147,39 @@ class WallpapersTab(QWidget):
             self,
         )
         self.details_panel.panel_collapse_requested.connect(self._on_collapse_requested)
+
         self.details_scroll.setWidget(self.details_panel)
         details_layout.addWidget(self.details_scroll)
+        details_outer_layout.addWidget(self.details_card)
 
         main_layout.addWidget(self.details_container)
 
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(15, 10, 5, 10)
-        layout.setSpacing(0)
+        outer_layout = QVBoxLayout(widget)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        self.content_card = QFrame()
+        self.content_card.setObjectName("wallpapersContentCard")
+        self.content_card.setStyleSheet(
+            f"""
+            QFrame#wallpapersContentCard {{
+                background-color: {self.theme.get_color('bg_secondary')};
+                border: 1px solid {self.theme.get_color('border')};
+                border-radius: 16px;
+            }}
+            """
+        )
+
+        layout = QVBoxLayout(self.content_card)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
 
         self.filter_bar = UnifiedFilterBar(self.theme, self.tr, UnifiedFilterBar.MODE_LOCAL, self)
         self.filter_bar.filters_changed.connect(self._on_filters_changed)
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
-
-        layout.addWidget(self.filter_bar)
-        layout.addSpacing(10)
+        layout.addWidget(self.filter_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -187,10 +219,11 @@ class WallpapersTab(QWidget):
         self.grid_widget = AdaptiveGridWidget()
         self.grid_widget.set_item_size_range(160, 240, 185)
         self.grid_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.scroll_area.setWidget(self.grid_widget)
 
+        self.scroll_area.setWidget(self.grid_widget)
         layout.addWidget(self.scroll_area)
 
+        outer_layout.addWidget(self.content_card)
         return widget
 
     def _on_collapse_requested(self) -> None:
@@ -198,11 +231,10 @@ class WallpapersTab(QWidget):
         self._update_grid_margin(False)
 
     def _update_grid_margin(self, panel_visible: bool) -> None:
-        layout = self.left_panel.layout()
         if panel_visible:
-            layout.setContentsMargins(15, 10, 5, 10)
+            self.content_card.layout().setContentsMargins(10, 10, 10, 10)
         else:
-            layout.setContentsMargins(15, 10, self._details_panel_margin, 10)
+            self.content_card.layout().setContentsMargins(10, 10, 10, 10)
 
     def _on_filters_changed(self, filters: LocalFilters) -> None:
         self._apply_filters_and_display(filters)
@@ -245,7 +277,7 @@ class WallpapersTab(QWidget):
             try:
                 with project_json.open("r", encoding="utf-8") as file:
                     project_data = json.load(file)
-                    data["title"] = project_data.get("title", pubfileid)
+                data["title"] = project_data.get("title", pubfileid)
             except Exception:
                 pass
 
@@ -267,7 +299,6 @@ class WallpapersTab(QWidget):
             "misc": [],
             "genre": [],
         }
-
         if not tags_dict:
             return result
 
@@ -311,6 +342,7 @@ class WallpapersTab(QWidget):
         for excluded_tag in filters.excluded_misc_tags:
             if excluded_tag in tags["misc"]:
                 return False
+
         for required_tag in filters.genre_tags:
             if required_tag not in tags["genre"]:
                 return False

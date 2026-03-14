@@ -73,7 +73,7 @@ class UnifiedActionsPanel(PopupPanel):
         self.hide()
 
     def _setup_ui(self) -> None:
-        self.setFixedWidth(190)
+        self.setFixedWidth(210)
 
         layout = self.body_layout()
         layout.setContentsMargins(12, 12, 12, 12)
@@ -174,10 +174,10 @@ class WorkshopFiltersPanel(PopupPanel):
         self.hide()
 
     def _setup_ui(self) -> None:
-        self.setFixedWidth(360)
+        self.setFixedWidth(575)
 
         layout = self.body_layout()
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
 
         title = QLabel(self.tr.t("labels.filters"))
@@ -194,10 +194,10 @@ class WorkshopFiltersPanel(PopupPanel):
 
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(8)
+        grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(8)
 
-        combo_w = 150
+        combo_w = 165
 
         self.sort_combo = self._create_combo(
             self.tr.t("labels.sort"),
@@ -247,19 +247,7 @@ class WorkshopFiltersPanel(PopupPanel):
             combo_w,
         )
 
-        grid.addWidget(self.sort_combo["container"], 0, 0)
-        grid.addWidget(self.time_combo["container"], 0, 1)
-        grid.addWidget(self.category_combo["container"], 1, 0)
-        grid.addWidget(self.type_combo["container"], 1, 1)
-        grid.addWidget(self.age_combo["container"], 2, 0)
-        grid.addWidget(self.resolution_combo["container"], 2, 1)
-        grid.addWidget(self.asset_type_combo["container"], 3, 0)
-        grid.addWidget(self.asset_genre_combo["container"], 3, 1)
-        grid.addWidget(self.script_type_combo["container"], 4, 0)
-
-        layout.addLayout(grid)
-
-        for combo_pack in (
+        combos = [
             self.sort_combo,
             self.time_combo,
             self.category_combo,
@@ -269,50 +257,86 @@ class WorkshopFiltersPanel(PopupPanel):
             self.asset_type_combo,
             self.asset_genre_combo,
             self.script_type_combo,
-        ):
+        ]
+
+        for index, combo_pack in enumerate(combos):
+            row = index // 3
+            col = index % 3
+            grid.addWidget(combo_pack["container"], row, col)
+
+        layout.addLayout(grid)
+
+        for combo_pack in combos:
             combo_pack["combo"].currentIndexChanged.connect(self.filters_changed.emit)
 
         self.sort_combo["combo"].currentIndexChanged.connect(self._on_sort_changed)
 
-        self.incompatible_checkbox = QCheckBox(self.tr.t("labels.incompatible_items"))
-        self.incompatible_checkbox.setStyleSheet(self._checkbox_style())
-        self.incompatible_checkbox.stateChanged.connect(self.filters_changed.emit)
-        layout.addWidget(self.incompatible_checkbox)
+        sections_row = QHBoxLayout()
+        sections_row.setContentsMargins(0, 0, 0, 0)
+        sections_row.setSpacing(12)
+        sections_row.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        misc_col = QWidget()
+        misc_layout = QVBoxLayout(misc_col)
+        misc_layout.setContentsMargins(0, 0, 0, 0)
+        misc_layout.setSpacing(6)
 
         misc_title = self._section_label(self.tr.t("labels.miscellaneous"))
-        layout.addWidget(misc_title)
+        misc_layout.addWidget(misc_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         misc_translations = WorkshopFilterConfig.get_translated_misc_tags(self.tr.t)
         self.misc_tags_widget = FilterTagsFlowWidget(
             tags=WorkshopFilterConfig.MISC_TAG_KEYS,
             translated_map=misc_translations,
             theme_manager=self.theme,
-            max_width=330,
+            max_width=255,
             parent=self,
         )
         self.misc_tags_widget.changed.connect(self.filters_changed.emit)
-        layout.addWidget(self.misc_tags_widget)
+        misc_layout.addWidget(self.misc_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
+
+        genre_col = QWidget()
+        genre_layout = QVBoxLayout(genre_col)
+        genre_layout.setContentsMargins(0, 0, 0, 0)
+        genre_layout.setSpacing(6)
 
         genre_title = self._section_label(self.tr.t("labels.genre"))
-        layout.addWidget(genre_title)
+        genre_layout.addWidget(genre_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         genre_translations = WorkshopFilterConfig.get_translated_genre_tags(self.tr.t)
         self.genre_tags_widget = FilterTagsFlowWidget(
             tags=WorkshopFilterConfig.GENRE_TAG_KEYS,
             translated_map=genre_translations,
             theme_manager=self.theme,
-            max_width=330,
+            max_width=255,
             parent=self,
         )
         self.genre_tags_widget.changed.connect(self.filters_changed.emit)
-        layout.addWidget(self.genre_tags_widget)
+        genre_layout.addWidget(self.genre_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
+
+        sections_row.addWidget(misc_col, 1, Qt.AlignmentFlag.AlignTop)
+        sections_row.addWidget(genre_col, 1, Qt.AlignmentFlag.AlignTop)
+
+        layout.addLayout(sections_row)
+
+        bottom_row = QHBoxLayout()
+        bottom_row.setContentsMargins(0, 2, 0, 0)
+        bottom_row.setSpacing(10)
+
+        self.incompatible_checkbox = QCheckBox(self.tr.t("labels.incompatible_items"))
+        self.incompatible_checkbox.setStyleSheet(self._checkbox_style())
+        self.incompatible_checkbox.stateChanged.connect(self.filters_changed.emit)
+
+        bottom_row.addWidget(self.incompatible_checkbox)
+        bottom_row.addStretch()
+
+        layout.addLayout(bottom_row)
 
         self._on_sort_changed()
 
     def _create_combo(self, label_text: str, options: dict[str, str], width: int) -> dict:
         container = QWidget()
         container.setStyleSheet("background: transparent; border: none;")
-
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(3)
@@ -337,7 +361,6 @@ class WorkshopFiltersPanel(PopupPanel):
 
         layout.addWidget(label)
         layout.addWidget(combo)
-
         return {"container": container, "label": label, "combo": combo}
 
     def _combo_style(self) -> str:
@@ -396,7 +419,8 @@ class WorkshopFiltersPanel(PopupPanel):
             font-size: 10px;
             font-weight: 700;
             background: transparent;
-            margin-top: 2px;
+            margin: 0;
+            padding: 0;
             """
         )
         return label
@@ -455,10 +479,10 @@ class LocalFiltersPanel(PopupPanel):
         self.hide()
 
     def _setup_ui(self) -> None:
-        self.setFixedWidth(360)
+        self.setFixedWidth(575)
 
         layout = self.body_layout()
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
 
         title = QLabel(self.tr.t("labels.filters"))
@@ -475,10 +499,10 @@ class LocalFiltersPanel(PopupPanel):
 
         grid = QGridLayout()
         grid.setContentsMargins(0, 0, 0, 0)
-        grid.setHorizontalSpacing(8)
+        grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(8)
 
-        combo_w = 150
+        combo_w = 165
 
         self.sort_combo = self._create_combo(
             self.tr.t("labels.sort"),
@@ -506,82 +530,99 @@ class LocalFiltersPanel(PopupPanel):
             combo_w,
         )
 
-        grid.addWidget(self.sort_combo["container"], 0, 0)
-        grid.addWidget(self.category_combo["container"], 0, 1)
-        grid.addWidget(self.type_combo["container"], 1, 0)
-        grid.addWidget(self.age_combo["container"], 1, 1)
-        grid.addWidget(self.resolution_combo["container"], 2, 0)
-
-        layout.addLayout(grid)
-
-        for combo_pack in (
+        combos = [
             self.sort_combo,
             self.category_combo,
             self.type_combo,
             self.age_combo,
             self.resolution_combo,
-        ):
+        ]
+
+        for index, combo_pack in enumerate(combos):
+            row = index // 3
+            col = index % 3
+            grid.addWidget(combo_pack["container"], row, col)
+
+        layout.addLayout(grid)
+
+        for combo_pack in combos:
             combo_pack["combo"].currentIndexChanged.connect(self.filters_changed.emit)
 
-        sort_order_label = QLabel(self.tr.t("tooltips.sort_order") + ":")
-        sort_order_label.setStyleSheet(
-            f"""
-            color: {self.theme.get_color('text_secondary')};
-            font-size: 10px;
-            font-weight: 700;
-            background: transparent;
-            """
-        )
-        layout.addWidget(sort_order_label)
+        sections_row = QHBoxLayout()
+        sections_row.setContentsMargins(0, 0, 0, 0)
+        sections_row.setSpacing(12)
+        sections_row.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.sort_order_button = QPushButton(self.tr.t("filters.sort_order.desc"))
-        self.sort_order_button.setFixedHeight(30)
-        self.sort_order_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.sort_order_button.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.theme.get_color('bg_secondary')};
-                color: {self.theme.get_color('text_primary')};
-                border: none;
-                border-radius: 6px;
-                font-size: 11px;
-                font-weight: 700;
-            }}
-            QPushButton:hover {{
-                background-color: {self.theme.get_color('bg_elevated')};
-            }}
-            """
-        )
-        self.sort_order_button.clicked.connect(self._toggle_sort_order)
-        layout.addWidget(self.sort_order_button)
+        misc_col = QWidget()
+        misc_layout = QVBoxLayout(misc_col)
+        misc_layout.setContentsMargins(0, 0, 0, 0)
+        misc_layout.setSpacing(6)
 
         misc_title = self._section_label(self.tr.t("labels.miscellaneous"))
-        layout.addWidget(misc_title)
+        misc_layout.addWidget(misc_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         misc_translations = WorkshopFilterConfig.get_translated_misc_tags(self.tr.t)
         self.misc_tags_widget = FilterTagsFlowWidget(
             tags=WorkshopFilterConfig.MISC_TAG_KEYS,
             translated_map=misc_translations,
             theme_manager=self.theme,
-            max_width=330,
+            max_width=255,
             parent=self,
         )
         self.misc_tags_widget.changed.connect(self.filters_changed.emit)
-        layout.addWidget(self.misc_tags_widget)
+        misc_layout.addWidget(self.misc_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
+
+        genre_col = QWidget()
+        genre_layout = QVBoxLayout(genre_col)
+        genre_layout.setContentsMargins(0, 0, 0, 0)
+        genre_layout.setSpacing(6)
 
         genre_title = self._section_label(self.tr.t("labels.genre"))
-        layout.addWidget(genre_title)
+        genre_layout.addWidget(genre_title, alignment=Qt.AlignmentFlag.AlignLeft)
 
         genre_translations = WorkshopFilterConfig.get_translated_genre_tags(self.tr.t)
         self.genre_tags_widget = FilterTagsFlowWidget(
             tags=WorkshopFilterConfig.GENRE_TAG_KEYS,
             translated_map=genre_translations,
             theme_manager=self.theme,
-            max_width=330,
+            max_width=255,
             parent=self,
         )
         self.genre_tags_widget.changed.connect(self.filters_changed.emit)
-        layout.addWidget(self.genre_tags_widget)
+        genre_layout.addWidget(self.genre_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
+
+        sections_row.addWidget(misc_col, 1, Qt.AlignmentFlag.AlignTop)
+        sections_row.addWidget(genre_col, 1, Qt.AlignmentFlag.AlignTop)
+
+        layout.addLayout(sections_row)
+
+        bottom_row = QHBoxLayout()
+        bottom_row.setContentsMargins(0, 2, 0, 0)
+        bottom_row.setSpacing(8)
+
+        sort_order_label = QLabel(self.tr.t("tooltips.sort_order") + ":")
+        sort_order_label.setStyleSheet(
+            f"""
+            color: {self.theme.get_color('text_secondary')};
+            font-size: 11px;
+            font-weight: 700;
+            background: transparent;
+            """
+        )
+
+        self.sort_order_button = QPushButton("↓")
+        self.sort_order_button.setCheckable(True)
+        self.sort_order_button.setChecked(False)
+        self.sort_order_button.setFixedSize(22, 22)
+        self.sort_order_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.sort_order_button.clicked.connect(self._toggle_sort_order)
+        self.sort_order_button.setStyleSheet(self._toggle_style())
+
+        bottom_row.addWidget(sort_order_label)
+        bottom_row.addWidget(self.sort_order_button)
+        bottom_row.addStretch()
+
+        layout.addLayout(bottom_row)
 
     def _create_combo(self, label_text: str, options: dict[str, str], width: int) -> dict:
         container = QWidget()
@@ -641,6 +682,27 @@ class LocalFiltersPanel(PopupPanel):
         }}
         """
 
+    def _toggle_style(self) -> str:
+        return f"""
+        QPushButton {{
+            background-color: {self.theme.get_color('bg_secondary')};
+            color: {self.theme.get_color('text_primary')};
+            border: 1px solid {self.theme.get_color('border')};
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 0;
+        }}
+        QPushButton:hover {{
+            background-color: {self.theme.get_color('bg_elevated')};
+        }}
+        QPushButton:checked {{
+            background-color: {self.theme.get_color('primary')};
+            color: white;
+            border: 1px solid {self.theme.get_color('primary')};
+        }}
+        """
+
     def _section_label(self, text: str) -> QLabel:
         label = QLabel(text)
         label.setStyleSheet(
@@ -649,14 +711,16 @@ class LocalFiltersPanel(PopupPanel):
             font-size: 10px;
             font-weight: 700;
             background: transparent;
-            margin-top: 2px;
+            margin: 0;
+            padding: 0;
             """
         )
         return label
 
     def _toggle_sort_order(self) -> None:
         self._sort_order = "asc" if self._sort_order == "desc" else "desc"
-        self.sort_order_button.setText(self.tr.t(f"filters.sort_order.{self._sort_order}"))
+        self.sort_order_button.setChecked(self._sort_order == "asc")
+        self.sort_order_button.setText("↑" if self._sort_order == "asc" else "↓")
         self.filters_changed.emit()
 
     def get_filters(self, search_text: str) -> LocalFilters:
@@ -681,7 +745,8 @@ class LocalFiltersPanel(PopupPanel):
         self.age_combo["combo"].setCurrentIndex(0)
         self.resolution_combo["combo"].setCurrentIndex(0)
         self._sort_order = "desc"
-        self.sort_order_button.setText(self.tr.t("filters.sort_order.desc"))
+        self.sort_order_button.setChecked(False)
+        self.sort_order_button.setText("↓")
         self.misc_tags_widget.reset_all()
         self.genre_tags_widget.reset_all()
 
@@ -777,7 +842,7 @@ class UnifiedFilterBar(QWidget):
         self.search_panel.set_filter_active(True)
         self.search_panel.set_actions_active(False)
         anchor = self.search_panel.filter_anchor()
-        self.filters_popup.show_right_of(anchor, x_gap=-26, y_offset=-18)
+        self.filters_popup.show_right_of(anchor, x_gap=-12, y_offset=-8)
 
     def _toggle_actions_popup(self) -> None:
         if self.filters_popup.isVisible():
@@ -791,7 +856,7 @@ class UnifiedFilterBar(QWidget):
         self.search_panel.set_actions_active(True)
         self.search_panel.set_filter_active(False)
         anchor = self.search_panel.actions_anchor()
-        self.actions_popup.show_right_of(anchor, x_gap=-26, y_offset=-17)
+        self.actions_popup.show_right_of(anchor, x_gap=-12, y_offset=-7)
 
     def _on_search_requested(self, text: str) -> None:
         self.search_requested.emit(text)
@@ -803,11 +868,7 @@ class UnifiedFilterBar(QWidget):
             self._current_page = 1
 
         self.filters_popup.clear_filters()
-
-        if self.mode == self.MODE_WORKSHOP:
-            self.refresh_requested.emit(self.get_current_filters())
-        else:
-            self.refresh_requested.emit(self.get_current_filters())
+        self.refresh_requested.emit(self.get_current_filters())
 
     def _on_refresh_requested(self) -> None:
         self.refresh_requested.emit(self.get_current_filters())

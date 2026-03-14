@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QEvent, QSize, Qt
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
 from infrastructure.resources.resource_manager import get_icon
@@ -9,13 +9,21 @@ class SearchPanel(QWidget):
     SEARCH_MODE_MANUAL = "manual"
     SEARCH_MODE_LIVE = "live"
 
+    FIXED_SEARCH_WIDTH = 250
+
     def __init__(self, theme_manager, translator, search_mode: str = "manual", parent=None):
         super().__init__(parent)
         self.theme = theme_manager
         self.tr = translator
         self.search_mode = search_mode
+
         self._filter_active = False
         self._actions_active = False
+
+        self._search_hovered = False
+        self._filter_hovered = False
+        self._actions_hovered = False
+
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -27,6 +35,8 @@ class SearchPanel(QWidget):
         self.info_secondary_frame = self._create_info_box()
 
         self.search_host = QWidget()
+        self.search_host.setObjectName("searchPanelHost")
+
         search_host_layout = QHBoxLayout(self.search_host)
         search_host_layout.setContentsMargins(0, 0, 0, 0)
         search_host_layout.setSpacing(8)
@@ -34,6 +44,9 @@ class SearchPanel(QWidget):
         self.main_frame = QFrame()
         self.main_frame.setObjectName("searchPanelMainFrame")
         self.main_frame.setFixedHeight(36)
+        self.main_frame.setFixedWidth(self.FIXED_SEARCH_WIDTH)
+        self.main_frame.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.main_frame.installEventFilter(self)
 
         frame_layout = QHBoxLayout(self.main_frame)
         frame_layout.setContentsMargins(6, 0, 0, 0)
@@ -54,6 +67,7 @@ class SearchPanel(QWidget):
         self.search_input.setFixedHeight(30)
         self.search_input.setObjectName("searchPanelLineEdit")
         self.search_input.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        self.search_input.installEventFilter(self)
 
         self.filter_button = QPushButton()
         self.filter_button.setFixedSize(36, 36)
@@ -62,6 +76,8 @@ class SearchPanel(QWidget):
         self.filter_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.filter_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.filter_button.setObjectName("searchPanelFilterButton")
+        self.filter_button.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.filter_button.installEventFilter(self)
 
         self.actions_button = QPushButton()
         self.actions_button.setFixedSize(36, 36)
@@ -70,17 +86,19 @@ class SearchPanel(QWidget):
         self.actions_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.actions_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.actions_button.setObjectName("searchPanelActionsButton")
+        self.actions_button.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.actions_button.installEventFilter(self)
 
         frame_layout.addWidget(self.search_button)
         frame_layout.addWidget(self.search_input, 1)
         frame_layout.addWidget(self.filter_button)
 
-        search_host_layout.addWidget(self.main_frame, 1)
+        search_host_layout.addWidget(self.main_frame)
         search_host_layout.addWidget(self.actions_button)
 
         root.addWidget(self.info_primary_frame)
         root.addWidget(self.info_secondary_frame)
-        root.addWidget(self.search_host, 1)
+        root.addWidget(self.search_host)
 
         self._apply_styles()
 
@@ -101,11 +119,54 @@ class SearchPanel(QWidget):
         frame.hide()
         return frame
 
+    def eventFilter(self, obj, event):
+        event_type = event.type()
+
+        if obj == self.main_frame or obj == self.search_input:
+            if event_type == QEvent.Type.Enter:
+                if not self.filter_button.underMouse():
+                    self._search_hovered = True
+                    self._apply_styles()
+            elif event_type == QEvent.Type.Leave:
+                if not self.main_frame.underMouse() and not self.search_input.underMouse():
+                    self._search_hovered = False
+                    self._apply_styles()
+
+        elif obj == self.filter_button:
+            if event_type == QEvent.Type.Enter:
+                self._filter_hovered = True
+                self._search_hovered = False
+                self._apply_styles()
+            elif event_type == QEvent.Type.Leave:
+                self._filter_hovered = False
+                if self.main_frame.underMouse() and not self.filter_button.underMouse():
+                    self._search_hovered = True
+                self._apply_styles()
+
+        elif obj == self.actions_button:
+            if event_type == QEvent.Type.Enter:
+                self._actions_hovered = True
+                self._search_hovered = False
+                self._apply_styles()
+            elif event_type == QEvent.Type.Leave:
+                self._actions_hovered = False
+                if self.main_frame.underMouse() and not self.filter_button.underMouse():
+                    self._search_hovered = True
+                self._apply_styles()
+
+        return super().eventFilter(obj, event)
+
     def _apply_styles(self) -> None:
-        filter_bg = self.theme.get_color("bg_tertiary") if self._filter_active else "transparent"
-        actions_bg = self.theme.get_color("bg_tertiary") if self._actions_active else self.theme.get_color("bg_secondary")
-        main_border = self.theme.get_color("border_light") if self._filter_active else self.theme.get_color("border")
         active_surface = self.theme.get_color("bg_tertiary")
+        elevated_surface = self.theme.get_color("bg_elevated")
+
+        main_surface = self.theme.get_color("bg_tertiary") if self._search_hovered else self.theme.get_color("bg_secondary")
+        main_border = self.theme.get_color("border_light") if (self._search_hovered or self._filter_active) else self.theme.get_color("border")
+
+        filter_highlighted_from_search = self._search_hovered
+        filter_highlighted_direct = self._filter_hovered or self._filter_active
+
+        actions_highlighted = self._actions_active or self._actions_hovered
 
         info_style = f"""
         QFrame#searchPanelInfoBox {{
@@ -123,10 +184,16 @@ class SearchPanel(QWidget):
         self.info_primary_frame.setStyleSheet(info_style)
         self.info_secondary_frame.setStyleSheet(info_style)
 
+        filter_bg = "transparent"
+        filter_radius = "8px"
+
+        if filter_highlighted_direct or filter_highlighted_from_search:
+            filter_bg = active_surface
+
         self.main_frame.setStyleSheet(
             f"""
             QFrame#searchPanelMainFrame {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: {main_surface};
                 border: 1px solid {main_border};
                 border-radius: 8px;
             }}
@@ -148,19 +215,23 @@ class SearchPanel(QWidget):
             QPushButton#searchPanelFilterButton {{
                 background: {filter_bg};
                 border: none;
-                border-top-right-radius: 8px;
-                border-bottom-right-radius: 8px;
-                border-top-left-radius: 8px;
-                border-bottom-left-radius: 8px;
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+                border-top-left-radius: 6px;
+                border-bottom-left-radius: 6px;
+                margin: 0px 0px 2px 0px;
+                padding: 0px;
             }}
             QPushButton#searchPanelFilterButton:hover {{
                 background-color: {active_surface};
             }}
             QPushButton#searchPanelFilterButton:pressed {{
-                background-color: {self.theme.get_color('bg_elevated')};
+                background-color: {elevated_surface};
             }}
             """
         )
+
+        actions_bg = active_surface if actions_highlighted else self.theme.get_color("bg_secondary")
 
         self.actions_button.setStyleSheet(
             f"""
@@ -174,7 +245,7 @@ class SearchPanel(QWidget):
                 border-color: {self.theme.get_color('border_light')};
             }}
             QPushButton#searchPanelActionsButton:pressed {{
-                background-color: {self.theme.get_color('bg_elevated')};
+                background-color: {elevated_surface};
             }}
             """
         )

@@ -1,7 +1,7 @@
 from typing import Optional
 
 from PyQt6.QtCore import QPoint, QTimer, Qt, QSize, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
 from infrastructure.cache.image_cache import ImageCache
 from infrastructure.resources.resource_manager import get_icon
@@ -15,6 +15,7 @@ from ui.widgets.grid_items import SkeletonGridItem, WorkshopGridItem
 from ui.widgets.loading_overlay import LoadingOverlay
 from ui.widgets.preview_popup import PreviewPopup
 from infrastructure.steam.workshop_parser import WorkshopParser
+
 
 class AnimatedDetailsContainer(QWidget):
     animation_finished = pyqtSignal()
@@ -128,16 +129,32 @@ class WorkshopTab(QWidget):
     def _setup_ui(self) -> None:
         main_layout = QHBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(5)
+        main_layout.setSpacing(10)
 
         self.left_panel = self._create_left_panel()
         main_layout.addWidget(self.left_panel, 1)
 
         self.details_container = AnimatedDetailsContainer(self)
-        self.details_container.set_target_width(320)
+        self.details_container.set_target_width(312)
         self.details_container.animation_finished.connect(self._on_details_animation_finished)
 
-        details_layout = QVBoxLayout(self.details_container)
+        details_outer_layout = QVBoxLayout(self.details_container)
+        details_outer_layout.setContentsMargins(0, 0, 0, 0)
+        details_outer_layout.setSpacing(0)
+
+        self.details_card = QFrame()
+        self.details_card.setObjectName("workshopDetailsCard")
+        self.details_card.setStyleSheet(
+            f"""
+            QFrame#workshopDetailsCard {{
+                background-color: {self.theme.get_color('bg_secondary')};
+                border: 1px solid {self.theme.get_color('border')};
+                border-radius: 16px;
+            }}
+            """
+        )
+
+        details_layout = QVBoxLayout(self.details_card)
         details_layout.setContentsMargins(0, 0, 0, 0)
 
         self.details_scroll = QScrollArea()
@@ -156,7 +173,9 @@ class WorkshopTab(QWidget):
         )
         self.details_panel.panel_collapse_requested.connect(self._on_collapse_requested)
         self.details_scroll.setWidget(self.details_panel)
+
         details_layout.addWidget(self.details_scroll)
+        details_outer_layout.addWidget(self.details_card)
 
         main_layout.addWidget(self.details_container)
 
@@ -164,16 +183,30 @@ class WorkshopTab(QWidget):
 
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(15, 10, 5, 10)
-        layout.setSpacing(0)
+        outer_layout = QVBoxLayout(widget)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+        outer_layout.setSpacing(0)
+
+        self.content_card = QFrame()
+        self.content_card.setObjectName("workshopContentCard")
+        self.content_card.setStyleSheet(
+            f"""
+            QFrame#workshopContentCard {{
+                background-color: {self.theme.get_color('bg_secondary')};
+                border: 1px solid {self.theme.get_color('border')};
+                border-radius: 16px;
+            }}
+            """
+        )
+
+        layout = QVBoxLayout(self.content_card)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
 
         self.filter_bar = UnifiedFilterBar(self.theme, self.tr, UnifiedFilterBar.MODE_WORKSHOP, self)
         self.filter_bar.filters_changed.connect(self._on_filters_changed)
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
-
-        layout.addWidget(self.filter_bar)
-        layout.addSpacing(10)
+        layout.addWidget(self.filter_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -213,24 +246,27 @@ class WorkshopTab(QWidget):
         self.grid_widget = AdaptiveGridWidget()
         self.grid_widget.set_item_size_range(160, 240, 185)
         self.grid_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+
         self.scroll_area.setWidget(self.grid_widget)
 
         self._loading_overlay = LoadingOverlay(self.theme, self.scroll_area)
 
         layout.addWidget(self.scroll_area, 1)
-        layout.addSpacing(10)
-        layout.addWidget(self._create_pagination_bar())
+        layout.addWidget(self._create_pagination_bar(), 0, Qt.AlignmentFlag.AlignHCenter)
 
+        outer_layout.addWidget(self.content_card)
         return widget
 
     def _create_pagination_bar(self) -> QWidget:
         bar = QWidget()
-        bar.setFixedHeight(40)
+        bar.setFixedHeight(35)
+        bar.setFixedWidth(500)
         bar.setStyleSheet(
             f"""
             QWidget {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border-radius: 10px;
+                border: 1px solid {self.theme.get_color('border')};
             }}
             """
         )
@@ -255,18 +291,19 @@ class WorkshopTab(QWidget):
             font-weight: 600;
             font-size: 13px;
             background: transparent;
+            border: none;
             """
         )
         layout.addWidget(self.page_label1)
 
         self.page_input = QLineEdit()
-        self.page_input.setFixedWidth(50)
+        self.page_input.setFixedWidth(40)
         self.page_input.setPlaceholderText(self.tr.t("labels.page"))
         self.page_input.setStyleSheet(
             f"""
             QLineEdit {{
-                background-color: {self.theme.get_color('bg_tertiary')};
-                border: 2px solid {self.theme.get_color('border')};
+                background-color: {self.theme.get_color('bg_secondary')};
+                border: none;
                 border-radius: 6px;
                 padding: 2px 8px;
                 color: {self.theme.get_color('text_primary')};
@@ -288,6 +325,7 @@ class WorkshopTab(QWidget):
             font-weight: 600;
             font-size: 13px;
             background: transparent;
+            border: none;
             """
         )
         layout.addWidget(self.page_label2)
@@ -312,15 +350,12 @@ class WorkshopTab(QWidget):
         button.setStyleSheet(
             f"""
             QPushButton {{
-                background-color: rgba(0, 0, 0, 0.2);
+                background-color: transparent;
                 border: none;
                 border-radius: 6px;
             }}
             QPushButton:hover {{
-                background-color: {self.theme.get_color('primary')};
-            }}
-            QPushButton:disabled {{
-                background-color: transparent;
+                background-color: rgba(0, 0, 0, 0.2);
             }}
             """
         )
@@ -335,11 +370,10 @@ class WorkshopTab(QWidget):
         self.grid_widget.schedule_layout_update(50)
 
     def _update_grid_margin(self, panel_visible: bool) -> None:
-        layout = self.left_panel.layout()
         if panel_visible:
-            layout.setContentsMargins(15, 10, 5, 10)
+            self.content_card.layout().setContentsMargins(10, 10, 10, 10)
         else:
-            layout.setContentsMargins(15, 10, self._details_panel_margin, 10)
+            self.content_card.layout().setContentsMargins(10, 10, 10, 10)
 
     def _setup_parser(self) -> None:
         self.parser = WorkshopParser(self.accounts, self.config, self)
@@ -373,10 +407,8 @@ class WorkshopTab(QWidget):
     def _go_to_page(self, page: int) -> None:
         if self._is_loading_page:
             return
-
         self.page_input.clearFocus()
         page = max(1, min(page, self.total_pages))
-
         if page != self.current_page:
             self.current_page = page
             self.selected_pubfileid = None
@@ -466,14 +498,13 @@ class WorkshopTab(QWidget):
             size_bytes = parse_file_size_to_bytes(item.file_size)
             if size_bytes > 0:
                 self._file_size_cache[item.pubfileid] = size_bytes
-
-            for grid_item in self.grid_items:
-                try:
-                    if grid_item and grid_item.pubfileid == item.pubfileid:
-                        grid_item.set_file_size_bytes(size_bytes)
-                        break
-                except RuntimeError:
-                    pass
+                for grid_item in self.grid_items:
+                    try:
+                        if grid_item and grid_item.pubfileid == item.pubfileid:
+                            grid_item.set_file_size_bytes(size_bytes)
+                            break
+                    except RuntimeError:
+                        pass
 
         self.details_panel.set_workshop_item(item)
 
@@ -498,6 +529,7 @@ class WorkshopTab(QWidget):
                 self.metadata_service.save_from_workshop_item(cached_item)
 
         self._update_item_statuses()
+
         if self.selected_pubfileid == pubfileid:
             self.details_panel.refresh_after_state_change()
 
@@ -673,6 +705,7 @@ class WorkshopTab(QWidget):
 
         self.dm.start_download(pubfileid, self.config.get_account_number())
         self._update_item_statuses()
+
         NotificationLabel.show_notification(
             self.details_panel,
             self.tr.t("messages.download_started"),
