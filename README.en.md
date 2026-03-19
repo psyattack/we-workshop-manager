@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="../screenshots/screen_main.png" alt="WEave (formerly WE Workshop Manager)" width="700">
+  <img src="screenshots/screen_main.png" alt="WEave (formerly WE Workshop Manager)" width="700">
 </p>
 
 <p align="center">
