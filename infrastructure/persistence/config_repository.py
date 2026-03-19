@@ -13,6 +13,12 @@ DEFAULT_CONFIG = {
                 "account_number": 3,
             }
         },
+        "backgrounds": {
+            "main":    {"image": "", "blur": 0, "opacity": 100},
+            "tabs":    {"image": "", "blur": 0, "opacity": 100},
+            "details": {"image": "", "blur": 0, "opacity": 100},
+            "extend_to_titlebar": True,
+        },
         "general": {
             "appearance": {
                 "language": "en",

@@ -37,9 +37,9 @@ WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that 
 - 🗂️ Manage installed wallpapers (apply, remove, extract .pkg files, etc.)
 - 📊 Download wallpapers by list of IDs and/or URLs
 - 🎯 Track download/extraction status of wallpapers
-- 🔧 Fast page loading
+- ⚜️ Themes + Full customization of the background of the main UI elements
+- 🔧 Pages load faster than in the browser
 - 🌍 Multilingual support
-- ⚜️ Themes
 - 🔰 Many other features
 
 > [!NOTE]  

@@ -3,6 +3,7 @@ from typing import Optional
 from PyQt6.QtCore import QPoint, QTimer, Qt, QSize, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
+from ui.widgets.background_widget import BackgroundImageWidget
 from infrastructure.cache.image_cache import ImageCache
 from infrastructure.resources.resource_manager import get_icon
 from shared.helpers import parse_file_size_to_bytes
@@ -147,7 +148,7 @@ class WorkshopTab(QWidget):
         self.details_card.setStyleSheet(
             f"""
             QFrame#workshopDetailsCard {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border: 1px solid {self.theme.get_color('border')};
                 border-radius: 16px;
             }}
@@ -179,7 +180,26 @@ class WorkshopTab(QWidget):
 
         main_layout.addWidget(self.details_container)
 
+        self._content_bg = BackgroundImageWidget(self.content_card, border_radius=15, border_inset=1)
+        self._content_bg.set_base_color(self.theme.get_color("bg_secondary"))
+
+        self._details_bg = BackgroundImageWidget(self.details_card, border_radius=15, border_inset=1)
+        self._details_bg.set_base_color(self.theme.get_color("bg_secondary"))
+
         self.preview_popup = PreviewPopup(self.theme, self.tr, self)
+
+    def apply_backgrounds(self, config, theme) -> None:
+        self._content_bg.set_image_from_base64(config.get_background_image("tabs"))
+        self._content_bg.set_blur_percent(config.get_background_blur("tabs"))
+        self._content_bg.set_opacity_percent(config.get_background_opacity("tabs"))
+        self._content_bg.set_base_color(theme.get_color("bg_secondary"))
+        self._content_bg.lower()
+
+        self._details_bg.set_image_from_base64(config.get_background_image("details"))
+        self._details_bg.set_blur_percent(config.get_background_blur("details"))
+        self._details_bg.set_opacity_percent(config.get_background_opacity("details"))
+        self._details_bg.set_base_color(theme.get_color("bg_secondary"))
+        self._details_bg.lower()
 
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
@@ -192,7 +212,7 @@ class WorkshopTab(QWidget):
         self.content_card.setStyleSheet(
             f"""
             QFrame#workshopContentCard {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border: 1px solid {self.theme.get_color('border')};
                 border-radius: 16px;
             }}

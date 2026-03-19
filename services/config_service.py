@@ -168,3 +168,27 @@ class ConfigService:
         if pubfileid in metadata:
             del metadata[pubfileid]
             self.set("wallpaper_metadata", metadata)
+
+    def get_background_image(self, area: str) -> str:
+        return self.get(f"settings.backgrounds.{area}.image", "")
+
+    def set_background_image(self, area: str, b64: str) -> None:
+        self.set(f"settings.backgrounds.{area}.image", b64)
+
+    def get_background_blur(self, area: str) -> int:
+        return self.get(f"settings.backgrounds.{area}.blur", 0)
+
+    def set_background_blur(self, area: str, v: int) -> None:
+        self.set(f"settings.backgrounds.{area}.blur", v)
+
+    def get_background_opacity(self, area: str) -> int:
+        return self.get(f"settings.backgrounds.{area}.opacity", 100)
+
+    def set_background_opacity(self, area: str, v: int) -> None:
+        self.set(f"settings.backgrounds.{area}.opacity", v)
+
+    def get_background_extend_titlebar(self) -> bool:
+        return self.get("settings.backgrounds.extend_to_titlebar", False)
+
+    def set_background_extend_titlebar(self, v: bool) -> None:
+        self.set("settings.backgrounds.extend_to_titlebar", v)

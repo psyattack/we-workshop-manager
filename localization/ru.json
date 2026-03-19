@@ -151,7 +151,17 @@
     "debug_mode": "Режим отладки",
     "debug_description": "Включить режим отладки для тестирования веб-представления",
     "show_id_section": "Показать раздел ID",
-    "show_id_description": "Показать или скрыть раздел ID на панели деталей"
+    "show_id_description": "Показать или скрыть раздел ID на панели деталей",
+    "backgrounds": "Фоны",
+    "bg_main": "Основной",
+    "bg_tabs": "Вкладки",
+    "bg_details": "Панель деталей",
+    "bg_select": "Выбрать",
+    "bg_clear": "Очистить",
+    "bg_blur": "Блюр",
+    "bg_opacity": "Прозрачность",
+    "bg_extend_titlebar": "Расширить на заголовок",
+    "bg_extend_titlebar_desc": "Основной фон покрывает область заголовка окна"
   },
   "info": {
     "description": "Это приложение позволяет легко загружать и управлять обоями Wallpaper Engine из Steam Мастерской.",

@@ -5,6 +5,7 @@ from typing import Any
 from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer, Qt, pyqtProperty
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
+from ui.widgets.background_widget import BackgroundImageWidget
 from shared.filesystem import get_directory_size, get_folder_mtime
 from shared.formatting import human_readable_size
 from ui.widgets.details_panel import DetailsPanel
@@ -122,7 +123,7 @@ class WallpapersTab(QWidget):
         self.details_card.setStyleSheet(
             f"""
             QFrame#wallpapersDetailsCard {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border: 1px solid {self.theme.get_color('border')};
                 border-radius: 16px;
             }}
@@ -154,6 +155,25 @@ class WallpapersTab(QWidget):
 
         main_layout.addWidget(self.details_container)
 
+        self._content_bg = BackgroundImageWidget(self.content_card, border_radius=15, border_inset=1)
+        self._content_bg.set_base_color(self.theme.get_color("bg_secondary"))
+
+        self._details_bg = BackgroundImageWidget(self.details_card, border_radius=15, border_inset=1)
+        self._details_bg.set_base_color(self.theme.get_color("bg_secondary"))
+
+    def apply_backgrounds(self, config, theme) -> None:
+        self._content_bg.set_image_from_base64(config.get_background_image("tabs"))
+        self._content_bg.set_blur_percent(config.get_background_blur("tabs"))
+        self._content_bg.set_opacity_percent(config.get_background_opacity("tabs"))
+        self._content_bg.set_base_color(theme.get_color("bg_secondary"))
+        self._content_bg.lower()
+
+        self._details_bg.set_image_from_base64(config.get_background_image("details"))
+        self._details_bg.set_blur_percent(config.get_background_blur("details"))
+        self._details_bg.set_opacity_percent(config.get_background_opacity("details"))
+        self._details_bg.set_base_color(theme.get_color("bg_secondary"))
+        self._details_bg.lower()
+
     def _create_left_panel(self) -> QWidget:
         widget = QWidget()
         outer_layout = QVBoxLayout(widget)
@@ -165,7 +185,7 @@ class WallpapersTab(QWidget):
         self.content_card.setStyleSheet(
             f"""
             QFrame#wallpapersContentCard {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border: 1px solid {self.theme.get_color('border')};
                 border-radius: 16px;
             }}

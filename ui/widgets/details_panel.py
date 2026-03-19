@@ -304,21 +304,18 @@ class DetailsPanel(QWidget):
         self.details_container = QWidget()
         self.details_container.setObjectName("detailsContainer")
         self.details_container.setFixedWidth(self.CONTENT_WIDTH)
-        self.details_container.setStyleSheet(
-            f"""
+        self.details_container.setStyleSheet(f"""
             #detailsContainer {{
-                background-color: {self.theme.get_color('bg_secondary')};
+                background-color: transparent;
                 border-radius: 8px;
                 border: none;
             }}
-
             #detailsContainer * {{
                 border: none;
                 border-left: none;
                 border-radius: 0px;
             }}
-            """
-        )
+        """)
 
         container_layout = QVBoxLayout(self.details_container)
         container_layout.setContentsMargins(0, 0, 0, 0)

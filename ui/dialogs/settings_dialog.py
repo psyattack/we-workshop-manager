@@ -2,16 +2,19 @@ from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, pyqtPrope
 from PyQt6.QtGui import QColor, QBrush, QPainter, QPen
 from PyQt6.QtWidgets import (
     QComboBox,
+    QFileDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
     QScrollArea,
+    QSlider,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
-
+from ui.widgets.background_widget import encode_image_to_base64, decode_base64_to_pixmap
 from shared.helpers import request_restart_or_exit
 from ui.dialogs.base_dialog import BaseDialog
 from ui.notifications import MessageBox
@@ -467,6 +470,9 @@ class SettingsDialog(BaseDialog):
         )
 
         layout.addWidget(behavior_section)
+
+        bg_section = self._create_background_section()
+        layout.addWidget(bg_section)
         layout.addStretch()
 
         self.tab_widget.addTab(
@@ -1068,3 +1074,183 @@ class SettingsDialog(BaseDialog):
             margin-left: 0px;
         }}
         """
+
+    def _create_background_section(self) -> CollapsibleSection:
+        section = CollapsibleSection(
+            self.tr.t("settings.backgrounds") if self.tr.t("settings.backgrounds") != "settings.backgrounds" else "Backgrounds",
+            expanded=False,
+            theme_manager=self.theme,
+        )
+        areas = [
+            ("main",    self.tr.t("settings.bg_main") if self.tr.t("settings.bg_main") != "settings.bg_main" else "Main"),
+            ("tabs",    self.tr.t("settings.bg_tabs") if self.tr.t("settings.bg_tabs") != "settings.bg_tabs" else "Tabs"),
+            ("details", self.tr.t("settings.bg_details") if self.tr.t("settings.bg_details") != "settings.bg_details" else "Details"),
+        ]
+        for area_key, area_label in areas:
+            row = self._build_bg_area_row(area_key, area_label)
+            section.add_widget(row)
+
+        extend_toggle = AnimatedToggle(theme_manager=self.theme)
+        extend_toggle.setChecked(self.config.get_background_extend_titlebar())
+        extend_toggle.toggled.connect(self._on_extend_titlebar_changed)
+        section.add_widget(
+            SettingsField(
+                self.tr.t("settings.bg_extend_titlebar") if self.tr.t("settings.bg_extend_titlebar") != "settings.bg_extend_titlebar" else "Extend to Title Bar",
+                extend_toggle,
+                description=self.tr.t("settings.bg_extend_titlebar_desc") if self.tr.t("settings.bg_extend_titlebar_desc") != "settings.bg_extend_titlebar_desc" else "Main background covers the title bar area",
+                theme_manager=self.theme,
+            )
+        )
+
+        return section
+
+    def _build_bg_area_row(self, area: str, label: str) -> QWidget:
+        container = QWidget()
+        container.setStyleSheet("background:transparent;border:none;")
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 4, 0, 4)
+        layout.setSpacing(4)
+
+        hdr = QLabel(f"  {label}")
+        hdr.setStyleSheet(f"font-size:12px;font-weight:700;color:{self.c_text_primary};background:transparent;border:none;")
+        layout.addWidget(hdr)
+
+        img_row = QHBoxLayout()
+        img_row.setContentsMargins(0, 0, 0, 0)
+        img_row.setSpacing(6)
+
+        preview = QLabel()
+        preview.setFixedSize(36, 36)
+        preview.setStyleSheet(f"background:{self.c_bg_tertiary};border-radius:6px;border:1px solid {self.c_border};")
+        preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_bg_preview(preview, area)
+
+        sel_btn = QPushButton(self.tr.t("settings.bg_select") if self.tr.t("settings.bg_select") != "settings.bg_select" else "Select")
+        sel_btn.setFixedHeight(28)
+        sel_btn.setStyleSheet(self._small_btn_style())
+        sel_btn.clicked.connect(lambda _, a=area, p=preview: self._on_bg_select(a, p))
+
+        clr_btn = QPushButton(self.tr.t("settings.bg_clear") if self.tr.t("settings.bg_clear") != "settings.bg_clear" else "Clear")
+        clr_btn.setFixedHeight(28)
+        clr_btn.setStyleSheet(self._small_btn_style())
+        clr_btn.clicked.connect(lambda _, a=area, p=preview: self._on_bg_clear(a, p))
+
+        img_row.addWidget(preview)
+        img_row.addWidget(sel_btn)
+        img_row.addWidget(clr_btn)
+        img_row.addStretch()
+        layout.addLayout(img_row)
+
+        blur_row = self._make_slider_row(
+            self.tr.t("settings.bg_blur") if self.tr.t("settings.bg_blur") != "settings.bg_blur" else "Blur",
+            self.config.get_background_blur(area),
+            lambda v, a=area: self._on_bg_blur(a, v),
+        )
+        layout.addLayout(blur_row)
+
+        opacity_row = self._make_slider_row(
+            self.tr.t("settings.bg_opacity") if self.tr.t("settings.bg_opacity") != "settings.bg_opacity" else "Opacity",
+            self.config.get_background_opacity(area),
+            lambda v, a=area: self._on_bg_opacity(a, v),
+        )
+        layout.addLayout(opacity_row)
+
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background:{self.c_border};border:none;")
+        layout.addWidget(sep)
+
+        return container
+
+    def _make_slider_row(self, label_text: str, initial: int, callback) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        lbl = QLabel(label_text)
+        lbl.setFixedWidth(50)
+        lbl.setStyleSheet(f"font-size:11px;color:{self.c_text_secondary};background:transparent;border:none;")
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, 100)
+        slider.setValue(initial)
+        slider.setFixedHeight(18)
+        slider.setStyleSheet(self._slider_style())
+        val_lbl = QLabel(f"{initial}%")
+        val_lbl.setFixedWidth(32)
+        val_lbl.setStyleSheet(f"font-size:11px;color:{self.c_text_primary};background:transparent;border:none;")
+        slider.valueChanged.connect(lambda v: val_lbl.setText(f"{v}%"))
+        slider.valueChanged.connect(callback)
+        row.addWidget(lbl)
+        row.addWidget(slider, 1)
+        row.addWidget(val_lbl)
+        return row
+
+    def _slider_style(self) -> str:
+        return f"""
+        QSlider::groove:horizontal {{
+            background:{self.c_bg_tertiary}; height:4px; border-radius:2px;
+        }}
+        QSlider::handle:horizontal {{
+            background:{self.c_primary}; width:12px; height:12px;
+            margin:-4px 0; border-radius:6px;
+        }}
+        QSlider::sub-page:horizontal {{
+            background:{self.c_primary}; border-radius:2px;
+        }}
+        """
+
+    def _small_btn_style(self) -> str:
+        return f"""
+        QPushButton {{
+            background-color:{self.c_bg_tertiary};color:{self.c_text_primary};
+            border:1px solid {self.c_border};border-radius:6px;
+            font-size:11px;font-weight:600;padding:0 10px;
+        }}
+        QPushButton:hover {{
+            border-color:{self.c_primary};background-color:{self.c_bg_secondary};
+        }}
+        """
+
+    def _update_bg_preview(self, preview: QLabel, area: str) -> None:
+        b64 = self.config.get_background_image(area)
+        if b64:
+            pm = decode_base64_to_pixmap(b64)
+            if not pm.isNull():
+                preview.setPixmap(pm.scaled(34, 34,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation))
+                return
+        preview.setText("—")
+
+    def _on_bg_select(self, area: str, preview: QLabel) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Select Background",  "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.webp);;All Files (*)",
+        )
+        if not path:
+            return
+        b64 = encode_image_to_base64(path)
+        if b64:
+            self.config.set_background_image(area, b64)
+            self._update_bg_preview(preview, area)
+            self._apply_bg_to_window()
+
+    def _on_bg_clear(self, area: str, preview: QLabel) -> None:
+        self.config.set_background_image(area, "")
+        self._update_bg_preview(preview, area)
+        self._apply_bg_to_window()
+
+    def _on_bg_blur(self, area: str, v: int) -> None:
+        self.config.set_background_blur(area, v)
+        self._apply_bg_to_window()
+
+    def _on_bg_opacity(self, area: str, v: int) -> None:
+        self.config.set_background_opacity(area, v)
+        self._apply_bg_to_window()
+
+    def _on_extend_titlebar_changed(self, checked: bool) -> None:
+        self.config.set_background_extend_titlebar(checked)
+        self._apply_bg_to_window()
+
+    def _apply_bg_to_window(self) -> None:
+        if self.main_window and hasattr(self.main_window, "apply_backgrounds"):
+            self.main_window.apply_backgrounds()

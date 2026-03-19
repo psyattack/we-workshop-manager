@@ -151,7 +151,17 @@
     "debug_mode": "Debug Mode",
     "debug_description": "Enable debug mode for webview testing",
     "show_id_section": "Show ID Section",
-    "show_id_description": "Show or hide the ID section in details panel"
+    "show_id_description": "Show or hide the ID section in details panel",
+    "backgrounds": "Backgrounds",
+    "bg_main": "Main",
+    "bg_tabs": "Tabs",
+    "bg_details": "Details Panel",
+    "bg_select": "Select",
+    "bg_clear": "Clear",
+    "bg_blur": "Blur",
+    "bg_opacity": "Opacity",
+    "bg_extend_titlebar": "Extend to Title Bar",
+    "bg_extend_titlebar_desc": "Main background covers the title bar area"
   },
   "info": {
     "description": "This application allows you to easily download and manage Wallpaper Engine wallpapers from Steam Workshop.",

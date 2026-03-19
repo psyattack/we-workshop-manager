@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from ui.widgets.background_widget import BackgroundImageWidget
 from infrastructure.resources.resource_manager import get_icon
 from shared.constants import APP_NAME
 from shared.filesystem import clear_cache_if_needed, get_app_data_dir
@@ -664,15 +665,18 @@ class MainWindow(QMainWindow):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         central_widget = QWidget()
-        central_widget.setStyleSheet(
-            f"""
-            QWidget {{
-                background-color: {self.theme.get_color('bg_primary')};
-                border-radius: 16px;
-            }}
-            """
-        )
+        central_widget.setObjectName("mainCentralWidget")
         self.setCentralWidget(central_widget)
+
+        self._main_bg = BackgroundImageWidget(central_widget, border_radius=16)
+        self._main_bg.set_base_color(self.theme.get_color("bg_primary"))
+
+        central_widget.setStyleSheet("""
+            #mainCentralWidget {
+                background-color: transparent;
+                border-radius: 16px;
+            }
+        """)
 
         root_layout = QVBoxLayout(central_widget)
         root_layout.setContentsMargins(0, 0, 0, 0)
@@ -692,15 +696,18 @@ class MainWindow(QMainWindow):
         self._create_tabs()
 
         content_container = QWidget()
+        content_container.setStyleSheet("background: transparent; border: none;")
         content_layout = QVBoxLayout(content_container)
-        content_layout.setContentsMargins(0, 0, 15, 15)
+        content_layout.setContentsMargins(0, 5, 15, 15)
         content_layout.setSpacing(0)
         content_layout.addWidget(self.stack, 1)
-
         body_layout.addWidget(content_container, 1)
+
         root_layout.addLayout(body_layout, 1)
 
         self._create_corner_covers()
+
+        self.apply_backgrounds()
 
     def _create_title_bar(self) -> QFrame:
         title_bar = QFrame()
@@ -890,6 +897,37 @@ class MainWindow(QMainWindow):
             cover.hide()
             cover.lower()
             self._corner_covers.append(cover)
+
+    def apply_backgrounds(self) -> None:
+        self._main_bg.set_image_from_base64(self.config.get_background_image("main"))
+        self._main_bg.set_blur_percent(self.config.get_background_blur("main"))
+        self._main_bg.set_opacity_percent(self.config.get_background_opacity("main"))
+        self._main_bg.set_base_color(self.theme.get_color("bg_primary"))
+        self._main_bg.lower()
+
+        extend = self.config.get_background_extend_titlebar()
+        if extend:
+            self.title_bar.setStyleSheet("""
+                QFrame {
+                    background: transparent;
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    border-bottom: none;
+                }
+            """)
+        else:
+            self.title_bar.setStyleSheet(f"""
+                QFrame {{
+                    background: {self.theme.get_color('bg_primary')};
+                    border-top-left-radius: 16px;
+                    border-top-right-radius: 16px;
+                    border-bottom: none;
+                }}
+            """)
+
+        for tab in [self.workshop_tab, self.wallpapers_tab]:
+            if hasattr(tab, "apply_backgrounds"):
+                tab.apply_backgrounds(self.config, self.theme)
 
     def _update_corner_covers(self) -> None:
         if not hasattr(self, "_corner_covers"):
