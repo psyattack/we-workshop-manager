@@ -84,7 +84,7 @@ def create_application_context(app) -> ApplicationContext:
         theme_service=theme_service,
         metadata_service=metadata_service,
     )
-    main_window.setWindowIcon(get_icon("ICON_APP"))
+    main_window.setWindowIcon(get_icon("ICON_APP128"))
 
     return ApplicationContext(
         app=app,
