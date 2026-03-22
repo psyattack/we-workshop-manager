@@ -1581,7 +1581,7 @@ class DetailsPanel(QWidget):
             self._add_separator()
             self._add_section_title(
                 self.tr.t("labels.collections"),
-                "ICON_FOLDER"
+                "ICON_COLLECTION"
             )
             for col in collections:
                 col_id = col.get("id", "") if isinstance(col, dict) else ""
@@ -1624,7 +1624,7 @@ class DetailsPanel(QWidget):
         if collections:
             self._add_separator()
             self._add_section_title(
-                self.tr.t("labels.collections"), "ICON_FOLDER"
+                self.tr.t("labels.collections"), "ICON_COLLECTION"
             )
             for col in collections:
                 col_id = col.get('id', '') if isinstance(col, dict) else ''

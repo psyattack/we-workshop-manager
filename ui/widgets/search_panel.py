@@ -34,15 +34,11 @@ class SearchPanel(QWidget):
         root.setSpacing(8)
 
         self.browse_toggle = BrowseToggle(
-            [self.tr.t("labels.author_workshop_files"),
-             self.tr.t("labels.author_collections")],
+            ["ICON_WALLPAPER", "ICON_COLLECTION"],
             self.theme, self,
         )
         self.browse_toggle.setFixedHeight(36)
         self.browse_toggle.currentChanged.connect(self.browse_mode_changed.emit)
-
-        root.addWidget(self.browse_toggle)
-        root.addSpacing(0)
 
         self.info_primary_frame = self._create_info_box()
         self.info_secondary_frame = self._create_info_box()
@@ -109,6 +105,7 @@ class SearchPanel(QWidget):
         frame_layout.addWidget(self.filter_button)
 
         search_host_layout.addWidget(self.main_frame)
+        search_host_layout.addWidget(self.browse_toggle)
         search_host_layout.addWidget(self.actions_button)
 
         root.addWidget(self.search_host)

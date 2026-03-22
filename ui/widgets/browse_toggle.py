@@ -1,49 +1,71 @@
 from PyQt6.QtCore import (
-    QEasingCurve, QParallelAnimationGroup, QRectF, Qt,
-    QVariantAnimation, QTimer, pyqtSignal,
+    QEasingCurve,
+    QParallelAnimationGroup,
+    QRectF,
+    Qt,
+    QVariantAnimation,
+    QTimer,
+    pyqtSignal,
 )
 from PyQt6.QtGui import QColor, QPainter, QPen
 from PyQt6.QtWidgets import QPushButton, QHBoxLayout, QWidget
 
+from infrastructure.resources.resource_manager import get_icon
+
 
 class BrowseTabButton(QPushButton):
-    def __init__(self, text: str, theme_manager, parent=None):
-        super().__init__(text, parent)
+    def __init__(self, icon_name: str, theme_manager, parent=None):
+        super().__init__(parent)
         self.theme = theme_manager
         self._active = False
+        self._icon_name = icon_name
+
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setFlat(True)
-        self.setMinimumWidth(56)
-        self.setFixedHeight(28)
+        self.setFixedSize(36, 28)
+        self.setIcon(get_icon(icon_name))
+        self.setIconSize(self._get_icon_size())
         self._apply_style()
+
+    def _get_icon_size(self) -> Qt.QSize:
+        return self.size() * 0.70
 
     def set_active(self, active: bool) -> None:
         self._active = active
         self._apply_style()
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.setIconSize(self._get_icon_size())
+
     def _apply_style(self) -> None:
-        text_active = self.theme.get_color("text_primary")
-        text_inactive = self.theme.get_color("text_secondary")
-        color = text_active if self._active else text_inactive
-        weight = "700" if self._active else "500"
-        self.setStyleSheet(f"""
+        color = (
+            self.theme.get_color("text_primary")
+            if self._active
+            else self.theme.get_color("text_secondary")
+        )
+
+        self.setStyleSheet(
+            f"""
             QPushButton {{
-                background: transparent; border: none;
-                color: {color}; font-size: 11px; font-weight: {weight};
-                padding: 0 10px; border-radius: 6px;
+                background: transparent;
+                border: none;
+                border-radius: 8px;
+                padding: 0px;
+                color: {color};
             }}
-            QPushButton:hover {{ background: transparent; }}
-        """)
+            """
+        )
 
 
 class BrowseToggle(QWidget):
     currentChanged = pyqtSignal(int)
 
-    def __init__(self, labels: list[str], theme_manager, parent=None):
+    def __init__(self, icon_names: list[str], theme_manager, parent=None):
         super().__init__(parent)
         self.theme = theme_manager
-        self._labels = labels
+        self._icon_names = icon_names
         self._buttons: list[BrowseTabButton] = []
         self._current_index = 0
 
@@ -51,60 +73,66 @@ class BrowseToggle(QWidget):
         self._indicator_width = 0.0
         self._indicator_stretch = 0.0
 
+        self._is_animating = False
+        self._pending_snap = False
+
         self._x_anim = QVariantAnimation(self)
         self._x_anim.setDuration(260)
         self._x_anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
-        self._x_anim.valueChanged.connect(self._on_x)
+        self._x_anim.valueChanged.connect(self._on_x_changed)
 
         self._w_anim = QVariantAnimation(self)
         self._w_anim.setDuration(260)
         self._w_anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
-        self._w_anim.valueChanged.connect(self._on_w)
+        self._w_anim.valueChanged.connect(self._on_w_changed)
 
-        self._s_anim = QVariantAnimation(self)
-        self._s_anim.setDuration(260)
-        self._s_anim.setKeyValueAt(0.0, 0.0)
-        self._s_anim.setKeyValueAt(0.35, 8.0)
-        self._s_anim.setKeyValueAt(0.7, 4.0)
-        self._s_anim.setKeyValueAt(1.0, 0.0)
-        self._s_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self._s_anim.valueChanged.connect(self._on_s)
+        self._stretch_anim = QVariantAnimation(self)
+        self._stretch_anim.setDuration(260)
+        self._stretch_anim.setKeyValueAt(0.0, 0.0)
+        self._stretch_anim.setKeyValueAt(0.35, 8.0)
+        self._stretch_anim.setKeyValueAt(0.7, 4.0)
+        self._stretch_anim.setKeyValueAt(1.0, 0.0)
+        self._stretch_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._stretch_anim.valueChanged.connect(self._on_stretch_changed)
 
-        self._group = QParallelAnimationGroup(self)
-        self._group.addAnimation(self._x_anim)
-        self._group.addAnimation(self._w_anim)
-        self._group.addAnimation(self._s_anim)
+        self._anim_group = QParallelAnimationGroup(self)
+        self._anim_group.addAnimation(self._x_anim)
+        self._anim_group.addAnimation(self._w_anim)
+        self._anim_group.addAnimation(self._stretch_anim)
+        self._anim_group.finished.connect(self._on_animation_finished)
 
-        self.setFixedHeight(36)
+        self.setFixedHeight(28)
+        self.setFixedWidth(72)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         self._layout = QHBoxLayout(self)
-        self._layout.setContentsMargins(4, 4, 4, 4)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
 
-        for i, text in enumerate(labels):
-            btn = BrowseTabButton(text, self.theme, self)
-            btn.clicked.connect(lambda c=False, idx=i: self.setCurrentIndex(idx))
-            self._buttons.append(btn)
-            self._layout.addWidget(btn)
+        for index, icon_name in enumerate(icon_names):
+            button = BrowseTabButton(icon_name, self.theme, self)
+            button.clicked.connect(lambda checked=False, i=index: self.setCurrentIndex(i))
+            self._buttons.append(button)
+            self._layout.addWidget(button)
 
-        self._apply_states()
-
-    def _rect(self, i: int) -> QRectF:
-        if 0 <= i < len(self._buttons):
-            return QRectF(self._buttons[i].geometry())
+        self._apply_button_states()
+        QTimer.singleShot(0, self._snap_indicator_to_current)
+    
+    def _get_button_rect(self, index: int) -> QRectF:
+        if 0 <= index < len(self._buttons):
+            return QRectF(self._buttons[index].geometry())
         return QRectF()
 
-    def _on_x(self, v):
-        self._indicator_x = float(v)
+    def _on_x_changed(self, value):
+        self._indicator_x = float(value)
         self.update()
 
-    def _on_w(self, v):
-        self._indicator_width = float(v)
+    def _on_w_changed(self, value):
+        self._indicator_width = float(value)
         self.update()
 
-    def _on_s(self, v):
-        self._indicator_stretch = float(v)
+    def _on_stretch_changed(self, value):
+        self._indicator_stretch = float(value)
         self.update()
 
     def currentIndex(self) -> int:
@@ -115,71 +143,109 @@ class BrowseToggle(QWidget):
             return
         if index == self._current_index:
             return
+
         self._current_index = index
-        self._apply_states()
-        target = self._rect(index)
-        self._group.stop()
-        self._x_anim.setStartValue(self._indicator_x)
-        self._x_anim.setEndValue(target.x())
-        self._w_anim.setStartValue(self._indicator_width)
-        self._w_anim.setEndValue(target.width())
-        self._s_anim.setStartValue(0.0)
-        self._s_anim.setEndValue(0.0)
-        self._group.start()
+        self._apply_button_states()
+
+        self._start_indicator_animation_to(index)
         self.currentChanged.emit(index)
 
-    def _snap(self) -> None:
-        r = self._rect(self._current_index)
-        self._indicator_x = r.x()
-        self._indicator_width = r.width()
+    def _start_indicator_animation_to(self, index: int) -> None:
+        def start():
+            target = self._get_button_rect(index)
+            if target.isNull():
+                return
+
+            self._is_animating = True
+            self._anim_group.stop()
+
+            self._x_anim.setStartValue(self._indicator_x)
+            self._x_anim.setEndValue(target.x())
+
+            self._w_anim.setStartValue(self._indicator_width)
+            self._w_anim.setEndValue(target.width())
+
+            self._stretch_anim.setStartValue(0.0)
+            self._stretch_anim.setEndValue(0.0)
+
+            self._anim_group.start()
+
+        QTimer.singleShot(0, start)
+
+    def _on_animation_finished(self) -> None:
+        self._is_animating = False
+        if self._pending_snap:
+            self._pending_snap = False
+            self._snap_indicator_to_current()
+
+    def _snap_indicator_to_current(self) -> None:
+        if self._is_animating:
+            self._pending_snap = True
+            return
+
+        rect = self._get_button_rect(self._current_index)
+        if rect.isNull():
+            return
+
+        self._indicator_x = rect.x()
+        self._indicator_width = rect.width()
         self._indicator_stretch = 0.0
         self.update()
 
-    def _apply_states(self) -> None:
-        for i, b in enumerate(self._buttons):
-            b.set_active(i == self._current_index)
+    def _apply_button_states(self) -> None:
+        for i, button in enumerate(self._buttons):
+            button.set_active(i == self._current_index)
 
-    def resizeEvent(self, e):
-        super().resizeEvent(e)
-        self._snap()
+    def update_labels(self, icon_names: list[str]) -> None:
+        self._icon_names = icon_names
+        for i, button in enumerate(self._buttons):
+            if i < len(icon_names):
+                button.setIcon(get_icon(icon_names[i]))
+        QTimer.singleShot(0, self._snap_indicator_to_current)
 
-    def showEvent(self, e):
-        super().showEvent(e)
-        QTimer.singleShot(0, self._snap)
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        QTimer.singleShot(0, self._snap_indicator_to_current)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        QTimer.singleShot(0, self._snap_indicator_to_current)
 
     def paintEvent(self, event):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        outer = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        border_c = QColor(self.theme.get_color("border"))
-        bg_c = QColor(self.theme.get_color("bg_secondary"))
-        p.setPen(QPen(border_c, 1))
-        p.setBrush(bg_c)
-        radius = 8.0
-        p.drawRoundedRect(outer, radius, radius)
+        outer_rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        border_color = QColor(self.theme.get_color("border"))
+        bg_color = QColor(self.theme.get_color("bg_secondary"))
+
+        painter.setPen(QPen(border_color, 1))
+        painter.setBrush(bg_color)
+        painter.drawRoundedRect(outer_rect, 8.0, 8.0)
 
         if not self._buttons:
             return
 
         extra = self._indicator_stretch
-        ind = QRectF(
-            self._indicator_x + 2.0 - (extra / 2.0),
-            4.0,
-            self._indicator_width - 4.0 + extra,
-            self.height() - 8.0,
+        indicator_rect = QRectF(
+            self._indicator_x + 1.5 - (extra / 2.0),
+            1.5,
+            self._indicator_width - 3.0 + extra,
+            self.height() - 3.0,
         )
 
-        ll = 3.0
-        rl = self.width() - 3.0
-        if ind.left() < ll:
-            ind.setLeft(ll)
-        if ind.right() > rl:
-            ind.setRight(rl)
-        if ind.width() < 10:
+        left_limit = 1.5
+        right_limit = self.width() - 1.5
+        if indicator_rect.left() < left_limit:
+            indicator_rect.setLeft(left_limit)
+        if indicator_rect.right() > right_limit:
+            indicator_rect.setRight(right_limit)
+
+        if indicator_rect.width() < 10:
             return
 
-        accent = QColor(self.theme.get_color("primary"))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(accent)
-        p.drawRoundedRect(ind, 5.0, 5.0)
+        highlight = QColor(255, 255, 255, 28)
+
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(highlight)
+        painter.drawRoundedRect(indicator_rect, 8.0, 8.0)

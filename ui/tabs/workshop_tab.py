@@ -1,3 +1,5 @@
+import copy
+from dataclasses import dataclass, field
 from typing import Optional
 
 from PyQt6.QtCore import QPoint, QTimer, Qt, QSize, pyqtSignal, pyqtProperty, QPropertyAnimation, QEasingCurve
@@ -18,6 +20,20 @@ from ui.widgets.loading_overlay import LoadingOverlay
 from ui.widgets.preview_popup import PreviewPopup
 from infrastructure.steam.workshop_parser import WorkshopParser
 from infrastructure.steam.workshop_url_builder import WorkshopUrlBuilder
+
+
+@dataclass
+class WorkshopNavigationState:
+    nav_mode: str
+    current_page: int
+    total_pages: int
+    filters: object = None
+    author_name: str = ""
+    author_url: str = ""
+    selected_pubfileid: str | None = None
+    browse_toggle_index: int = 0
+    collection_stack: list[str] = field(default_factory=list)
+    current_collection_id: str | None = None
 
 
 class AnimatedDetailsContainer(QWidget):
@@ -128,6 +144,7 @@ class WorkshopTab(QWidget):
         self._current_collection_contents = None
         self._collection_items_per_page = 30
         self._collection_total_pages = 1
+        self._navigation_history: list[WorkshopNavigationState] = []
 
         self._nav_mode = self.NAV_NORMAL
         self._author_name = ""
@@ -459,6 +476,73 @@ class WorkshopTab(QWidget):
 
         self.scroll_area.verticalScrollBar().setValue(0)
 
+    def _create_navigation_state(self) -> WorkshopNavigationState:
+        filters = self.filter_bar.get_current_filters()
+        filters_copy = copy.deepcopy(filters) if filters is not None else None
+
+        current_collection_id = None
+        if self._current_collection_contents is not None:
+            current_collection_id = self._current_collection_contents.collection_id
+
+        return WorkshopNavigationState(
+            nav_mode=self._nav_mode,
+            current_page=self.current_page,
+            total_pages=self.total_pages,
+            filters=filters_copy,
+            author_name=self._author_name,
+            author_url=self._author_url,
+            selected_pubfileid=self.selected_pubfileid,
+            browse_toggle_index=self.filter_bar.search_panel.browse_toggle.currentIndex()
+            if hasattr(self.filter_bar.search_panel, "browse_toggle") else 0,
+            collection_stack=list(self._collection_stack),
+            current_collection_id=current_collection_id,
+        )
+
+    def _push_navigation_state(self) -> None:
+        self._navigation_history.append(self._create_navigation_state())
+
+    def _restore_navigation_state(self, state: WorkshopNavigationState) -> None:
+        self._nav_mode = state.nav_mode
+        self.current_page = max(1, state.current_page)
+        self.total_pages = max(1, state.total_pages)
+        self._author_name = state.author_name
+        self._author_url = state.author_url
+        self.selected_pubfileid = state.selected_pubfileid
+        self._collection_stack = list(state.collection_stack)
+
+        if hasattr(self.filter_bar.search_panel, "browse_toggle"):
+            self.filter_bar.search_panel.browse_toggle.setCurrentIndex(state.browse_toggle_index)
+
+        if self._author_url:
+            self.filter_bar.search_panel.show_author_close()
+            self._set_sort_period_enabled(False)
+        else:
+            self.filter_bar.search_panel.hide_author_close()
+            self._set_sort_period_enabled(True)
+
+        if state.filters is not None:
+            state.filters.page = self.current_page
+            self.filter_bar.set_page(self.current_page)
+
+        self._current_collection_contents = None
+
+        if self._nav_mode == self.NAV_COLLECTION_CONTENTS and state.current_collection_id:
+            self.parser.load_collection_contents(state.current_collection_id)
+        elif self._nav_mode in (
+            self.NAV_AUTHOR_ITEMS,
+            self.NAV_AUTHOR_COLLECTIONS,
+            self.NAV_GLOBAL_COLLECTIONS,
+            self.NAV_NORMAL,
+        ):
+            self._load_current_mode_page()
+
+    def _pop_and_restore_navigation_state(self) -> bool:
+        if not self._navigation_history:
+            return False
+        state = self._navigation_history.pop()
+        self._restore_navigation_state(state)
+        return True
+
     def _on_login_success(self) -> None:
         self._initial_load()
 
@@ -616,6 +700,9 @@ class WorkshopTab(QWidget):
     def _on_author_clicked(self, author_name: str, author_url: str) -> None:
         if not author_url:
             return
+
+        self._push_navigation_state()
+
         self._author_name = author_name
         self._author_url = author_url
         self._nav_mode = self.NAV_AUTHOR_ITEMS
@@ -624,27 +711,26 @@ class WorkshopTab(QWidget):
         self.selected_pubfileid = None
 
         self.filter_bar.search_panel.show_author_close()
-
         self.filter_bar.search_panel.browse_toggle.setCurrentIndex(0)
-
         self._set_sort_period_enabled(False)
-
         self._load_current_mode_page()
 
     def _exit_author_mode(self) -> None:
         self._author_name = ""
         self._author_url = ""
         self._collection_stack.clear()
-        self.current_page = 1
         self.selected_pubfileid = None
 
         self.filter_bar.search_panel.hide_author_close()
-
         self._set_sort_period_enabled(True)
 
+        restored = self._pop_and_restore_navigation_state()
+        if restored:
+            return
+
+        self.current_page = 1
         self._nav_mode = self.NAV_NORMAL
         self.filter_bar.search_panel.browse_toggle.setCurrentIndex(0)
-
         filters = self.filter_bar.get_current_filters()
         filters.page = 1
         self.filter_bar.set_page(1)
@@ -659,6 +745,8 @@ class WorkshopTab(QWidget):
                 fp.time_combo["combo"].setEnabled(enabled)
 
     def _on_collection_item_clicked(self, pubfileid: str) -> None:
+        self._push_navigation_state()
+
         self._nav_mode = self.NAV_COLLECTION_CONTENTS
         self._collection_stack.append(pubfileid)
         self.selected_pubfileid = None
@@ -672,26 +760,13 @@ class WorkshopTab(QWidget):
         self.current_page = 1
         self.total_pages = 1
 
-        if self._collection_stack:
-            self._collection_stack.pop()
+        if self._pop_and_restore_navigation_state():
+            return
 
-        if self._collection_stack:
-            prev_id = self._collection_stack.pop()
-            self._on_collection_item_clicked(prev_id)
-        else:
-            if self._author_url:
-                idx = self.filter_bar.search_panel.browse_toggle.currentIndex()
-                self._nav_mode = (
-                    self.NAV_AUTHOR_COLLECTIONS if idx == 1
-                    else self.NAV_AUTHOR_ITEMS
-                )
-            elif self.filter_bar.search_panel.browse_toggle.currentIndex() == 1:
-                self._nav_mode = self.NAV_GLOBAL_COLLECTIONS
-            else:
-                self._nav_mode = self.NAV_NORMAL
-            if hasattr(self, '_pagination_bar'):
-                self._pagination_bar.setVisible(True)
-            self._load_current_mode_page()
+        self._nav_mode = self.NAV_NORMAL
+        if hasattr(self, '_pagination_bar'):
+            self._pagination_bar.setVisible(True)
+        self._load_current_mode_page()
 
     def _render_collection_contents_page(self) -> None:
         contents = self._current_collection_contents

@@ -530,7 +530,6 @@ class CollectionGridItem(BaseGridItem):
 
     def _setup_collection_badge(self, item_count: int) -> None:
         self.badge = QWidget(self.overlay_container)
-        self.badge.setFixedHeight(22)
         self.badge.setStyleSheet("""
             background-color: rgba(74, 127, 217, 200);
             border-radius: 4px;
@@ -542,8 +541,8 @@ class CollectionGridItem(BaseGridItem):
         badge_layout.setSpacing(3)
 
         folder_icon = QLabel()
-        folder_icon.setPixmap(get_pixmap("ICON_FOLDER", 14))
-        folder_icon.setFixedSize(14, 14)
+        folder_icon.setPixmap(get_pixmap("ICON_COLLECTION2", 24))
+        folder_icon.setFixedSize(24, 28)
         folder_icon.setStyleSheet("background: transparent; border: none;")
         badge_layout.addWidget(folder_icon)
 
