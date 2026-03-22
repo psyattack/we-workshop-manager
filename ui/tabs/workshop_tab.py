@@ -13,9 +13,11 @@ from ui.widgets.details_panel import DetailsPanel
 from ui.widgets.filter_bar import UnifiedFilterBar
 from ui.widgets.flow_layout import AdaptiveGridWidget
 from ui.widgets.grid_items import SkeletonGridItem, WorkshopGridItem
+from ui.widgets.grid_items import CollectionGridItem
 from ui.widgets.loading_overlay import LoadingOverlay
 from ui.widgets.preview_popup import PreviewPopup
 from infrastructure.steam.workshop_parser import WorkshopParser
+from infrastructure.steam.workshop_url_builder import WorkshopUrlBuilder
 
 
 class AnimatedDetailsContainer(QWidget):
@@ -83,6 +85,12 @@ class AnimatedDetailsContainer(QWidget):
 class WorkshopTab(QWidget):
     download_requested = pyqtSignal(str)
 
+    NAV_NORMAL = "normal"
+    NAV_AUTHOR_ITEMS = "author_items"
+    NAV_AUTHOR_COLLECTIONS = "author_collections"
+    NAV_COLLECTION_CONTENTS = "collection_contents"
+    NAV_GLOBAL_COLLECTIONS = "global_collections"
+
     def __init__(
         self,
         config_service,
@@ -116,10 +124,26 @@ class WorkshopTab(QWidget):
         self._file_size_cache: dict[str, int] = {}
         self._details_panel_margin = 15
         self._loading_overlay: Optional[LoadingOverlay] = None
+        self._empty_state_container: Optional[QWidget] = None
+        self._current_collection_contents = None
+        self._collection_items_per_page = 30
+        self._collection_total_pages = 1
+
+        self._nav_mode = self.NAV_NORMAL
+        self._author_name = ""
+        self._author_url = ""
+        self._collection_stack: list[str] = []
 
         self._setup_ui()
         self._setup_parser()
         self._setup_downloads_dialog()
+
+        self.details_panel.author_clicked.connect(self._on_author_clicked)
+        self.parser.collection_contents_loaded.connect(self._on_collection_contents_loaded)
+        self.filter_bar.search_panel.author_close_requested.connect(self._exit_author_mode)
+        self.filter_bar.search_panel.browse_mode_changed.connect(
+            self._on_browse_mode_changed
+        )
 
         self.dm.download_completed.connect(self._on_download_completed)
 
@@ -209,44 +233,38 @@ class WorkshopTab(QWidget):
 
         self.content_card = QFrame()
         self.content_card.setObjectName("workshopContentCard")
-        self.content_card.setStyleSheet(
-            f"""
+        self.content_card.setStyleSheet(f"""
             QFrame#workshopContentCard {{
                 background-color: transparent;
                 border: 1px solid {self.theme.get_color('border')};
                 border-radius: 16px;
             }}
-            """
-        )
-
+        """)
         layout = QVBoxLayout(self.content_card)
         layout.setContentsMargins(10, 10, 10, 7)
         layout.setSpacing(10)
 
-        self.filter_bar = UnifiedFilterBar(self.theme, self.tr, UnifiedFilterBar.MODE_WORKSHOP, self)
+        self.filter_bar = UnifiedFilterBar(
+            self.theme, self.tr, UnifiedFilterBar.MODE_WORKSHOP, self
+        )
         self.filter_bar.filters_changed.connect(self._on_filters_changed)
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
         layout.addWidget(self.filter_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.scroll_area.setStyleSheet(
-            f"""
-            QScrollArea {{
-                border: none;
-                background-color: transparent;
-            }}
+        self.scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.scroll_area.setStyleSheet(f"""
+            QScrollArea {{ border: none; background-color: transparent; }}
             QScrollBar:vertical {{
                 background-color: {self.theme.get_color('bg_secondary')};
-                width: 10px;
-                margin: 2px 2px 2px 2px;
-                border-radius: 4px;
+                width: 10px; margin: 2px 2px 2px 2px; border-radius: 4px;
             }}
             QScrollBar::handle:vertical {{
                 background-color: {self.theme.get_color('border')};
-                min-height: 30px;
-                border-radius: 4px;
+                min-height: 30px; border-radius: 4px;
             }}
             QScrollBar::handle:vertical:hover {{
                 background-color: {self.theme.get_color('primary')};
@@ -254,25 +272,22 @@ class WorkshopTab(QWidget):
             QScrollBar::handle:vertical:pressed {{
                 background-color: {self.theme.get_color('primary_hover')};
             }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            """
-        )
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0px; }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
+        """)
 
         self.grid_widget = AdaptiveGridWidget()
         self.grid_widget.set_item_size_range(160, 240, 185)
-        self.grid_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-
+        self.grid_widget.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.scroll_area.setWidget(self.grid_widget)
-
         self._loading_overlay = LoadingOverlay(self.theme, self.scroll_area)
 
         layout.addWidget(self.scroll_area, 1)
-        layout.addWidget(self._create_pagination_bar(), 0, Qt.AlignmentFlag.AlignHCenter)
+
+        self._pagination_bar = self._create_pagination_bar()
+        layout.addWidget(self._pagination_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
         outer_layout.addWidget(self.content_card)
         return widget
@@ -427,16 +442,22 @@ class WorkshopTab(QWidget):
     def _go_to_page(self, page: int) -> None:
         if self._is_loading_page:
             return
+
         self.page_input.clearFocus()
         page = max(1, min(page, self.total_pages))
-        if page != self.current_page:
-            self.current_page = page
-            self.selected_pubfileid = None
-            filters = self.filter_bar.get_current_filters()
-            filters.page = page
-            self.filter_bar.set_page(page)
-            self.parser.load_page(filters)
-            self.scroll_area.verticalScrollBar().setValue(0)
+        if page == self.current_page:
+            return
+
+        self.current_page = page
+        self.selected_pubfileid = None
+        self.filter_bar.set_page(page)
+
+        if self._nav_mode == self.NAV_COLLECTION_CONTENTS and self._current_collection_contents is not None:
+            self._render_collection_contents_page()
+        else:
+            self._load_current_mode_page()
+
+        self.scroll_area.verticalScrollBar().setValue(0)
 
     def _on_login_success(self) -> None:
         self._initial_load()
@@ -446,6 +467,9 @@ class WorkshopTab(QWidget):
 
     def _initial_load(self) -> None:
         self._initial_load_done = True
+        self._nav_mode = self.NAV_NORMAL
+        if hasattr(self, '_browse_toggle'):
+            self.filter_bar.search_panel.browse_toggle.setCurrentIndex(0)
         self.parser.load_page(self.filter_bar.get_current_filters())
 
     def _on_refresh_requested(self, filters) -> None:
@@ -454,7 +478,7 @@ class WorkshopTab(QWidget):
         filters.page = self.current_page
         self.filter_bar.set_page(self.current_page)
         self.selected_pubfileid = None
-        self.parser.load_page(filters)
+        self._load_current_mode_page()
 
     def _on_filters_changed(self, filters) -> None:
         if self._is_loading_page:
@@ -463,7 +487,8 @@ class WorkshopTab(QWidget):
         filters.page = 1
         self.filter_bar.set_page(1)
         self.selected_pubfileid = None
-        self.parser.load_page(filters)
+        self._collection_stack.clear()
+        self._load_current_mode_page()
 
     def _on_page_loading_started(self) -> None:
         self._is_loading_page = True
@@ -487,9 +512,25 @@ class WorkshopTab(QWidget):
         self._update_pagination()
         self._update_info_text()
 
+        if hasattr(self, '_pagination_bar'):
+            self._pagination_bar.setVisible(True)
+
         QTimer.singleShot(50, self._force_grid_update)
 
-        if page_data.items and not self.selected_pubfileid and self.details_container.is_panel_visible():
+        is_collection_mode = self._nav_mode in (
+            self.NAV_GLOBAL_COLLECTIONS,
+            self.NAV_AUTHOR_COLLECTIONS,
+            self.NAV_COLLECTION_CONTENTS,
+        )
+        has_collection_items = any(
+            getattr(item, 'is_collection', False) for item in page_data.items
+        )
+
+        if (page_data.items
+                and not self.selected_pubfileid
+                and self.details_container.is_panel_visible()
+                and not is_collection_mode
+                and not has_collection_items):
             self._select_item(page_data.items[0].pubfileid)
 
         self._try_preload_next_page()
@@ -527,6 +568,234 @@ class WorkshopTab(QWidget):
                         pass
 
         self.details_panel.set_workshop_item(item)
+
+    def _open_current_collection_details(self, contents) -> None:
+        if not self.details_container.is_panel_visible():
+            self.details_container.show_panel()
+            self._update_grid_margin(True)
+
+        self.details_panel.set_collection_info(contents)
+
+    def _on_browse_mode_changed(self, index: int) -> None:
+        self.current_page = 1
+        self.selected_pubfileid = None
+        self._collection_stack.clear()
+        filters = self.filter_bar.get_current_filters()
+        filters.page = 1
+        self.filter_bar.set_page(1)
+
+        if self._author_url:
+            if index == 1:
+                self._nav_mode = self.NAV_AUTHOR_COLLECTIONS
+            else:
+                self._nav_mode = self.NAV_AUTHOR_ITEMS
+            self._load_current_mode_page()
+        else:
+            if index == 1:
+                self._nav_mode = self.NAV_GLOBAL_COLLECTIONS
+            else:
+                self._nav_mode = self.NAV_NORMAL
+            self._load_current_mode_page()
+
+    def _load_current_mode_page(self) -> None:
+        filters = self.filter_bar.get_current_filters()
+        filters.page = self.current_page
+
+        if self._nav_mode == self.NAV_AUTHOR_ITEMS:
+            url = WorkshopUrlBuilder.build_author_items(self._author_url, filters)
+            self.parser.load_author_page(url, is_collections=False)
+        elif self._nav_mode == self.NAV_AUTHOR_COLLECTIONS:
+            url = WorkshopUrlBuilder.build_author_collections(self._author_url, filters)
+            self.parser.load_author_page(url, is_collections=True)
+        elif self._nav_mode == self.NAV_GLOBAL_COLLECTIONS:
+            url = WorkshopUrlBuilder.build_collections_browse(filters)
+            self.parser.load_author_page(url, is_collections=True)
+        else:
+            self.parser.load_page(filters)
+
+    def _on_author_clicked(self, author_name: str, author_url: str) -> None:
+        if not author_url:
+            return
+        self._author_name = author_name
+        self._author_url = author_url
+        self._nav_mode = self.NAV_AUTHOR_ITEMS
+        self._collection_stack.clear()
+        self.current_page = 1
+        self.selected_pubfileid = None
+
+        self.filter_bar.search_panel.show_author_close()
+
+        self.filter_bar.search_panel.browse_toggle.setCurrentIndex(0)
+
+        self._set_sort_period_enabled(False)
+
+        self._load_current_mode_page()
+
+    def _exit_author_mode(self) -> None:
+        self._author_name = ""
+        self._author_url = ""
+        self._collection_stack.clear()
+        self.current_page = 1
+        self.selected_pubfileid = None
+
+        self.filter_bar.search_panel.hide_author_close()
+
+        self._set_sort_period_enabled(True)
+
+        self._nav_mode = self.NAV_NORMAL
+        self.filter_bar.search_panel.browse_toggle.setCurrentIndex(0)
+
+        filters = self.filter_bar.get_current_filters()
+        filters.page = 1
+        self.filter_bar.set_page(1)
+        self.parser.load_page(filters)
+
+    def _set_sort_period_enabled(self, enabled: bool) -> None:
+        if hasattr(self.filter_bar, 'filters_popup'):
+            fp = self.filter_bar.filters_popup
+            if hasattr(fp, 'sort_combo'):
+                fp.sort_combo["combo"].setEnabled(enabled)
+            if hasattr(fp, 'time_combo'):
+                fp.time_combo["combo"].setEnabled(enabled)
+
+    def _on_collection_item_clicked(self, pubfileid: str) -> None:
+        self._nav_mode = self.NAV_COLLECTION_CONTENTS
+        self._collection_stack.append(pubfileid)
+        self.selected_pubfileid = None
+        self.current_page = 1
+        self.total_pages = 1
+        self._current_collection_contents = None
+        self.parser.load_collection_contents(pubfileid)
+
+    def _on_collection_back(self) -> None:
+        self._current_collection_contents = None
+        self.current_page = 1
+        self.total_pages = 1
+
+        if self._collection_stack:
+            self._collection_stack.pop()
+
+        if self._collection_stack:
+            prev_id = self._collection_stack.pop()
+            self._on_collection_item_clicked(prev_id)
+        else:
+            if self._author_url:
+                idx = self.filter_bar.search_panel.browse_toggle.currentIndex()
+                self._nav_mode = (
+                    self.NAV_AUTHOR_COLLECTIONS if idx == 1
+                    else self.NAV_AUTHOR_ITEMS
+                )
+            elif self.filter_bar.search_panel.browse_toggle.currentIndex() == 1:
+                self._nav_mode = self.NAV_GLOBAL_COLLECTIONS
+            else:
+                self._nav_mode = self.NAV_NORMAL
+            if hasattr(self, '_pagination_bar'):
+                self._pagination_bar.setVisible(True)
+            self._load_current_mode_page()
+
+    def _render_collection_contents_page(self) -> None:
+        contents = self._current_collection_contents
+        if contents is None:
+            return
+
+        self._clear_grid()
+
+        if self.details_container.is_panel_visible():
+            self.details_panel.set_collection_info(contents)
+
+        total_items = len(contents.items)
+        start_index = (self.current_page - 1) * self._collection_items_per_page
+        end_index = start_index + self._collection_items_per_page
+        page_items = contents.items[start_index:end_index]
+
+        start_num = start_index + 1 if total_items > 0 else 0
+        end_num = min(end_index, total_items)
+
+        self.filter_bar.set_info_text(
+            f"{contents.title} ({start_num}-{end_num} / {total_items})"
+            if total_items > 0 else f"{contents.title} (0 / 0)"
+        )
+
+        item_size = self.grid_widget.get_current_item_size()
+
+        primary_card = CollectionGridItem(
+            pubfileid=contents.collection_id,
+            title=contents.title,
+            preview_url=contents.preview_url,
+            item_size=item_size,
+            theme_manager=self.theme,
+            parent=self,
+            is_primary_collection_card=True,
+            related_count=len(contents.related_collections),
+            show_back_button=True,
+            current_collection_text=self.tr.t("labels.current_collection"),
+            related_collections_text=self.tr.t("labels.related_collections"),
+        )
+        primary_card.clicked.connect(
+            lambda _pid=contents.collection_id: self._open_current_collection_details(contents)
+        )
+        primary_card.back_clicked.connect(self._on_collection_back)
+        self.grid_widget.add_item(primary_card)
+        self.grid_items.append(primary_card)
+
+        if self.current_page == 1 and contents.related_collections:
+            for col in contents.related_collections:
+                ci = CollectionGridItem(
+                    pubfileid=col.pubfileid,
+                    title=col.title,
+                    preview_url=col.preview_url,
+                    item_count=getattr(col, 'item_count', 0),
+                    item_size=item_size,
+                    theme_manager=self.theme,
+                    parent=self,
+                )
+                ci.clicked.connect(self._on_collection_item_clicked)
+                self.grid_widget.add_item(ci)
+                self.grid_items.append(ci)
+
+        for item_data in page_items:
+            grid_item = WorkshopGridItem(
+                pubfileid=item_data.pubfileid,
+                title=item_data.title,
+                preview_url=item_data.preview_url,
+                item_size=item_size,
+                theme_manager=self.theme,
+                parent=self,
+            )
+
+            if self.dm.is_downloading(item_data.pubfileid):
+                st = self.dm.get_download_status(item_data.pubfileid)
+                grid_item.set_status(WorkshopGridItem.STATUS_DOWNLOADING, st)
+            elif self._is_fully_installed(item_data.pubfileid):
+                grid_item.set_status(WorkshopGridItem.STATUS_INSTALLED)
+            else:
+                grid_item.set_status(WorkshopGridItem.STATUS_AVAILABLE)
+
+            grid_item.clicked.connect(self._select_item)
+            self.grid_widget.add_item(grid_item)
+            self.grid_items.append(grid_item)
+
+        if hasattr(self, "_pagination_bar"):
+            self._pagination_bar.setVisible(True)
+
+        self._update_pagination()
+        QTimer.singleShot(50, self._force_grid_update)
+
+    def _on_collection_contents_loaded(self, contents) -> None:
+        self._is_loading_page = False
+        if self._loading_overlay:
+            self._loading_overlay.hide()
+
+        self._current_collection_contents = contents
+        total_items = len(contents.items)
+        self._collection_total_pages = max(
+            1,
+            (total_items + self._collection_items_per_page - 1) // self._collection_items_per_page
+        )
+        self.total_pages = self._collection_total_pages
+        self.current_page = max(1, min(self.current_page, self.total_pages))
+
+        self._render_collection_contents_page()
 
     def _on_error(self, error_msg: str) -> None:
         self._is_loading_page = False
@@ -582,49 +851,95 @@ class WorkshopTab(QWidget):
                 pass
         self.skeleton_items.clear()
 
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._empty_state_container is not None:
+            self._empty_state_container.setMinimumHeight(self.scroll_area.viewport().height())
+            self.grid_widget.update_layout()
+
+    def _show_empty_state(self, text: str) -> None:
+        container = QWidget()
+        container.span_full_width = True
+        container.setMinimumHeight(self.scroll_area.viewport().height())
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        container.setStyleSheet("background: transparent;")
+
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(0)
+
+        layout.addStretch()
+
+        label = QLabel(text)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setStyleSheet(
+            f"""
+            color: {self.theme.get_color('text_secondary')};
+            font-size: 16px;
+            padding: 10px;
+            background: transparent;
+            """
+        )
+        layout.addWidget(label)
+
+        layout.addStretch()
+
+        self._empty_state_container = container
+        self.grid_widget.add_item(container)
+
     def _populate_grid(self, items) -> None:
         self._clear_skeleton_grid()
 
         if not items:
-            label = QLabel(self.tr.t("labels.no_wallpapers_found"))
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setStyleSheet(
-                f"""
-                color: {self.theme.get_color('text_secondary')};
-                font-size: 16px;
-                padding: 50px;
-                """
+            is_collections = self._nav_mode in (
+                self.NAV_GLOBAL_COLLECTIONS,
+                self.NAV_AUTHOR_COLLECTIONS,
             )
-            self.grid_widget.add_item(label)
+            key = "labels.no_collections_found" if is_collections else "labels.no_wallpapers_found"
+            self._show_empty_state(self.tr.t(key))
             return
 
         item_size = self.grid_widget.get_current_item_size()
 
         for item_data in items:
-            grid_item = WorkshopGridItem(
-                pubfileid=item_data.pubfileid,
-                title=item_data.title,
-                preview_url=item_data.preview_url,
-                item_size=item_size,
-                theme_manager=self.theme,
-                parent=self,
-            )
-
-            cached_size = self._file_size_cache.get(item_data.pubfileid, 0)
-            if cached_size > 0:
-                grid_item.set_file_size_bytes(cached_size)
-
-            if self.dm.is_downloading(item_data.pubfileid):
-                status_text = self.dm.get_download_status(item_data.pubfileid)
-                grid_item.set_status(WorkshopGridItem.STATUS_DOWNLOADING, status_text)
-            elif self._is_fully_installed(item_data.pubfileid):
-                grid_item.set_status(WorkshopGridItem.STATUS_INSTALLED)
+            if getattr(item_data, 'is_collection', False):
+                grid_item = CollectionGridItem(
+                    pubfileid=item_data.pubfileid,
+                    title=item_data.title,
+                    preview_url=item_data.preview_url,
+                    item_size=item_size,
+                    theme_manager=self.theme,
+                    parent=self,
+                )
+                grid_item.clicked.connect(self._on_collection_item_clicked)
+                self.grid_widget.add_item(grid_item)
+                self.grid_items.append(grid_item)
             else:
-                grid_item.set_status(WorkshopGridItem.STATUS_AVAILABLE)
+                grid_item = WorkshopGridItem(
+                    pubfileid=item_data.pubfileid,
+                    title=item_data.title,
+                    preview_url=item_data.preview_url,
+                    item_size=item_size,
+                    theme_manager=self.theme,
+                    parent=self,
+                )
 
-            grid_item.clicked.connect(self._select_item)
-            self.grid_widget.add_item(grid_item)
-            self.grid_items.append(grid_item)
+                cached_size = self._file_size_cache.get(item_data.pubfileid, 0)
+                if cached_size > 0:
+                    grid_item.set_file_size_bytes(cached_size)
+
+                if self.dm.is_downloading(item_data.pubfileid):
+                    status_text = self.dm.get_download_status(item_data.pubfileid)
+                    grid_item.set_status(WorkshopGridItem.STATUS_DOWNLOADING, status_text)
+                elif self._is_fully_installed(item_data.pubfileid):
+                    grid_item.set_status(WorkshopGridItem.STATUS_INSTALLED)
+                else:
+                    grid_item.set_status(WorkshopGridItem.STATUS_AVAILABLE)
+
+                grid_item.clicked.connect(self._select_item)
+                self.grid_widget.add_item(grid_item)
+                self.grid_items.append(grid_item)
 
     def _clear_grid(self) -> None:
         for item in self.grid_items:
@@ -637,6 +952,7 @@ class WorkshopTab(QWidget):
         self._clear_skeleton_grid()
         self.grid_widget.clear_items()
         self.grid_items.clear()
+        self._empty_state_container = None
 
     def _select_item(self, pubfileid: str) -> None:
         if not self.details_container.is_panel_visible():
@@ -644,6 +960,15 @@ class WorkshopTab(QWidget):
             self._update_grid_margin(True)
 
         self.selected_pubfileid = pubfileid
+
+        for grid_item in self.grid_items:
+            try:
+                if hasattr(grid_item, 'pubfileid') and grid_item.pubfileid == pubfileid:
+                    if isinstance(grid_item, CollectionGridItem):
+                        self._on_collection_item_clicked(pubfileid)
+                        return
+            except RuntimeError:
+                continue
 
         if self._is_fully_installed(pubfileid):
             folder_path = self.we.projects_path / pubfileid
@@ -657,7 +982,8 @@ class WorkshopTab(QWidget):
             try:
                 if item is None:
                     continue
-
+                if not hasattr(item, 'set_status'):
+                    continue
                 if self.dm.is_downloading(item.pubfileid):
                     status_text = self.dm.get_download_status(item.pubfileid)
                     item.set_status(WorkshopGridItem.STATUS_DOWNLOADING, status_text)
@@ -675,21 +1001,39 @@ class WorkshopTab(QWidget):
                 pass
 
     def _update_info_text(self) -> None:
+        if self._nav_mode == self.NAV_COLLECTION_CONTENTS:
+            return
+
+        prefix = ""
+        if self._author_url and self._author_name:
+            prefix = f"{self._author_name}  ·  "
+
+        is_collections = self._nav_mode in (
+            self.NAV_GLOBAL_COLLECTIONS,
+            self.NAV_AUTHOR_COLLECTIONS,
+        )
+
         if self._current_page_data:
             total_items = self._current_page_data.total_items
             current_count = len(self._current_page_data.items)
             start_item = (self.current_page - 1) * 15 + 1
             end_item = min(start_item + current_count - 1, total_items)
-
             if total_items > 0:
-                text = self.tr.t(
-                    "labels.showing_wallpapers",
-                    start=start_item,
-                    end=end_item,
-                    total=total_items,
-                )
+                if is_collections:
+                    text = prefix + self.tr.t(
+                        "labels.showing_collections",
+                        start=start_item, end=end_item, total=total_items,
+                    )
+                else:
+                    text = prefix + self.tr.t(
+                        "labels.showing_wallpapers",
+                        start=start_item, end=end_item, total=total_items,
+                    )
             else:
-                text = self.tr.t("labels.no_wallpapers_found")
+                if is_collections:
+                    text = prefix + self.tr.t("labels.no_collections_found")
+                else:
+                    text = prefix + self.tr.t("labels.no_wallpapers_found")
         else:
             text = self.tr.t("labels.loading_dots")
 
@@ -753,3 +1097,10 @@ class WorkshopTab(QWidget):
         self._preview_url_cache.clear()
         self._file_size_cache.clear()
         self._clear_grid()
+
+        self._nav_mode = self.NAV_NORMAL
+        self._author_name = ""
+        self._author_url = ""
+        self._collection_stack.clear()
+        if hasattr(self, 'filter_bar'):
+            self.filter_bar.search_panel.hide_author_close()

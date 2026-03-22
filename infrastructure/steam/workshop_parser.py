@@ -79,6 +79,7 @@ class WorkshopParser(QObject):
     login_failed = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
     preload_completed = pyqtSignal(str)
+    collection_contents_loaded = pyqtSignal(object)
 
     FETCH_TIMEOUT_MS = 10000
     POLL_INTERVAL_MS = 50
@@ -126,6 +127,9 @@ class WorkshopParser(QObject):
         self._preload_poll_count = 0
         self._bg_request_id = 0
         self._bg_callbacks: dict[int, tuple[str, object, int]] = {}
+
+        self._collection_request_id = 0
+        self._collection_poll_count = 0
 
         self._page_cache = WorkshopPageCache()
         self._item_cache = WorkshopItemCache()
@@ -477,6 +481,11 @@ class WorkshopParser(QObject):
                 20,
                 lambda: self._fetch_item_details(self._current_pubfileid, self._details_request_id),
             )
+        elif self._request_type in ("author_items", "author_collections"):
+            if self._request_type == "author_collections":
+                QTimer.singleShot(50, self._parse_collection_listing_page)
+            else:
+                QTimer.singleShot(50, self._parse_browse_page)
 
     def _handle_login(self) -> None:
         if self._login_attempted:
@@ -617,6 +626,7 @@ class WorkshopParser(QObject):
             num_ratings=result.get("num_ratings", ""),
             author=result.get("author", "") or (existing.author if existing else ""),
             author_url=result.get("author_url", "") or (existing.author_url if existing else ""),
+            collections=result.get("collections", []),
         )
 
         self._item_cache.set(pubfileid, item)
@@ -702,9 +712,157 @@ class WorkshopParser(QObject):
             or (existing.author if existing else ""),
             author_url=result.get("author_url", "")
             or (existing.author_url if existing else ""),
+            collections=result.get("collections", []),
         )
         self._item_cache.set(pid, item)
         return item
+
+    def load_author_page(self, url: str, is_collections: bool = False) -> None:
+        if self._is_loading_page:
+            return
+        cached_page = self._page_cache.get(url)
+        if cached_page:
+            self._current_page_data = cached_page
+            self.page_loaded.emit(cached_page)
+            return
+        self._is_loading_page = True
+        self._is_loading_details = False
+        self._request_type = "author_collections" if is_collections else "author_items"
+        self._current_url = url
+        self.page_loading_started.emit()
+        self._webview.load(QUrl(url))
+
+    def load_collection_contents(self, collection_id: str) -> None:
+        self._collection_request_id += 1
+        request_id = self._collection_request_id
+        self._collection_poll_count = 0
+        self._is_loading_page = True
+        self.page_loading_started.emit()
+
+        from infrastructure.steam.workshop_scripts import (
+            build_collection_contents_fetch_script,
+        )
+        script = build_collection_contents_fetch_script(collection_id, request_id)
+        self._page.runJavaScript(script)
+        self._poll_collection_result(request_id, collection_id)
+
+    def _poll_collection_result(self, request_id: int, collection_id: str) -> None:
+        if request_id != self._collection_request_id:
+            return
+        self._collection_poll_count += 1
+        if self._collection_poll_count > self._max_polls:
+            self._is_loading_page = False
+            self.loading_finished.emit()
+            self.error_occurred.emit("Collection fetch timeout")
+            return
+
+        from infrastructure.steam.workshop_scripts import build_collection_contents_poll_script
+        script = build_collection_contents_poll_script(request_id)
+        self._page.runJavaScript(
+            script,
+            lambda result: self._check_collection_result(result, request_id, collection_id),
+        )
+
+    def _check_collection_result(self, result, request_id: int, collection_id: str) -> None:
+        if request_id != self._collection_request_id:
+            return
+        if result is None:
+            QTimer.singleShot(
+                self.POLL_INTERVAL_MS,
+                lambda: self._poll_collection_result(request_id, collection_id),
+            )
+            return
+        if isinstance(result, dict) and result.get("cancelled"):
+            self._is_loading_page = False
+            self.loading_finished.emit()
+            return
+        if isinstance(result, dict) and "error" in result:
+            self._is_loading_page = False
+            self.loading_finished.emit()
+            self.error_occurred.emit(f"Collection error: {result['error']}")
+            return
+        self._on_collection_parsed(result)
+
+    def _on_collection_parsed(self, result) -> None:
+        self._is_loading_page = False
+        self.loading_finished.emit()
+        if not result:
+            self.error_occurred.emit("Failed to parse collection")
+            return
+
+        from domain.models.workshop import WorkshopCollection, CollectionContents, WorkshopItem
+
+        items = []
+        for item_data in result.get("items", []):
+            item = WorkshopItem(
+                pubfileid=item_data.get("pubfileid", ""),
+                title=item_data.get("title", ""),
+                preview_url=item_data.get("preview_url", ""),
+                is_collection=item_data.get("is_collection", False),
+            )
+            items.append(item)
+            self._item_cache.set(item.pubfileid, item)
+
+        related = []
+        for col_data in result.get("related_collections", []):
+            col = WorkshopCollection(
+                pubfileid=col_data.get("pubfileid", ""),
+                title=col_data.get("title", ""),
+                preview_url=col_data.get("preview_url", ""),
+            )
+            related.append(col)
+
+        contents = CollectionContents(
+            collection_id=result.get("collection_id", ""),
+            title=result.get("title", ""),
+            description=result.get("description", ""),
+            preview_url=result.get("preview_url", ""),
+            author=result.get("author", ""),
+            author_url=result.get("author_url", ""),
+            items=items,
+            related_collections=related,
+            info=result.get("info", {}),
+        )
+        self.collection_contents_loaded.emit(contents)
+
+    def _parse_collection_listing_page(self) -> None:
+        from infrastructure.steam.workshop_scripts import collection_listing_parse_script
+        self._page.runJavaScript(
+            collection_listing_parse_script(), self._on_collection_listing_parsed
+        )
+
+    def _on_collection_listing_parsed(self, result) -> None:
+        self._is_loading_page = False
+        self.loading_finished.emit()
+        if not result:
+            self.error_occurred.emit("Failed to parse collections page")
+            return
+
+        from domain.models.workshop import WorkshopItem
+        items = []
+        for item_data in result.get("items", []):
+            item = WorkshopItem(
+                pubfileid=item_data.get("pubfileid", ""),
+                title=item_data.get("title", ""),
+                preview_url=item_data.get("preview_url", ""),
+                author=item_data.get("author", ""),
+                author_url=item_data.get("author_url", ""),
+                is_collection=item_data.get("is_collection", True),
+            )
+            items.append(item)
+            self._item_cache.set(item.pubfileid, item)
+
+        from domain.models.workshop import WorkshopPage
+        page_data = WorkshopPage(
+            items=items,
+            current_page=result.get("current_page", 1),
+            total_pages=max(1, result.get("total_pages", 1)),
+            total_items=result.get("total_items", 0),
+            filters=self._current_filters,
+        )
+        self._page_cache.set(self._current_url, page_data)
+        self._current_page_data = page_data
+        self.page_loaded.emit(page_data)
 
     def cleanup(self) -> None:
         try:

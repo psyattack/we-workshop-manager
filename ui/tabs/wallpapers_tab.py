@@ -97,6 +97,7 @@ class WallpapersTab(QWidget):
         self._is_refreshing = False
         self._all_wallpapers_data: list[dict[str, Any]] = []
         self._details_panel_margin = 15
+        self._empty_state_container = None
 
         self._setup_ui()
 
@@ -423,15 +424,24 @@ class WallpapersTab(QWidget):
         self.grid_widget.updateGeometry()
         self.scroll_area.updateGeometry()
 
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        if self._empty_state_container is not None:
+            self._empty_state_container.setMinimumHeight(self.scroll_area.viewport().height())
+            self.grid_widget.update_layout()
+
     def _show_empty_state(self, text: str) -> None:
         container = QWidget()
-        container.setMinimumHeight(120)
-        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        container.span_full_width = True
+        container.setMinimumHeight(self.scroll_area.viewport().height())
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         container.setStyleSheet("background: transparent;")
 
         layout = QVBoxLayout(container)
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(0)
+
+        layout.addStretch()
 
         label = QLabel(text)
         label.setWordWrap(True)
@@ -446,6 +456,9 @@ class WallpapersTab(QWidget):
         )
         layout.addWidget(label)
 
+        layout.addStretch()
+
+        self._empty_state_container = container
         self.grid_widget.add_item(container)
 
     def _display_wallpapers(self, wallpapers: list[dict[str, Any]]) -> None:
@@ -478,6 +491,7 @@ class WallpapersTab(QWidget):
 
         self.grid_widget.clear_items()
         self.grid_items.clear()
+        self._empty_state_container = None
 
     def _update_info_text(self, filtered_count: int, total_count: int, total_size: int) -> None:
         primary = self.tr.t("labels.wallpapers_filtered", filtered=filtered_count, total=total_count)

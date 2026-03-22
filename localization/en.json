@@ -67,6 +67,8 @@
     "tags": "Tags:",
     "showing_wallpapers": "Showing {start}-{end} of {total:,} wallpapers",
     "no_wallpapers_found": "No wallpapers found",
+    "showing_collections": "Showing {start}-{end} of {total:,} collections",
+    "no_collections_found": "No collections found",
     "loading_dots": "Loading...",
     "starting": "Starting...",
     "search_placeholder": "Search...",
@@ -74,7 +76,15 @@
     "account": "Account",
     "translating": "Translating...",
     "action": "Action",
-    "content_descriptors": "Content Descriptors:"
+    "content_descriptors": "Content Descriptors:",
+    "author_workshop_files": "Wallpapers",
+    "author_collections": "Collections",
+    "collection": "Collection",
+    "collections": "Collections:",
+    "items_count": "Items: {count}",
+    "related_collections": "Related Collections",
+    "back": "Back",
+    "current_collection": "Current collection"
   },
   "messages": {
     "download_started": "Download started!",

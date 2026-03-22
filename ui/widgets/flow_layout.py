@@ -167,16 +167,28 @@ class FlowLayout(QLayout):
             if widget is None:
                 continue
 
-            if column_index >= columns:
+            if getattr(widget, 'span_full_width', False):
+                if column_index > 0:
+                    column_index = 0
+                    x = effective_rect.x()
+                    y += row_height + self._v_spacing
+                item_height = max(item_size, widget.heightForWidth(available_width) or widget.minimumHeight())
+                item_rect = QRect(effective_rect.x(), y, available_width, item_height)
+                new_positions.append(item_rect)
                 column_index = 0
                 x = effective_rect.x()
-                y += row_height + self._v_spacing
+                y += item_height + self._v_spacing
+            else:
+                if column_index >= columns:
+                    column_index = 0
+                    x = effective_rect.x()
+                    y += row_height + self._v_spacing
 
-            item_rect = QRect(x, y, item_size, item_size)
-            new_positions.append(item_rect)
+                item_rect = QRect(x, y, item_size, item_size)
+                new_positions.append(item_rect)
 
-            x += item_size + self._h_spacing
-            column_index += 1
+                x += item_size + self._h_spacing
+                column_index += 1
 
         total_height = y + row_height - effective_rect.y() + margins.bottom()
 
@@ -212,7 +224,8 @@ class FlowLayout(QLayout):
 
             rect = positions[index]
             widget.setGeometry(rect)
-            self._resize_grid_item(widget, rect.width())
+            if not getattr(widget, 'span_full_width', False):
+                self._resize_grid_item(widget, rect.width())
 
     def _resize_grid_item(self, widget: QWidget, new_size: int) -> None:
         if not hasattr(widget, "item_size"):
@@ -271,6 +284,9 @@ class FlowLayout(QLayout):
             cy = (new_size - circle_size) // 2
             widget.circular_progress.move(cx, cy)
 
+        if hasattr(widget, "update_primary_collection_layout"):
+            widget.update_primary_collection_layout()
+
     def _animate_to_positions(self, new_positions: list[QRect]) -> None:
         self._stop_animations()
         self._animation_group = QParallelAnimationGroup()
@@ -288,8 +304,9 @@ class FlowLayout(QLayout):
             old_rect = self._cached_item_positions[index]
             new_rect = new_positions[index]
 
-            if old_rect.size() != new_rect.size():
-                self._resize_grid_item(widget, new_rect.width())
+            if not getattr(widget, 'span_full_width', False):
+                if old_rect.size() != new_rect.size():
+                    self._resize_grid_item(widget, new_rect.width())
 
             if old_rect.topLeft() != new_rect.topLeft():
                 animation = QPropertyAnimation(widget, b"pos")

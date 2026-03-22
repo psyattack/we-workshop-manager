@@ -30,6 +30,7 @@ from infrastructure.resources.resource_manager import get_pixmap
 from shared.helpers import request_restart_or_exit
 from ui.dialogs.base_dialog import BaseDialog
 from ui.notifications import MessageBox
+from shared.constants import APP_VERSION_DISPLAY
 
 
 class SmoothScrollBar(QScrollBar):
@@ -519,7 +520,7 @@ class SettingsDialog(BaseDialog):
 
         vl.addStretch()
 
-        ver = QLabel("v1.0")
+        ver = QLabel(APP_VERSION_DISPLAY)
         ver.setStyleSheet(
             f"font-size:10px;color:{self.c_text_disabled};background:transparent;border:none;"
         )

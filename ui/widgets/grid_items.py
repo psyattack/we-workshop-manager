@@ -2,12 +2,12 @@ import json
 import weakref
 from pathlib import Path
 
-from PyQt6.QtCore import QByteArray, QBuffer, QEasingCurve, QPropertyAnimation, QSize, Qt, pyqtProperty, pyqtSignal, QRectF, QEvent
-from PyQt6.QtGui import QColor, QFont, QFontMetrics, QMovie, QPainter, QPen, QPixmap, QPixmapCache, QTransform
-from PyQt6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PyQt6.QtCore import QByteArray, QBuffer, QSize, Qt, pyqtSignal, QEvent
+from PyQt6.QtGui import QColor, QFontMetrics, QMovie, QPainter, QPixmap, QPixmapCache
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from infrastructure.cache.image_cache import ImageCache
-from infrastructure.resources.resource_manager import get_pixmap
+from infrastructure.resources.resource_manager import get_icon, get_pixmap
 from shared.helpers import parse_file_size_to_bytes
 from ui.widgets.animated_icon_label import AnimatedIconLabel
 from ui.widgets.progress import CircularProgressWidget
@@ -481,6 +481,258 @@ class WorkshopGridItem(BaseGridItem):
 
     def release_resources(self) -> None:
         super().release_resources()
+
+
+class CollectionGridItem(BaseGridItem):
+    back_clicked = pyqtSignal()
+
+    def __init__(
+        self,
+        pubfileid: str,
+        title: str = "",
+        preview_url: str = "",
+        item_count: int = 0,
+        item_size: int = 185,
+        theme_manager=None,
+        parent=None,
+        is_primary_collection_card: bool = False,
+        related_count: int = 0,
+        show_back_button: bool = False,
+        current_collection_text: str = "Current collection",
+        related_collections_text: str = "Related Collections",
+    ):
+        super().__init__(
+            item_id=pubfileid,
+            item_size=item_size,
+            theme_manager=theme_manager,
+            parent=parent,
+        )
+        self.pubfileid = pubfileid
+        self.preview_url = preview_url
+        self._is_loading = False
+
+        self.is_primary_collection_card = is_primary_collection_card
+        self.related_count = related_count
+        self.show_back_button = show_back_button
+        self.current_collection_text = current_collection_text
+        self.related_collections_text = related_collections_text
+
+        self.set_title(title if title else f"Collection {pubfileid}")
+
+        if self.is_primary_collection_card:
+            self._setup_primary_collection_overlay()
+            if self.show_back_button:
+                self._setup_back_button()
+        else:
+            self._setup_collection_badge(item_count)
+
+        self._load_preview()
+
+    def _setup_collection_badge(self, item_count: int) -> None:
+        self.badge = QWidget(self.overlay_container)
+        self.badge.setFixedHeight(22)
+        self.badge.setStyleSheet("""
+            background-color: rgba(74, 127, 217, 200);
+            border-radius: 4px;
+            padding: 0;
+        """)
+
+        badge_layout = QHBoxLayout(self.badge)
+        badge_layout.setContentsMargins(4, 2, 6, 2)
+        badge_layout.setSpacing(3)
+
+        folder_icon = QLabel()
+        folder_icon.setPixmap(get_pixmap("ICON_FOLDER", 14))
+        folder_icon.setFixedSize(14, 14)
+        folder_icon.setStyleSheet("background: transparent; border: none;")
+        badge_layout.addWidget(folder_icon)
+
+        if item_count > 0:
+            count_label = QLabel(str(item_count))
+            count_label.setStyleSheet("""
+                color: white;
+                font-size: 10px;
+                font-weight: bold;
+                background: transparent;
+                border: none;
+            """)
+            badge_layout.addWidget(count_label)
+
+        self.badge.adjustSize()
+        self.badge.move(4, 4)
+        self.badge.raise_()
+
+    def _setup_primary_collection_overlay(self) -> None:
+        self.name_container.setStyleSheet(
+            "background-color: rgba(0, 0, 0, 160); border-radius: 0px;"
+        )
+        self.name_container.setFixedHeight(self.item_size)
+        self.name_container.setFixedWidth(self.item_size)
+        self.name_container.move(0, 0)
+        self.name_container.show()
+
+        if hasattr(self, "name_label") and self.name_label is not None:
+            self.name_label.hide()
+
+        self.primary_title_label = QLabel(self.current_collection_text, self.name_container)
+        self.primary_title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.primary_title_label.setStyleSheet("""
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            background: transparent;
+            border: none;
+        """)
+
+        self.primary_related_label = None
+        if self.related_count > 0:
+            self.primary_related_label = QLabel(
+                f"{self.related_collections_text}: {self.related_count}",
+                self.name_container,
+            )
+            self.primary_related_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.primary_related_label.setStyleSheet("""
+                color: rgba(255, 255, 255, 220);
+                font-size: 12px;
+                font-weight: 500;
+                background: transparent;
+                border: none;
+            """)
+
+        self._update_primary_overlay_geometry()
+        self.name_container.raise_()
+
+    def _update_primary_overlay_geometry(self) -> None:
+        if not self.is_primary_collection_card:
+            return
+
+        width = self.item_size
+        height = self.item_size
+
+        title_height = 28
+        related_height = 22 if self.primary_related_label is not None else 0
+        spacing = 4 if self.primary_related_label is not None else 0
+        total_height = title_height + related_height + spacing
+
+        start_y = (height - total_height) // 2
+
+        if hasattr(self, "primary_title_label") and self.primary_title_label is not None:
+            self.primary_title_label.setGeometry(12, start_y, width - 24, title_height)
+
+        if self.primary_related_label is not None:
+            self.primary_related_label.setGeometry(
+                12,
+                start_y + title_height + spacing,
+                width - 24,
+                related_height,
+            )
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_primary_collection_layout()
+
+    def update_primary_collection_layout(self) -> None:
+        if not self.is_primary_collection_card:
+            return
+
+        try:
+            self.setFixedSize(self.item_size, self.item_size)
+            self.overlay_container.setFixedSize(self.item_size, self.item_size)
+            self.preview_label.setFixedSize(self.item_size, self.item_size)
+
+            self.name_container.setFixedWidth(self.item_size)
+            self.name_container.setFixedHeight(self.item_size)
+            self.name_container.move(0, 0)
+
+            if hasattr(self, "name_label") and self.name_label is not None:
+                self.name_label.hide()
+
+            self._update_primary_overlay_geometry()
+
+            self.name_container.raise_()
+
+            if hasattr(self, "back_button") and self.back_button is not None:
+                self.back_button.move(8, 8)
+                self.back_button.raise_()
+
+        except RuntimeError:
+            pass
+
+    def _setup_back_button(self) -> None:
+        self.back_button = QPushButton(self.overlay_container)
+        self.back_button.setFixedSize(28, 28)
+        self.back_button.setIcon(get_icon("ICON_BACK"))
+        self.back_button.setIconSize(QSize(16, 16))
+        self.back_button.move(8, 8)
+        self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.back_button.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 0, 0, 150);
+                border-radius: 6px;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: rgba(0, 0, 0, 200);
+            }
+        """)
+        self.back_button.clicked.connect(self.back_clicked.emit)
+        self.back_button.raise_()
+
+    def mousePressEvent(self, event):
+        if self.is_primary_collection_card and self.show_back_button:
+            if hasattr(self, "back_button"):
+                try:
+                    if self.back_button.geometry().contains(event.position().toPoint()):
+                        event.accept()
+                        return
+                except Exception:
+                    pass
+        super().mousePressEvent(event)
+
+    def _load_preview(self) -> None:
+        if not self.preview_url or self._is_loading or self._is_destroyed:
+            self._show_placeholder()
+            return
+
+        cache = ImageCache.instance()
+        pixmap = cache.get_pixmap(self.preview_url)
+        if pixmap:
+            self._stop_loading_animation()
+            self._pixmap = pixmap
+            self._is_gif = False
+            self._apply_pixmap(self.item_size)
+            return
+
+        gif_data = cache.get_gif(self.preview_url)
+        if gif_data:
+            self._load_gif_from_data(gif_data)
+            return
+
+        self._is_loading = True
+        self._show_loading_placeholder()
+
+        weak_self = weakref.ref(self)
+        expected_url = self.preview_url
+
+        def on_loaded(url: str, data, is_gif: bool):
+            self_ref = weak_self()
+            if self_ref is None or self_ref._is_destroyed:
+                return
+            if url != expected_url:
+                return
+            self_ref._is_loading = False
+            if data is None:
+                self_ref._show_placeholder()
+                return
+            if is_gif:
+                self_ref._load_gif_from_data(data)
+            else:
+                self_ref._stop_loading_animation()
+                self_ref._is_gif = False
+                self_ref._pixmap = data
+                self_ref._apply_pixmap(self_ref.item_size)
+
+        cache.load_image(self.preview_url, callback=on_loaded)
 
 
 class LocalGridItem(BaseGridItem):

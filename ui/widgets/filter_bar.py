@@ -782,6 +782,9 @@ class UnifiedFilterBar(QWidget):
 
         self.search_panel = SearchPanel(self.theme, self.tr, search_mode, self)
 
+        if self.mode == self.MODE_LOCAL:
+            self.search_panel.set_browse_toggle_visible(False)
+
         if self.mode == self.MODE_WORKSHOP:
             self.search_panel.search_button.clicked.connect(
                 lambda: self._on_search_requested(self.search_panel.text())

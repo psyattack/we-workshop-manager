@@ -6,7 +6,7 @@ import weakref
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, QThread, QTimer, Qt, QSize, pyqtSignal, QRectF, QEvent
+from PyQt6.QtCore import QBuffer, QByteArray, QIODevice, QThread, QTimer, Qt, QSize, pyqtSignal, QRectF, QEvent, QEasingCurve, QPropertyAnimation
 from PyQt6.QtGui import QMovie, QPainter, QPainterPath, QPixmap
 from PyQt6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
@@ -46,8 +46,10 @@ class DetailsPanel(QWidget):
     MODE_NONE = 0
     MODE_INSTALLED = 1
     MODE_WORKSHOP = 2
+    DESCRIPTION_PREVIEW_LINES = 4
 
     panel_collapse_requested = pyqtSignal()
+    author_clicked = pyqtSignal(str, str)
 
     CONTENT_WIDTH = 310
 
@@ -86,6 +88,11 @@ class DetailsPanel(QWidget):
         self._translation_worker: Optional[TranslationWorker] = None
         self._description_label: Optional[QLabel] = None
         self._translate_button: Optional[QPushButton] = None
+        self._expand_description_button: Optional[QPushButton] = None
+        self._description_expanded = False
+        self._displayed_description_full: str = ""
+        self._description_animation: Optional[QPropertyAnimation] = None
+        self._pending_metadata_fetch = False
 
         self._pending_metadata_fetch = False
         self._metadata_fetch_pubfileid = ""
@@ -372,6 +379,46 @@ class DetailsPanel(QWidget):
                 return workshop_tab.details_panel
         return None
 
+    def _get_main_window(self):
+        window = self.window()
+        return window if window is not None else None
+
+    def _switch_to_workshop_tab(self):
+        main_window = self._get_main_window()
+        if not main_window:
+            return None
+
+        if hasattr(main_window, "top_tabs"):
+            main_window.top_tabs.setCurrentIndex(0)
+        if hasattr(main_window, "stack"):
+            main_window.stack.setCurrentIndex(0)
+
+        if hasattr(main_window, "workshop_tab"):
+            return main_window.workshop_tab
+        return None
+
+    def _navigate_to_author(self, author_name: str, author_url: str) -> None:
+        if not author_url:
+            return
+
+        workshop_tab = self._switch_to_workshop_tab()
+        if workshop_tab is None:
+            webbrowser.open(author_url)
+            return
+
+        workshop_tab._on_author_clicked(author_name, author_url)
+
+    def _navigate_to_collection(self, collection_id: str) -> None:
+        if not collection_id:
+            return
+
+        workshop_tab = self._switch_to_workshop_tab()
+        if workshop_tab is None:
+            webbrowser.open(f"https://steamcommunity.com/sharedfiles/filedetails/?id={collection_id}")
+            return
+
+        workshop_tab._on_collection_item_clicked(collection_id)
+
     def _is_workshop_tab_initialized(self) -> bool:
         main_window = self.window()
         if main_window and hasattr(main_window, "workshop_tab"):
@@ -591,6 +638,14 @@ class DetailsPanel(QWidget):
             self._translation_worker.terminate()
         self._translation_worker = None
 
+        if self._description_animation is not None:
+            try:
+                self._description_animation.stop()
+                self._description_animation.deleteLater()
+            except Exception:
+                pass
+            self._description_animation = None
+
         self._cancel_pending_fetch()
         self._metadata_fetch_pubfileid = ""
         self._current_item = None
@@ -601,6 +656,9 @@ class DetailsPanel(QWidget):
         self._is_translated = False
         self._description_label = None
         self._translate_button = None
+        self._expand_description_button = None
+        self._description_expanded = False
+        self._displayed_description_full = ""
         self._download_btn = None
 
     def _stop_movie(self) -> None:
@@ -942,6 +1000,48 @@ class DetailsPanel(QWidget):
         self.details_layout.addWidget(row_widget)
         return text_label
 
+    def _add_author_row(self, author: str, author_url: str = "") -> None:
+        row_widget = QWidget()
+        row_widget.setStyleSheet("background: transparent; border: none;")
+        row_layout = QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(6)
+
+        icon_label = self._create_icon_label("ICON_USER", 16)
+        row_layout.addWidget(icon_label)
+
+        full_text = self.tr.t("labels.author", author="__PLACEHOLDER__")
+        prefix = full_text.split("__PLACEHOLDER__")[0]
+
+        if prefix.strip():
+            prefix_label = QLabel(prefix.rstrip())
+            prefix_label.setStyleSheet(f"""
+                color: {self.theme.get_color('text_secondary')};
+                font-size: 14px;
+                background: transparent;
+                border: none;
+            """)
+            row_layout.addWidget(prefix_label)
+
+        name_label = QLabel(author)
+        name_label.setStyleSheet(f"""
+            color: {self.theme.get_color('primary')};
+            font-size: 14px;
+            font-weight: 600;
+            background: transparent;
+            border: none;
+        """)
+        if author_url:
+            name_label.setCursor(Qt.CursorShape.PointingHandCursor)
+            name_label.mousePressEvent = lambda e, a=author, u=author_url: (
+                self._navigate_to_author(a, u) if e.button() == Qt.MouseButton.LeftButton else None
+            )
+
+        row_layout.addWidget(name_label)
+        row_layout.addStretch()
+
+        self.details_layout.addWidget(row_widget)
+
     def _add_detail_label(self, text: str, icon_name: str = ""):
         if icon_name:
             return self._add_detail_row(icon_name, text)
@@ -1009,17 +1109,148 @@ class DetailsPanel(QWidget):
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignTop)
         label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        label.setFixedWidth(self.CONTENT_WIDTH - 16)
         self.details_layout.addWidget(label)
         return label
+
+    def _description_expand_button_style(self) -> str:
+        hover_bg = "rgba(255, 255, 255, 0.08)"
+        pressed_bg = "rgba(255, 255, 255, 0.12)"
+        return f"""
+            QPushButton {{
+                background-color: transparent;
+                border: none;
+                border-radius: 8px;
+                padding: 0px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_bg};
+            }}
+            QPushButton:pressed {{
+                background-color: {pressed_bg};
+            }}
+        """
+
+    def _create_expand_description_button(self) -> QPushButton:
+        button = QPushButton()
+        button.setFixedWidth(self.CONTENT_WIDTH - 16)
+        button.setFixedHeight(24)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        button.setStyleSheet(self._description_expand_button_style())
+
+        button.setIcon(get_icon("ICON_ARROW_DOWN"))
+        button.setIconSize(QSize(18, 18))
+        button.clicked.connect(self._expand_description)
+
+        return button
+
+    def _set_description_text(self, text: str) -> None:
+        if self._description_label:
+            self._description_label.setText(text)
+
+    def _max_description_height(self) -> int:
+        if not self._description_label:
+            return 0
+        metrics = self._description_label.fontMetrics()
+        line_height = metrics.lineSpacing()
+        return line_height * self.DESCRIPTION_PREVIEW_LINES
+
+    def _description_exceeds_preview(self, text: str) -> bool:
+        if not text or not self._description_label:
+            return False
+
+        probe = QLabel()
+        probe.setWordWrap(True)
+        probe.setAlignment(Qt.AlignmentFlag.AlignTop)
+        probe.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        probe.setFont(self._description_label.font())
+        probe.setStyleSheet(self._description_label.styleSheet())
+        probe.setText(text)
+
+        width = self.CONTENT_WIDTH - 16
+        probe.setFixedWidth(width)
+        probe.adjustSize()
+
+        return probe.sizeHint().height() > self._max_description_height()
+
+    def _truncate_description_to_height(self, text: str) -> str:
+        if not text or not self._description_label:
+            return text
+
+        clean = text.strip()
+        if not clean:
+            return clean
+
+        if not self._description_exceeds_preview(clean):
+            return clean
+
+        left = 0
+        right = len(clean)
+        best = ""
+
+        probe = QLabel()
+        probe.setWordWrap(True)
+        probe.setAlignment(Qt.AlignmentFlag.AlignTop)
+        probe.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        probe.setFont(self._description_label.font())
+        probe.setStyleSheet(self._description_label.styleSheet())
+        probe.setFixedWidth(self.CONTENT_WIDTH - 16)
+
+        max_height = self._max_description_height()
+
+        while left <= right:
+            mid = (left + right) // 2
+            candidate = clean[:mid].rstrip()
+
+            last_space = candidate.rfind(" ")
+            if last_space > 0 and mid < len(clean):
+                candidate = candidate[:last_space].rstrip()
+
+            candidate_with_ellipsis = candidate + "…"
+            probe.setText(candidate_with_ellipsis)
+            probe.adjustSize()
+
+            if probe.sizeHint().height() <= max_height:
+                best = candidate_with_ellipsis
+                left = mid + 1
+            else:
+                right = mid - 1
+
+        return best if best else clean[:50].rstrip() + "…"
+
+    def _expand_description(self) -> None:
+        self._description_expanded = True
+        self._set_description_text(self._displayed_description_full)
+
+        if self._expand_description_button is not None:
+            self._expand_description_button.hide()
+
+    def _update_description_display(self) -> None:
+        if self._description_label is None:
+            return
+
+        full_text = self._displayed_description_full or self.tr.t("labels.no_description")
+        should_collapse = self._description_exceeds_preview(full_text)
+
+        if self._description_expanded or not should_collapse:
+            self._set_description_text(full_text)
+            if self._expand_description_button is not None:
+                self._expand_description_button.hide()
+        else:
+            self._set_description_text(self._truncate_description_to_height(full_text))
+            if self._expand_description_button is not None:
+                self._expand_description_button.show()
 
     def _add_description_section(self, description: str) -> None:
         self._original_description = description or ""
         self._translated_description = ""
         self._is_translated = False
+        self._description_expanded = False
+        self._displayed_description_full = description if description else self.tr.t("labels.no_description")
 
         header_widget = QWidget()
         header_widget.setStyleSheet("background: transparent; border: none;")
-
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
@@ -1057,23 +1288,31 @@ class DetailsPanel(QWidget):
 
         self.details_layout.addWidget(header_widget)
 
-        display_text = description if description else self.tr.t("labels.no_description")
-        self._description_label = self._add_description_label(display_text)
+        self._description_label = self._add_description_label(self._displayed_description_full)
+
+        self._expand_description_button = self._create_expand_description_button()
+        self.details_layout.addWidget(self._expand_description_button)
+
+        self._update_description_display()
 
     def _on_translate_clicked(self) -> None:
         if not self._original_description:
             return
 
         if self._is_translated:
-            self._description_label.setText(self._original_description)
+            self._displayed_description_full = self._original_description
             self._is_translated = False
+            self._description_expanded = False
+            self._update_description_display()
             if self._translate_button and hasattr(self._translate_button, '_custom_tooltip_filter'):
                 self._translate_button._custom_tooltip_filter.set_text(self.tr.t("tooltips.translate_description"))
             return
 
         if self._translated_description:
-            self._description_label.setText(self._translated_description)
+            self._displayed_description_full = self._translated_description
             self._is_translated = True
+            self._description_expanded = False
+            self._update_description_display()
             if self._translate_button and hasattr(self._translate_button, '_custom_tooltip_filter'):
                 self._translate_button._custom_tooltip_filter.set_text(self.tr.t("tooltips.show_original"))
             return
@@ -1091,6 +1330,9 @@ class DetailsPanel(QWidget):
             self._translate_button.setEnabled(False)
 
         self._description_label.setText(self.tr.t("labels.translating"))
+        if self._expand_description_button is not None:
+            self._expand_description_button.hide()
+
         self._translation_worker.start()
 
     def _on_translation_finished(self, original: str, translated: str) -> None:
@@ -1099,19 +1341,20 @@ class DetailsPanel(QWidget):
 
         self._translated_description = translated
         self._is_translated = True
+        self._description_expanded = False
+        self._displayed_description_full = translated
 
-        if self._description_label:
-            self._description_label.setText(translated)
+        self._update_description_display()
 
         if self._translate_button:
             self._translate_button.setEnabled(True)
             self._translate_button._custom_tooltip_filter.set_text(self.tr.t("tooltips.show_original"))
-
         self._translation_worker = None
 
     def _on_translation_error(self, error_msg: str) -> None:
-        if self._description_label:
-            self._description_label.setText(self._original_description)
+        self._displayed_description_full = self._original_description
+        self._description_expanded = False
+        self._update_description_display()
 
         if self._translate_button:
             self._translate_button.setEnabled(True)
@@ -1294,7 +1537,17 @@ class DetailsPanel(QWidget):
             self._add_detail_row("ICON_CALENDAR", self.tr.t("labels.installed", date=format_timestamp(mtime)))
 
             if metadata.author:
-                self._add_detail_row("ICON_USER", self.tr.t("labels.author", author=metadata.author))
+                author_url = getattr(metadata, 'author_url', '') or ''
+                if not author_url:
+                    parser = self._get_main_parser()
+                    if parser:
+                        cached_item = parser.get_cached_item(self.current_pubfileid)
+                        if cached_item and cached_item.author_url:
+                            author_url = cached_item.author_url
+                if author_url:
+                    self._add_author_row(metadata.author, author_url)
+                else:
+                    self._add_detail_row("ICON_USER", self.tr.t("labels.author", author=metadata.author))
 
             if metadata.tags:
                 self._add_tags_section(metadata.tags)
@@ -1315,6 +1568,28 @@ class DetailsPanel(QWidget):
                 self._add_separator()
                 self._add_description_section(description)
 
+        collections = []
+        if metadata:
+            collections = getattr(metadata, "collections", []) or []
+        if not collections:
+            parser = self._get_main_parser()
+            if parser:
+                cached_item = parser.get_cached_item(self.current_pubfileid)
+                if cached_item:
+                    collections = getattr(cached_item, "collections", []) or []
+        if collections:
+            self._add_separator()
+            self._add_section_title(
+                self.tr.t("labels.collections"),
+                "ICON_FOLDER"
+            )
+            for col in collections:
+                col_id = col.get("id", "") if isinstance(col, dict) else ""
+                col_title = col.get("title", "") if isinstance(col, dict) else ""
+                link_widget = self._create_collection_link(col_id, col_title)
+                if link_widget:
+                    self.details_layout.addWidget(link_widget)
+
         self.details_layout.addStretch()
 
     def _setup_workshop_details(self, item) -> None:
@@ -1333,7 +1608,10 @@ class DetailsPanel(QWidget):
             self._add_detail_row("ICON_REFRESH", self.tr.t("labels.updated", date=item.updated_date))
 
         if item.author:
-            self._add_detail_row("ICON_USER", self.tr.t("labels.author", author=item.author))
+            if item.author_url:
+                self._add_author_row(item.author, item.author_url)
+            else:
+                self._add_detail_row("ICON_USER", self.tr.t("labels.author", author=item.author))
 
         if item.tags:
             self._add_tags_section(item.tags)
@@ -1342,7 +1620,134 @@ class DetailsPanel(QWidget):
             self._add_separator()
             self._add_description_section(item.description)
 
+        collections = getattr(item, 'collections', [])
+        if collections:
+            self._add_separator()
+            self._add_section_title(
+                self.tr.t("labels.collections"), "ICON_FOLDER"
+            )
+            for col in collections:
+                col_id = col.get('id', '') if isinstance(col, dict) else ''
+                col_title = col.get('title', '') if isinstance(col, dict) else ''
+                link_widget = self._create_collection_link(col_id, col_title)
+                if link_widget:
+                    self.details_layout.addWidget(link_widget)
+
         self.details_layout.addStretch()
+
+    def set_collection_info(self, contents) -> None:
+        self._reset_state()
+        self._mode = self.MODE_WORKSHOP
+        self.current_pubfileid = contents.collection_id
+        self._current_preview_url = contents.preview_url or ""
+        self.setVisible(True)
+
+        self.title_label.setText(contents.title or f"Collection {contents.collection_id}")
+        self.id_label.setText(self.current_pubfileid)
+
+        self._clear_buttons()
+        browser_btn = self._create_text_button(
+            "ICON_WORLD",
+            self.tr.t("buttons.open_workshop"),
+            self.tr.t("tooltips.open_workshop"),
+            self._on_open_browser,
+        )
+        browser_btn.setFixedSize(300, 35)
+        self.buttons_layout.addWidget(browser_btn)
+        self.buttons_layout.addStretch()
+
+        self._clear_details()
+        info = contents.info or {}
+
+        rating_file = info.get('rating_star_file', '')
+        num_ratings = info.get('num_ratings', '')
+        if rating_file:
+            self._add_rating_row(rating_file, num_ratings)
+
+        item_count = info.get('item_count', len(contents.items))
+        if item_count:
+            self._add_detail_row("ICON_PACKAGE", f"Items: {item_count}")
+
+        if contents.author:
+            if contents.author_url:
+                self._add_author_row(contents.author, contents.author_url)
+            else:
+                self._add_detail_row("ICON_USER", self.tr.t("labels.author", author=contents.author))
+
+        visitors = info.get('unique_visitors', '')
+        if visitors:
+            self._add_detail_row("ICON_WORLD", f"Unique visitors: {visitors}")
+
+        subscribers = info.get('subscribers', '')
+        if subscribers:
+            self._add_detail_row("ICON_USER", f"Subscribers: {subscribers}")
+
+        favorited = info.get('favorited', '')
+        if favorited:
+            self._add_detail_row("ICON_HEART", f"Favorited: {favorited}")
+
+        total_fav = info.get('total_favorited', '')
+        if total_fav and total_fav != favorited:
+            self._add_detail_row("ICON_HEART", f"Total favorited: {total_fav}")
+
+        posted = info.get('posted_date', '')
+        if posted:
+            self._add_detail_row("ICON_CALENDAR", self.tr.t("labels.posted", date=posted))
+
+        updated = info.get('updated_date', '')
+        if updated:
+            self._add_detail_row("ICON_REFRESH", self.tr.t("labels.updated", date=updated))
+
+        tag_keys = ['Miscellaneous', 'Genre', 'Category', 'Age Rating',
+                     'Type', 'Resolution', 'Content Descriptors']
+        tags_to_show = {}
+        for key in tag_keys:
+            if key in info and info[key]:
+                tags_to_show[key] = info[key]
+        if tags_to_show:
+            self._add_tags_section(tags_to_show)
+
+        if contents.description:
+            self._add_separator()
+            self._add_description_section(contents.description)
+
+        self.details_layout.addStretch()
+        self._update_id_section_visibility()
+
+        if contents.preview_url:
+            self._load_remote_preview(contents.preview_url)
+        else:
+            self._show_image_placeholder()
+
+    def _create_collection_link(self, collection_id: str, title: str):
+        if not collection_id:
+            return None
+
+        row = QWidget()
+        row.setStyleSheet("background: transparent; border: none;")
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(4, 0, 4, 0)
+        row_layout.setSpacing(6)
+
+        link_label = QLabel(title or f"Collection {collection_id}")
+        link_label.setStyleSheet(f"""
+            color: {self.theme.get_color('primary')};
+            font-size: 12px;
+            font-weight: 500;
+            background: transparent;
+            border: none;
+        """)
+        link_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        link_label.mousePressEvent = lambda e, cid=collection_id: (
+            self._navigate_to_collection(cid) if e.button() == Qt.MouseButton.LeftButton else None
+        )
+
+        row_layout.addWidget(link_label, 1)
+        row_layout.addStretch()
+        return row
+
+    def _on_collection_link_clicked(self, collection_id: str) -> None:
+        self._navigate_to_collection(collection_id)
 
     def _find_grid_item(self, pubfileid: str):
         parent = self.parent()

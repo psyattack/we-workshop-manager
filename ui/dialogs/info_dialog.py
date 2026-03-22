@@ -122,25 +122,6 @@ class InfoDialog(BaseDialog):
 
         self.content_layout.addLayout(buttons_layout)
 
-        ok_btn = QPushButton(self.tr.t("buttons.ok"))
-        ok_btn.setFixedHeight(40)
-        ok_btn.setStyleSheet(
-            f"""
-            QPushButton {{
-                background-color: {self.c_primary};
-                color: {self.c_text_primary};
-                border: none;
-                border-radius: 8px;
-                font-weight: 600;
-            }}
-            QPushButton:hover {{
-                background-color: {self.c_primary_hover};
-            }}
-            """
-        )
-        ok_btn.clicked.connect(self.accept)
-        self.content_layout.addWidget(ok_btn)
-
     def _add_links_block(self, author: tuple[str, str], tools: list[tuple[str, str]]) -> None:
         container = QWidget()
         container.setStyleSheet(

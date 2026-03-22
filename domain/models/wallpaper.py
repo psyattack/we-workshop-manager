@@ -8,6 +8,7 @@ class WallpaperMetadata:
     description: str = ""
     preview_url: str = ""
     author: str = ""
+    author_url: str = ""
     file_size: str = ""
     rating: int = 0
     num_ratings: str = ""
@@ -17,7 +18,7 @@ class WallpaperMetadata:
     updated_date: int = 0
     updated_date_str: str = ""
     tags: dict = field(default_factory=dict)
-
+    collections: list = field(default_factory=list)
 
 @dataclass
 class LocalWallpaperEntry:

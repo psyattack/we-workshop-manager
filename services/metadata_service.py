@@ -110,12 +110,31 @@ class MetadataService:
         self.config_service.remove_wallpaper_metadata(pubfileid)
 
     def save_from_workshop_item(self, item) -> WallpaperMetadata:
+        raw_collections = getattr(item, "collections", []) or []
+        normalized_collections = []
+
+        for col in raw_collections:
+            if not isinstance(col, dict):
+                continue
+
+            col_id = str(col.get("id", "")).strip()
+            if not col_id:
+                continue
+
+            normalized_collections.append({
+                "id": col_id,
+                "title": col.get("title", "") or f"Collection {col_id}",
+                "item_count": int(col.get("item_count", 0) or 0),
+                "url": f"https://steamcommunity.com/sharedfiles/filedetails/?id={col_id}",
+            })
+
         metadata = WallpaperMetadata(
             pubfileid=item.pubfileid,
             title=item.title or item.pubfileid,
             description=item.description or "",
             preview_url=item.preview_url or "",
             author=item.author or "",
+            author_url=getattr(item, "author_url", "") or "",
             file_size=item.file_size or "",
             rating=self._rating_from_star_file(
                 getattr(item, "rating_star_file", "")
@@ -131,6 +150,7 @@ class MetadataService:
             ),
             updated_date_str=item.updated_date or "",
             tags=item.tags or {},
+            collections=normalized_collections,
         )
         self.save(metadata)
         return metadata

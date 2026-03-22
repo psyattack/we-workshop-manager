@@ -18,6 +18,8 @@ class WorkshopItem:
     num_ratings: str = ""
     is_installed: bool = False
     is_downloading: bool = False
+    is_collection: bool = False
+    collections: list = field(default_factory=list)
 
 
 @dataclass
@@ -47,3 +49,27 @@ class WorkshopPage:
     total_pages: int = 1
     total_items: int = 0
     filters: Optional[WorkshopFilters] = None
+
+
+@dataclass
+class WorkshopCollection:
+    pubfileid: str
+    title: str = ""
+    preview_url: str = ""
+    author: str = ""
+    author_url: str = ""
+    item_count: int = 0
+    is_collection: bool = True
+
+
+@dataclass
+class CollectionContents:
+    collection_id: str
+    title: str = ""
+    description: str = ""
+    preview_url: str = ""
+    author: str = ""
+    author_url: str = ""
+    items: list[WorkshopItem] = field(default_factory=list)
+    related_collections: list[WorkshopCollection] = field(default_factory=list)
+    info: dict = field(default_factory=dict)

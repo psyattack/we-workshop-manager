@@ -1,15 +1,17 @@
-from PyQt6.QtCore import QEvent, QSize, Qt
+from PyQt6.QtCore import QEvent, QSize, Qt, pyqtSignal
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 
 from infrastructure.resources.resource_manager import get_icon
+from ui.widgets.browse_toggle import BrowseToggle
 from ui.widgets.custom_tooltip import install_tooltip
 
 
 class SearchPanel(QWidget):
     SEARCH_MODE_MANUAL = "manual"
     SEARCH_MODE_LIVE = "live"
-
     FIXED_SEARCH_WIDTH = 250
+    author_close_requested = pyqtSignal()
+    browse_mode_changed = pyqtSignal(int)
 
     def __init__(self, theme_manager, translator, search_mode: str = "manual", parent=None):
         super().__init__(parent)
@@ -31,12 +33,25 @@ class SearchPanel(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(8)
 
+        self.browse_toggle = BrowseToggle(
+            [self.tr.t("labels.author_workshop_files"),
+             self.tr.t("labels.author_collections")],
+            self.theme, self,
+        )
+        self.browse_toggle.setFixedHeight(36)
+        self.browse_toggle.currentChanged.connect(self.browse_mode_changed.emit)
+
+        root.addWidget(self.browse_toggle)
+        root.addSpacing(0)
+
         self.info_primary_frame = self._create_info_box()
         self.info_secondary_frame = self._create_info_box()
 
+        root.addWidget(self.info_primary_frame)
+        root.addWidget(self.info_secondary_frame)
+
         self.search_host = QWidget()
         self.search_host.setObjectName("searchPanelHost")
-
         search_host_layout = QHBoxLayout(self.search_host)
         search_host_layout.setContentsMargins(0, 0, 0, 0)
         search_host_layout.setSpacing(8)
@@ -96,26 +111,34 @@ class SearchPanel(QWidget):
         search_host_layout.addWidget(self.main_frame)
         search_host_layout.addWidget(self.actions_button)
 
-        root.addWidget(self.info_primary_frame)
-        root.addWidget(self.info_secondary_frame)
         root.addWidget(self.search_host)
-
         self._apply_styles()
 
     def _create_info_box(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("searchPanelInfoBox")
         frame.setFixedHeight(36)
-
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(12, 0, 12, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(12, 0, 6, 0)
+        layout.setSpacing(4)
 
         label = QLabel("")
         label.setObjectName("searchPanelInfoLabel")
-        layout.addWidget(label)
+        layout.addWidget(label, 1)
+
+        close_btn = QPushButton()
+        close_btn.setFixedSize(20, 20)
+        close_btn.setIcon(get_icon("ICON_CLOSE2"))
+        close_btn.setIconSize(QSize(10, 10))
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        close_btn.setObjectName("infoCloseBtn")
+        close_btn.clicked.connect(self.author_close_requested.emit)
+        close_btn.hide()
+        layout.addWidget(close_btn)
 
         frame._label = label
+        frame._close_btn = close_btn
         frame.hide()
         return frame
 
@@ -159,13 +182,18 @@ class SearchPanel(QWidget):
     def _apply_styles(self) -> None:
         active_surface = self.theme.get_color("bg_tertiary")
         elevated_surface = self.theme.get_color("bg_elevated")
-
-        main_surface = self.theme.get_color("bg_tertiary") if self._search_hovered else self.theme.get_color("bg_secondary")
-        main_border = self.theme.get_color("border_light") if (self._search_hovered or self._filter_active) else self.theme.get_color("border")
-
+        main_surface = (
+            self.theme.get_color("bg_tertiary")
+            if self._search_hovered
+            else self.theme.get_color("bg_secondary")
+        )
+        main_border = (
+            self.theme.get_color("border_light")
+            if (self._search_hovered or self._filter_active)
+            else self.theme.get_color("border")
+        )
         filter_highlighted_from_search = self._search_hovered
         filter_highlighted_direct = self._filter_hovered or self._filter_active
-
         actions_highlighted = self._actions_active or self._actions_hovered
 
         info_style = f"""
@@ -250,6 +278,19 @@ class SearchPanel(QWidget):
             """
         )
 
+        for frame in (self.info_primary_frame, self.info_secondary_frame):
+            if hasattr(frame, '_close_btn'):
+                frame._close_btn.setStyleSheet(f"""
+                    QPushButton#infoCloseBtn {{
+                        background: transparent;
+                        border: none;
+                        border-radius: 10px;
+                    }}
+                    QPushButton#infoCloseBtn:hover {{
+                        background-color: rgba(239, 91, 91, 0.25);
+                    }}
+                """)
+
     def set_filter_active(self, active: bool) -> None:
         self._filter_active = active
         self._apply_styles()
@@ -290,3 +331,14 @@ class SearchPanel(QWidget):
 
     def actions_anchor(self):
         return self.actions_button
+
+    def show_author_close(self) -> None:
+        if hasattr(self.info_primary_frame, '_close_btn'):
+            self.info_primary_frame._close_btn.show()
+
+    def hide_author_close(self) -> None:
+        if hasattr(self.info_primary_frame, '_close_btn'):
+            self.info_primary_frame._close_btn.hide()
+
+    def set_browse_toggle_visible(self, visible: bool) -> None:
+        self.browse_toggle.setVisible(visible)

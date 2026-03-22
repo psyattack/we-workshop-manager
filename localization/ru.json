@@ -67,6 +67,8 @@
     "tags": "Теги:",
     "showing_wallpapers": "Показано {start}-{end} из {total:,} обоев",
     "no_wallpapers_found": "Обои не найдены",
+    "showing_collections": "Показано {start}-{end} из {total:,} коллекций",
+    "no_collections_found": "Коллекции не найдены",
     "loading_dots": "Загрузка...",
     "starting": "Запуск...",
     "search_placeholder": "Поиск...",
@@ -74,7 +76,15 @@
     "account": "Аккаунт",
     "translating": "Перевод...",
     "action": "Действие",
-    "content_descriptors": "Описатели содержимого:"
+    "content_descriptors": "Описатели содержимого:",
+    "author_workshop_files": "Обои",
+    "author_collections": "Коллекции:",
+    "collection": "Коллекция",
+    "collections": "Коллекции:",
+    "items_count": "Предметов: {count}",
+    "related_collections": "Связанные коллекции",
+    "back": "Назад",
+    "current_collection": "Текущая коллекция"
   },
   "messages": {
     "download_started": "Загрузка началась!",
