@@ -307,16 +307,22 @@ class ToolTipFilter(QWidget):
         self.text = text
         self.position = position
         self.theme = theme_manager
-        self.tooltip = CustomToolTip(text, position, theme_manager)
+        self.tooltip = None
         self._hover_timer = QTimer(self)
         self._hover_timer.setSingleShot(True)
         self._hover_timer.timeout.connect(self._show_tooltip)
 
         self.target_widget.installEventFilter(self)
 
+    def _ensure_tooltip(self) -> CustomToolTip:
+        if self.tooltip is None:
+            self.tooltip = CustomToolTip(self.text, self.position, self.theme)
+        return self.tooltip
+
     def set_text(self, text: str) -> None:
         self.text = text
-        self.tooltip.set_text(text)
+        if self.tooltip is not None:
+            self.tooltip.set_text(text)
 
     def eventFilter(self, obj, event):
         if obj == self.target_widget:
@@ -324,17 +330,21 @@ class ToolTipFilter(QWidget):
                 self._hover_timer.start(750)
             elif event.type() == QEvent.Type.Leave:
                 self._hover_timer.stop()
-                self.tooltip.hide()
+                if self.tooltip is not None:
+                    self.tooltip.hide()
             elif event.type() == QEvent.Type.MouseButtonPress:
-                self.tooltip.hide()
+                if self.tooltip is not None:
+                    self.tooltip.hide()
             elif event.type() == QEvent.Type.Hide:
-                self.tooltip.hide()
+                if self.tooltip is not None:
+                    self.tooltip.hide()
         return False
 
     def _show_tooltip(self) -> None:
         if not self.target_widget.isVisible():
             return
-        self.tooltip.show_for(self.target_widget)
+        tooltip = self._ensure_tooltip()
+        tooltip.show_for(self.target_widget)
 
 
 def install_tooltip(widget: QWidget, text: str, position: str = "top", theme_manager=None) -> ToolTipFilter:

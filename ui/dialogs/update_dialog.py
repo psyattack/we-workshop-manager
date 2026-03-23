@@ -19,7 +19,7 @@ class UpdateDialog(BaseDialog):
     def _build_ui(self) -> None:
         release = self.result.release_info
 
-        title = QLabel(f"New version available: v{self.result.latest_version}")
+        title = QLabel(f"New version available: v{self.result.latest_version}", self.content_layout.parentWidget())
         title.setStyleSheet(
             f"""
             color: {self.c_text_primary};
@@ -30,7 +30,7 @@ class UpdateDialog(BaseDialog):
         )
         self.content_layout.addWidget(title)
 
-        current = QLabel(f"Current version: v{self.result.current_version}")
+        current = QLabel(f"Current version: v{self.result.current_version}", self.content_layout.parentWidget())
         current.setStyleSheet(
             f"""
             color: {self.c_text_secondary};
@@ -40,7 +40,7 @@ class UpdateDialog(BaseDialog):
         )
         self.content_layout.addWidget(current)
 
-        changelog_label = QLabel("Changelog")
+        changelog_label = QLabel("Changelog", self.content_layout.parentWidget())
         changelog_label.setStyleSheet(
             f"""
             color: {self.c_text_primary};
@@ -52,7 +52,7 @@ class UpdateDialog(BaseDialog):
         )
         self.content_layout.addWidget(changelog_label)
 
-        changelog = QTextEdit()
+        changelog = QTextEdit(self.content_layout.parentWidget())
         changelog.setReadOnly(True)
         changelog.setPlainText(release.body if release else "")
         changelog.setStyleSheet(
@@ -72,7 +72,7 @@ class UpdateDialog(BaseDialog):
         buttons_layout = QHBoxLayout()
         buttons_layout.setSpacing(10)
 
-        skip_btn = QPushButton("Skip this version")
+        skip_btn = QPushButton("Skip this version", self.content_layout.parentWidget())
         skip_btn.setFixedHeight(38)
         skip_btn.setStyleSheet(
             f"""
@@ -90,7 +90,7 @@ class UpdateDialog(BaseDialog):
         )
         skip_btn.clicked.connect(self._skip_version)
 
-        later_btn = QPushButton("Later")
+        later_btn = QPushButton("Later", self.content_layout.parentWidget())
         later_btn.setFixedHeight(38)
         later_btn.setStyleSheet(
             f"""
@@ -108,7 +108,7 @@ class UpdateDialog(BaseDialog):
         )
         later_btn.clicked.connect(self.reject)
 
-        download_btn = QPushButton("Download")
+        download_btn = QPushButton("Download", self.content_layout.parentWidget())
         download_btn.setFixedHeight(38)
         download_btn.setStyleSheet(
             f"""

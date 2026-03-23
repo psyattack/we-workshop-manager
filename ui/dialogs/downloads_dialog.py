@@ -61,7 +61,7 @@ class DownloadsDialog(BaseDialog):
         return super().eventFilter(obj, event)
 
     def _setup_content(self) -> None:
-        scroll = QScrollArea()
+        scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setStyleSheet(
@@ -93,7 +93,7 @@ class DownloadsDialog(BaseDialog):
             """
         )
 
-        self.scroll_container = QWidget()
+        self.scroll_container = QWidget(scroll)
         self.scroll_container.setStyleSheet("background: transparent;")
 
         self.scroll_layout = QVBoxLayout(self.scroll_container)
@@ -130,7 +130,7 @@ class DownloadsDialog(BaseDialog):
             all_tasks.append(("extract", pubfileid, info))
 
         if not all_tasks:
-            label = QLabel(self.tr.t("labels.no_tasks"))
+            label = QLabel(self.tr.t("labels.no_tasks"), self.scroll_container)
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet(
                 f"""
@@ -152,7 +152,7 @@ class DownloadsDialog(BaseDialog):
         self.scroll_layout.addStretch()
 
     def _create_task_item(self, task_type: str, pubfileid: str, info) -> None:
-        item_widget = QWidget()
+        item_widget = QWidget(self.scroll_container)
         item_widget.setFixedHeight(68)
         item_widget.setStyleSheet(
             f"""
@@ -183,7 +183,7 @@ class DownloadsDialog(BaseDialog):
         progress.update_from_status(status_text, file_size_bytes, is_extraction)
         item_layout.addWidget(progress)
 
-        text_container = QWidget()
+        text_container = QWidget(item_widget)
         text_container.setStyleSheet("background: transparent; border: none;")
 
         text_layout = QVBoxLayout(text_container)
@@ -197,7 +197,7 @@ class DownloadsDialog(BaseDialog):
         else:
             prefix = self.tr.t("labels.extract_prefix", id=short_id)
 
-        title_label = QLabel(prefix)
+        title_label = QLabel(prefix, text_container)
         title_label.setStyleSheet(
             f"""
             color: {self.c_text_primary};
@@ -218,7 +218,7 @@ class DownloadsDialog(BaseDialog):
         if not display_status:
             display_status = self.tr.t("labels.starting")
 
-        status_label = QLabel(display_status)
+        status_label = QLabel(display_status, text_container)
         status_label.setStyleSheet(
             f"""
             color: {self.c_text_disabled};
@@ -232,7 +232,7 @@ class DownloadsDialog(BaseDialog):
         item_layout.addWidget(text_container, 1)
 
         if task_type == "download":
-            delete_btn = QPushButton()
+            delete_btn = QPushButton(item_widget)
             delete_btn.setIcon(get_icon("ICON_DELETE"))
             delete_btn.setIconSize(QSize(28, 28))
             delete_btn.setFixedSize(36, 36)

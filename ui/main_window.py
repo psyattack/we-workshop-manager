@@ -186,7 +186,7 @@ class SideNavBar(QWidget):
         self._layout.setSpacing(0)
         self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self._top_separator_wrap = QWidget()
+        self._top_separator_wrap = QWidget(self)
         self._top_separator_wrap.setFixedHeight(16)
         self._top_separator_wrap.setStyleSheet("background: transparent;")
 
@@ -195,7 +195,7 @@ class SideNavBar(QWidget):
         self._top_separator_layout.setSpacing(0)
         self._top_separator_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
 
-        self._top_separator = QFrame()
+        self._top_separator = QFrame(self._top_separator_wrap)
         self._top_separator.setFixedSize(40, 1)
         self._top_separator.setStyleSheet(
             f"background-color: {self.theme.get_color('border')}; border: none;"
@@ -229,7 +229,7 @@ class SideNavBar(QWidget):
 
         self._nav_buttons.append(button)
 
-        wrapper = QWidget()
+        wrapper = QWidget(self)
         wrapper.setFixedSize(68, 58)
         wrapper.setStyleSheet("background: transparent;")
         wrapper.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -250,7 +250,7 @@ class SideNavBar(QWidget):
         self._apply_action_button_style(button)
         self._action_buttons.append(button)
 
-        wrapper = QWidget()
+        wrapper = QWidget(self)
         wrapper.setFixedSize(68, 48)
         wrapper.setStyleSheet("background: transparent;")
         wrapper.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -798,7 +798,7 @@ class MainWindow(QMainWindow):
 
         self._create_tabs()
 
-        content_container = QWidget()
+        content_container = QWidget(self)
         content_container.setStyleSheet("background: transparent; border: none;")
         content_layout = QVBoxLayout(content_container)
         content_layout.setContentsMargins(0, 5, 15, 15)
@@ -811,7 +811,7 @@ class MainWindow(QMainWindow):
         self.apply_backgrounds()
 
     def _create_title_bar(self) -> QFrame:
-        title_bar = QFrame()
+        title_bar = QFrame(self)
         title_bar.setFixedHeight(52)
         title_bar.setStyleSheet(f"""
             QFrame {{
@@ -827,13 +827,13 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(12, 2, 10, 0)
         layout.setSpacing(8)
 
-        left_container = QWidget()
+        left_container = QWidget(title_bar)
         left_container.setStyleSheet("background: transparent;")
         left_layout = QHBoxLayout(left_container)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(5)
 
-        settings_block = QWidget()
+        settings_block = QWidget(left_container)
         settings_block.setFixedWidth(44)
         settings_block.setStyleSheet("background: transparent;")
         settings_block_layout = QVBoxLayout(settings_block)
@@ -853,13 +853,13 @@ class MainWindow(QMainWindow):
         self._apply_action_button_style_like_sidenav(self.settings_btn)
         settings_block_layout.addWidget(self.settings_btn, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        vertical_line = QFrame()
+        vertical_line = QFrame(left_container)
         vertical_line.setFixedSize(1, 34)
         vertical_line.setStyleSheet(
             f"background-color: {self.theme.get_color('border')}; border: none;"
         )
 
-        vertical_line_wrap = QWidget()
+        vertical_line_wrap = QWidget(left_container)
         vertical_line_wrap.setFixedWidth(14)
         vertical_line_wrap.setStyleSheet("background: transparent;")
         vertical_line_wrap_layout = QVBoxLayout(vertical_line_wrap)
@@ -872,7 +872,7 @@ class MainWindow(QMainWindow):
         # app_icon.setPixmap(get_icon("ICON_APP").pixmap(16, 16))
         # app_icon.setStyleSheet("background: transparent; border: none; margin-right: 2px;")
 
-        app_name = QLabel(APP_NAME)
+        app_name = QLabel(APP_NAME, left_container)
         app_name.setStyleSheet(
             f"""
             font-size: 15px;
@@ -1292,7 +1292,7 @@ class MainWindow(QMainWindow):
         self._minimize_pos_anim.start()
 
     def _create_window_button(self, button_type: str, callback):
-        button = _FadeHoverButton(button_type)
+        button = _FadeHoverButton(button_type, self)
         button.clicked.connect(callback)
         return button
 

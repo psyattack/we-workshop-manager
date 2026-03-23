@@ -119,7 +119,7 @@ class WallpapersTab(QWidget):
         details_outer_layout.setContentsMargins(0, 0, 0, 0)
         details_outer_layout.setSpacing(0)
 
-        self.details_card = QFrame()
+        self.details_card = QFrame(self.details_container)
         self.details_card.setObjectName("wallpapersDetailsCard")
         self.details_card.setStyleSheet(
             f"""
@@ -134,7 +134,7 @@ class WallpapersTab(QWidget):
         details_layout = QVBoxLayout(self.details_card)
         details_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.details_scroll = QScrollArea()
+        self.details_scroll = QScrollArea(self.details_card)
         self.details_scroll.setWidgetResizable(True)
         self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.details_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
@@ -176,12 +176,12 @@ class WallpapersTab(QWidget):
         self._details_bg.lower()
 
     def _create_left_panel(self) -> QWidget:
-        widget = QWidget()
+        widget = QWidget(self)
         outer_layout = QVBoxLayout(widget)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
 
-        self.content_card = QFrame()
+        self.content_card = QFrame(widget)
         self.content_card.setObjectName("wallpapersContentCard")
         self.content_card.setStyleSheet(
             f"""
@@ -202,7 +202,7 @@ class WallpapersTab(QWidget):
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
         layout.addWidget(self.filter_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        self.scroll_area = QScrollArea()
+        self.scroll_area = QScrollArea(self.content_card)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.scroll_area.setStyleSheet(
@@ -431,7 +431,7 @@ class WallpapersTab(QWidget):
             self.grid_widget.update_layout()
 
     def _show_empty_state(self, text: str) -> None:
-        container = QWidget()
+        container = QWidget(self)
         container.span_full_width = True
         container.setMinimumHeight(self.scroll_area.viewport().height())
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -443,7 +443,7 @@ class WallpapersTab(QWidget):
 
         layout.addStretch()
 
-        label = QLabel(text)
+        label = QLabel(text, container)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(

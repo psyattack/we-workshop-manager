@@ -131,6 +131,10 @@ class WorkshopParser(QObject):
         self._collection_request_id = 0
         self._collection_poll_count = 0
 
+        self._page_request_id = 0
+        self._author_request_id = 0
+        self._current_page_filters = None
+
         self._page_cache = WorkshopPageCache()
         self._item_cache = WorkshopItemCache()
 
@@ -212,10 +216,12 @@ class WorkshopParser(QObject):
             pass
 
     def load_page(self, filters: WorkshopFilters, use_cache: bool = True) -> None:
-        if self._is_loading_page:
-            return
+        self._page_request_id += 1
+        request_id = self._page_request_id
 
         url = WorkshopUrlBuilder.build(filters)
+        self._current_filters = filters
+        self._current_url = url
 
         if use_cache:
             cached_page = self._page_cache.get(url)
@@ -227,8 +233,7 @@ class WorkshopParser(QObject):
         self._is_loading_page = True
         self._is_loading_details = False
         self._request_type = "browse"
-        self._current_filters = filters
-        self._current_url = url
+        self._current_page_filters = filters
 
         self.page_loading_started.emit()
         self._webview.load(QUrl(url))
@@ -474,18 +479,22 @@ class WorkshopParser(QObject):
             self._handle_login()
             return
 
+        page_rid = self._page_request_id
+        author_rid = self._author_request_id
+        details_rid = self._details_request_id
+
         if self._request_type == "browse":
-            QTimer.singleShot(50, self._parse_browse_page)
+            QTimer.singleShot(50, lambda: self._parse_browse_page(page_rid))
         elif self._request_type == "details_init":
             QTimer.singleShot(
                 20,
-                lambda: self._fetch_item_details(self._current_pubfileid, self._details_request_id),
+                lambda: self._fetch_item_details(self._current_pubfileid, details_rid),
             )
         elif self._request_type in ("author_items", "author_collections"):
             if self._request_type == "author_collections":
-                QTimer.singleShot(50, self._parse_collection_listing_page)
+                QTimer.singleShot(50, lambda: self._parse_collection_listing_page(author_rid))
             else:
-                QTimer.singleShot(50, self._parse_browse_page)
+                QTimer.singleShot(50, lambda: self._parse_browse_page(author_rid))
 
     def _handle_login(self) -> None:
         if self._login_attempted:
@@ -563,10 +572,21 @@ class WorkshopParser(QObject):
 
         self._page.runJavaScript(script, on_check)
 
-    def _parse_browse_page(self) -> None:
-        self._page.runJavaScript(browse_page_parse_script(), self._on_browse_parsed)
+    def _parse_browse_page(self, request_id: int = None) -> None:
+        rid = request_id if request_id is not None else self._page_request_id
+        self._page.runJavaScript(
+            browse_page_parse_script(),
+            lambda result: self._on_browse_parsed(result, rid),
+        )
 
-    def _on_browse_parsed(self, result) -> None:
+    def _on_browse_parsed(self, result, request_id: int = None) -> None:
+        rid = request_id if request_id is not None else self._page_request_id
+        is_page = rid == self._page_request_id
+        is_author = rid == self._author_request_id
+
+        if not is_page and not is_author:
+            return
+
         self._is_loading_page = False
         self.loading_finished.emit()
 
@@ -574,6 +594,7 @@ class WorkshopParser(QObject):
             self.error_occurred.emit("Failed to parse page")
             return
 
+        filters = self._current_page_filters if is_page else self._current_filters
         items: list[WorkshopItem] = []
         for item_data in result.get("items", []):
             item = WorkshopItem(
@@ -591,7 +612,7 @@ class WorkshopParser(QObject):
             current_page=result.get("current_page", 1),
             total_pages=max(1, result.get("total_pages", 1)),
             total_items=result.get("total_items", 0),
-            filters=self._current_filters,
+            filters=filters,
         )
 
         self._page_cache.set(self._current_url, page_data)
@@ -718,13 +739,14 @@ class WorkshopParser(QObject):
         return item
 
     def load_author_page(self, url: str, is_collections: bool = False) -> None:
-        if self._is_loading_page:
-            return
+        self._author_request_id += 1
+
         cached_page = self._page_cache.get(url)
         if cached_page:
             self._current_page_data = cached_page
             self.page_loaded.emit(cached_page)
             return
+
         self._is_loading_page = True
         self._is_loading_details = False
         self._request_type = "author_collections" if is_collections else "author_items"
@@ -781,9 +803,13 @@ class WorkshopParser(QObject):
             self.loading_finished.emit()
             self.error_occurred.emit(f"Collection error: {result['error']}")
             return
-        self._on_collection_parsed(result)
+        self._on_collection_parsed(result, request_id)
 
-    def _on_collection_parsed(self, result) -> None:
+    def _on_collection_parsed(self, result, request_id: int = None) -> None:
+        rid = request_id if request_id is not None else self._collection_request_id
+        if rid != self._collection_request_id:
+            return
+
         self._is_loading_page = False
         self.loading_finished.emit()
         if not result:
@@ -825,13 +851,19 @@ class WorkshopParser(QObject):
         )
         self.collection_contents_loaded.emit(contents)
 
-    def _parse_collection_listing_page(self) -> None:
+    def _parse_collection_listing_page(self, request_id: int = None) -> None:
+        rid = request_id if request_id is not None else self._author_request_id
         from infrastructure.steam.workshop_scripts import collection_listing_parse_script
         self._page.runJavaScript(
-            collection_listing_parse_script(), self._on_collection_listing_parsed
+            collection_listing_parse_script(),
+            lambda result: self._on_collection_listing_parsed(result, rid),
         )
 
-    def _on_collection_listing_parsed(self, result) -> None:
+    def _on_collection_listing_parsed(self, result, request_id: int = None) -> None:
+        rid = request_id if request_id is not None else self._author_request_id
+        if rid != self._author_request_id:
+            return
+
         self._is_loading_page = False
         self.loading_finished.emit()
         if not result:

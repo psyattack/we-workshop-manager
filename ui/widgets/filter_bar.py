@@ -106,7 +106,7 @@ class UnifiedActionsPanel(PopupPanel):
         layout.addWidget(self.refresh_button)
 
     def _create_action_button(self, text: str, icon_name: str, callback) -> QPushButton:
-        button = QPushButton()
+        button = QPushButton(self)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
         button.setFixedHeight(34)
         button.clicked.connect(callback)
@@ -116,7 +116,7 @@ class UnifiedActionsPanel(PopupPanel):
         row.setContentsMargins(10, 0, 12, 0)
         row.setSpacing(8)
 
-        icon_label = QLabel()
+        icon_label = QLabel(button)
         pixmap = get_pixmap(icon_name, size=20)
         if pixmap.isNull():
             icon = get_icon(icon_name)
@@ -125,7 +125,7 @@ class UnifiedActionsPanel(PopupPanel):
         icon_label.setFixedSize(20, 20)
         icon_label.setStyleSheet("background: transparent; border: none;")
 
-        text_label = QLabel(text)
+        text_label = QLabel(text, button)
         text_label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_primary')};
@@ -180,7 +180,7 @@ class WorkshopFiltersPanel(PopupPanel):
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
 
-        title = QLabel(self.tr.t("labels.filters"))
+        title = QLabel(self.tr.t("labels.filters"), self)
         title.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_primary')};
@@ -276,7 +276,7 @@ class WorkshopFiltersPanel(PopupPanel):
         sections_row.setSpacing(12)
         sections_row.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        misc_col = QWidget()
+        misc_col = QWidget(self)
         misc_layout = QVBoxLayout(misc_col)
         misc_layout.setContentsMargins(0, 0, 0, 0)
         misc_layout.setSpacing(6)
@@ -295,7 +295,7 @@ class WorkshopFiltersPanel(PopupPanel):
         self.misc_tags_widget.changed.connect(self.filters_changed.emit)
         misc_layout.addWidget(self.misc_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
 
-        genre_col = QWidget()
+        genre_col = QWidget(self)
         genre_layout = QVBoxLayout(genre_col)
         genre_layout.setContentsMargins(0, 0, 0, 0)
         genre_layout.setSpacing(6)
@@ -323,7 +323,7 @@ class WorkshopFiltersPanel(PopupPanel):
         bottom_row.setContentsMargins(0, 2, 0, 0)
         bottom_row.setSpacing(10)
 
-        self.incompatible_checkbox = QCheckBox(self.tr.t("labels.incompatible_items"))
+        self.incompatible_checkbox = QCheckBox(self.tr.t("labels.incompatible_items"), self)
         self.incompatible_checkbox.setStyleSheet(self._checkbox_style())
         self.incompatible_checkbox.stateChanged.connect(self.filters_changed.emit)
 
@@ -335,13 +335,13 @@ class WorkshopFiltersPanel(PopupPanel):
         self._on_sort_changed()
 
     def _create_combo(self, label_text: str, options: dict[str, str], width: int) -> dict:
-        container = QWidget()
+        container = QWidget(self)
         container.setStyleSheet("background: transparent; border: none;")
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(3)
 
-        label = QLabel(label_text)
+        label = QLabel(label_text, container)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -351,7 +351,7 @@ class WorkshopFiltersPanel(PopupPanel):
             """
         )
 
-        combo = QComboBox()
+        combo = QComboBox(container)
         combo.setFixedWidth(width)
         combo.setFixedHeight(28)
         combo.setStyleSheet(self._combo_style())
@@ -412,7 +412,7 @@ class WorkshopFiltersPanel(PopupPanel):
         """
 
     def _section_label(self, text: str) -> QLabel:
-        label = QLabel(text)
+        label = QLabel(text, self)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -485,7 +485,7 @@ class LocalFiltersPanel(PopupPanel):
         layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(10)
 
-        title = QLabel(self.tr.t("labels.filters"))
+        title = QLabel(self.tr.t("labels.filters"), self)
         title.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_primary')};
@@ -553,7 +553,7 @@ class LocalFiltersPanel(PopupPanel):
         sections_row.setSpacing(12)
         sections_row.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        misc_col = QWidget()
+        misc_col = QWidget(self)
         misc_layout = QVBoxLayout(misc_col)
         misc_layout.setContentsMargins(0, 0, 0, 0)
         misc_layout.setSpacing(6)
@@ -572,7 +572,7 @@ class LocalFiltersPanel(PopupPanel):
         self.misc_tags_widget.changed.connect(self.filters_changed.emit)
         misc_layout.addWidget(self.misc_tags_widget, alignment=Qt.AlignmentFlag.AlignTop)
 
-        genre_col = QWidget()
+        genre_col = QWidget(self)
         genre_layout = QVBoxLayout(genre_col)
         genre_layout.setContentsMargins(0, 0, 0, 0)
         genre_layout.setSpacing(6)
@@ -600,7 +600,7 @@ class LocalFiltersPanel(PopupPanel):
         bottom_row.setContentsMargins(0, 2, 0, 0)
         bottom_row.setSpacing(8)
 
-        sort_order_label = QLabel(self.tr.t("tooltips.sort_order") + ":")
+        sort_order_label = QLabel(self.tr.t("tooltips.sort_order") + ":", self)
         sort_order_label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -610,7 +610,7 @@ class LocalFiltersPanel(PopupPanel):
             """
         )
 
-        self.sort_order_button = QPushButton("↓")
+        self.sort_order_button = QPushButton("\u2193", self)
         self.sort_order_button.setCheckable(True)
         self.sort_order_button.setChecked(False)
         self.sort_order_button.setFixedSize(22, 22)
@@ -625,14 +625,14 @@ class LocalFiltersPanel(PopupPanel):
         layout.addLayout(bottom_row)
 
     def _create_combo(self, label_text: str, options: dict[str, str], width: int) -> dict:
-        container = QWidget()
+        container = QWidget(self)
         container.setStyleSheet("background: transparent; border: none;")
 
         layout = QVBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(3)
 
-        label = QLabel(label_text)
+        label = QLabel(label_text, container)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -642,7 +642,7 @@ class LocalFiltersPanel(PopupPanel):
             """
         )
 
-        combo = QComboBox()
+        combo = QComboBox(container)
         combo.setFixedWidth(width)
         combo.setFixedHeight(28)
         combo.setStyleSheet(self._combo_style())
@@ -704,7 +704,7 @@ class LocalFiltersPanel(PopupPanel):
         """
 
     def _section_label(self, text: str) -> QLabel:
-        label = QLabel(text)
+        label = QLabel(text, self)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};

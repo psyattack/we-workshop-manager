@@ -119,14 +119,14 @@ class DetailsPanel(QWidget):
         main_layout.setContentsMargins(5, 8, 5, 8)
         main_layout.setSpacing(8)
 
-        preview_container = QWidget()
+        preview_container = QWidget(self)
         preview_container.setFixedSize(self.CONTENT_WIDTH, 275)
 
         preview_layout = QVBoxLayout(preview_container)
         preview_layout.setContentsMargins(0, 0, 0, 0)
         preview_layout.setSpacing(0)
 
-        self.preview_label = QLabel()
+        self.preview_label = QLabel(preview_container)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setFixedSize(self.CONTENT_WIDTH, 275)
         self.preview_label.setStyleSheet(
@@ -190,7 +190,7 @@ class DetailsPanel(QWidget):
         self.panel_collapse_requested.emit()
 
     def _create_action_buttons(self, layout) -> None:
-        self.buttons_widget = QWidget()
+        self.buttons_widget = QWidget(self)
         self.buttons_widget.setFixedWidth(self.CONTENT_WIDTH)
 
         self.buttons_layout = QHBoxLayout(self.buttons_widget)
@@ -201,7 +201,7 @@ class DetailsPanel(QWidget):
         layout.addWidget(self.buttons_widget, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _create_title_section(self, layout) -> None:
-        self.title_container = QWidget()
+        self.title_container = QWidget(self)
         self.title_container.setObjectName("titleContainer")
         self.title_container.setFixedSize(self.CONTENT_WIDTH, 74)
         self.title_container.setStyleSheet(
@@ -217,7 +217,7 @@ class DetailsPanel(QWidget):
         container_layout = QVBoxLayout(self.title_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_scroll = QScrollArea()
+        self.title_scroll = QScrollArea(self.title_container)
         self.title_scroll.setObjectName("titleScroll")
         self.title_scroll.setWidgetResizable(True)
         self.title_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -228,13 +228,13 @@ class DetailsPanel(QWidget):
             """
         )
 
-        title_content = QWidget()
+        title_content = QWidget(self.title_scroll)
         title_content.setStyleSheet("background: transparent; border: none;")
 
         title_layout = QHBoxLayout(title_content)
         title_layout.setContentsMargins(8, 4, 8, 4)
 
-        self.title_label = QLabel()
+        self.title_label = QLabel(title_content)
         self.title_label.setStyleSheet(
             f"""
             font-weight: bold;
@@ -254,7 +254,7 @@ class DetailsPanel(QWidget):
         layout.addWidget(self.title_container, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _create_id_section(self, layout) -> None:
-        self.id_widget = QWidget()
+        self.id_widget = QWidget(self)
         self.id_widget.setFixedWidth(self.CONTENT_WIDTH)
         self.id_widget.setStyleSheet(
             f"""
@@ -275,13 +275,13 @@ class DetailsPanel(QWidget):
         id_layout.setContentsMargins(8, 4, 8, 4)
         id_layout.setSpacing(6)
 
-        icon_label = QLabel()
+        icon_label = QLabel(self.id_widget)
         icon_label.setPixmap(get_pixmap("ICON_ID", width=22, height=18))
         icon_label.setFixedSize(18, 16)
         icon_label.setStyleSheet("background: transparent; border: none;")
         id_layout.addWidget(icon_label)
 
-        self.id_label = QLabel()
+        self.id_label = QLabel(self.id_widget)
         self.id_label.setStyleSheet(
             f"""
             QLabel {{
@@ -311,7 +311,7 @@ class DetailsPanel(QWidget):
         self.id_widget.setVisible(show_id)
 
     def _create_details_section(self, layout) -> None:
-        self.details_container = QWidget()
+        self.details_container = QWidget(self)
         self.details_container.setObjectName("detailsContainer")
         self.details_container.setFixedWidth(self.CONTENT_WIDTH)
         self.details_container.setStyleSheet(f"""
@@ -330,7 +330,7 @@ class DetailsPanel(QWidget):
         container_layout = QVBoxLayout(self.details_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.details_scroll = QScrollArea()
+        self.details_scroll = QScrollArea(self.details_container)
         self.details_scroll.setObjectName("detailsScroll")
         self.details_scroll.setWidgetResizable(True)
         self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -342,7 +342,7 @@ class DetailsPanel(QWidget):
             """
         )
 
-        details_content = QWidget()
+        details_content = QWidget(self.details_scroll)
         details_content.setObjectName("detailsContent")
         details_content.setStyleSheet(
             """
@@ -704,7 +704,7 @@ class DetailsPanel(QWidget):
         if self._loading_icon is not None:
             try:
                 self._loading_icon.stop_animation()
-                self._loading_icon.setParent(None)
+                self._loading_icon.hide()
                 self._loading_icon.deleteLater()
             except Exception:
                 pass
@@ -782,7 +782,7 @@ class DetailsPanel(QWidget):
         button_color = color or self.theme.get_color("primary")
         button_hover = hover_color or self.theme.get_color("primary_hover")
 
-        button = QPushButton()
+        button = QPushButton(self)
         install_tooltip(button, tooltip, "bottom", self.theme)
         button.setFixedSize(45, 35)
         button.setIcon(get_icon(icon_name))
@@ -804,7 +804,7 @@ class DetailsPanel(QWidget):
         return button
 
     def _create_text_button(self, icon_name, text, tooltip, callback):
-        button = QPushButton()
+        button = QPushButton(self)
         install_tooltip(button, tooltip, "bottom", self.theme)
         button.setIcon(get_icon(icon_name))
         button.setIconSize(QSize(24, 24))
@@ -905,7 +905,7 @@ class DetailsPanel(QWidget):
         self.buttons_layout.addStretch()
 
     def _create_downloading_button(self):
-        button = QPushButton()
+        button = QPushButton(self)
         button.setFixedSize(148, 35)
         button.setEnabled(False)
         button.setStyleSheet(
@@ -930,7 +930,7 @@ class DetailsPanel(QWidget):
         spinner.setStyleSheet("background: transparent; border: none;")
         btn_layout.addWidget(spinner)
 
-        text_lbl = QLabel("Downloading...")
+        text_lbl = QLabel("Downloading...", button)
         text_lbl.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -968,14 +968,14 @@ class DetailsPanel(QWidget):
                 self._setup_workshop_buttons()
 
     def _create_icon_label(self, icon_name: str, size: int = 16) -> QLabel:
-        label = QLabel()
+        label = QLabel(self)
         label.setPixmap(get_pixmap(icon_name, size))
         label.setFixedSize(size, size)
         label.setStyleSheet("background: transparent; border: none;")
         return label
 
     def _add_detail_row(self, icon_name: str, text: str):
-        row_widget = QWidget()
+        row_widget = QWidget(self)
         row_widget.setStyleSheet("background: transparent; border: none;")
 
         row_layout = QHBoxLayout(row_widget)
@@ -985,7 +985,7 @@ class DetailsPanel(QWidget):
         icon_label = self._create_icon_label(icon_name, 16)
         row_layout.addWidget(icon_label)
 
-        text_label = QLabel(text)
+        text_label = QLabel(text, row_widget)
         text_label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -1001,7 +1001,7 @@ class DetailsPanel(QWidget):
         return text_label
 
     def _add_author_row(self, author: str, author_url: str = "") -> None:
-        row_widget = QWidget()
+        row_widget = QWidget(self)
         row_widget.setStyleSheet("background: transparent; border: none;")
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
@@ -1014,7 +1014,7 @@ class DetailsPanel(QWidget):
         prefix = full_text.split("__PLACEHOLDER__")[0]
 
         if prefix.strip():
-            prefix_label = QLabel(prefix.rstrip())
+            prefix_label = QLabel(prefix.rstrip(), row_widget)
             prefix_label.setStyleSheet(f"""
                 color: {self.theme.get_color('text_secondary')};
                 font-size: 14px;
@@ -1023,7 +1023,7 @@ class DetailsPanel(QWidget):
             """)
             row_layout.addWidget(prefix_label)
 
-        name_label = QLabel(author)
+        name_label = QLabel(author, row_widget)
         name_label.setStyleSheet(f"""
             color: {self.theme.get_color('primary')};
             font-size: 14px;
@@ -1046,7 +1046,7 @@ class DetailsPanel(QWidget):
         if icon_name:
             return self._add_detail_row(icon_name, text)
 
-        label = QLabel(text)
+        label = QLabel(text, self)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -1060,13 +1060,13 @@ class DetailsPanel(QWidget):
         return label
 
     def _add_separator(self) -> None:
-        separator = QWidget()
+        separator = QWidget(self)
         separator.setFixedHeight(1)
         separator.setStyleSheet(f"background-color: {self.theme.get_color('border')}; border: none;")
         self.details_layout.addWidget(separator)
 
     def _add_section_title(self, text: str, icon_name: str = None):
-        header_widget = QWidget()
+        header_widget = QWidget(self)
         header_widget.setStyleSheet("background: transparent; border: none;")
 
         header_layout = QHBoxLayout(header_widget)
@@ -1074,12 +1074,12 @@ class DetailsPanel(QWidget):
         header_layout.setSpacing(8)
 
         if icon_name:
-            icon_label = QLabel()
+            icon_label = QLabel(header_widget)
             icon_label.setPixmap(get_pixmap(icon_name, 18))
             icon_label.setStyleSheet("background: transparent; border: none;")
             header_layout.addWidget(icon_label)
 
-        label = QLabel(text)
+        label = QLabel(text, header_widget)
         label.setStyleSheet(
             f"""
             font-weight: bold;
@@ -1096,7 +1096,7 @@ class DetailsPanel(QWidget):
         return label
 
     def _add_description_label(self, text: str):
-        label = QLabel(text)
+        label = QLabel(text, self)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_primary')};
@@ -1132,7 +1132,7 @@ class DetailsPanel(QWidget):
         """
 
     def _create_expand_description_button(self) -> QPushButton:
-        button = QPushButton()
+        button = QPushButton(self)
         button.setFixedWidth(self.CONTENT_WIDTH - 16)
         button.setFixedHeight(24)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1160,7 +1160,7 @@ class DetailsPanel(QWidget):
         if not text or not self._description_label:
             return False
 
-        probe = QLabel()
+        probe = QLabel(self)
         probe.setWordWrap(True)
         probe.setAlignment(Qt.AlignmentFlag.AlignTop)
         probe.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
@@ -1189,7 +1189,7 @@ class DetailsPanel(QWidget):
         right = len(clean)
         best = ""
 
-        probe = QLabel()
+        probe = QLabel(self)
         probe.setWordWrap(True)
         probe.setAlignment(Qt.AlignmentFlag.AlignTop)
         probe.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
@@ -1249,14 +1249,14 @@ class DetailsPanel(QWidget):
         self._description_expanded = False
         self._displayed_description_full = description if description else self.tr.t("labels.no_description")
 
-        header_widget = QWidget()
+        header_widget = QWidget(self)
         header_widget.setStyleSheet("background: transparent; border: none;")
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(8)
 
         if description and description.strip():
-            self._translate_button = QPushButton()
+            self._translate_button = QPushButton(header_widget)
             install_tooltip(self._translate_button, self.tr.t("tooltips.translate_description"), "bottom", self.theme)
             self._translate_button.setFixedSize(18, 18)
             self._translate_button.setIcon(get_icon("ICON_TRANSLATE"))
@@ -1273,7 +1273,7 @@ class DetailsPanel(QWidget):
             self._translate_button.clicked.connect(self._on_translate_clicked)
             header_layout.addWidget(self._translate_button)
 
-        title_label = QLabel(self.tr.t("labels.description"))
+        title_label = QLabel(self.tr.t("labels.description"), header_widget)
         title_label.setStyleSheet(
             f"""
             font-weight: bold;
@@ -1454,7 +1454,7 @@ class DetailsPanel(QWidget):
         if not stars_text:
             return
 
-        row_widget = QWidget()
+        row_widget = QWidget(self)
         row_widget.setStyleSheet("background: transparent; border: none;")
 
         row_layout = QHBoxLayout(row_widget)
@@ -1464,7 +1464,7 @@ class DetailsPanel(QWidget):
         icon_label = self._create_icon_label("ICON_STAR", 16)
         row_layout.addWidget(icon_label)
 
-        rating_text = QLabel(self.tr.t("labels.rating"))
+        rating_text = QLabel(self.tr.t("labels.rating"), row_widget)
         rating_text.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_secondary')};
@@ -1477,7 +1477,7 @@ class DetailsPanel(QWidget):
         row_layout.addSpacing(4)
 
         count_part = f" ({num_ratings})" if num_ratings else ""
-        stars_label = QLabel(f"{stars_text}{count_part}")
+        stars_label = QLabel(f"{stars_text}{count_part}", row_widget)
         stars_label.setStyleSheet(
             """
             color: #f5c518;
@@ -1512,7 +1512,7 @@ class DetailsPanel(QWidget):
             else:
                 values = []
 
-            tag_group = TagGroupWidget(clean_key, values, self.theme, max_width=280)
+            tag_group = TagGroupWidget(clean_key, values, self.theme, max_width=280, parent=self)
             self.details_layout.addWidget(tag_group)
 
     def _setup_installed_details(self) -> None:
@@ -1723,13 +1723,13 @@ class DetailsPanel(QWidget):
         if not collection_id:
             return None
 
-        row = QWidget()
+        row = QWidget(self)
         row.setStyleSheet("background: transparent; border: none;")
         row_layout = QHBoxLayout(row)
         row_layout.setContentsMargins(4, 0, 4, 0)
         row_layout.setSpacing(6)
 
-        link_label = QLabel(title or f"Collection {collection_id}")
+        link_label = QLabel(title or f"Collection {collection_id}", row)
         link_label.setStyleSheet(f"""
             color: {self.theme.get_color('primary')};
             font-size: 12px;

@@ -82,7 +82,7 @@ class BaseDialog(QDialog):
         )
 
     def _create_title_bar(self, title: str) -> None:
-        title_bar = QFrame()
+        title_bar = QFrame(self.container)
         title_bar.setFixedHeight(40)
         title_bar.setStyleSheet("QWidget { background: transparent; border: none; }")
 
@@ -91,7 +91,7 @@ class BaseDialog(QDialog):
         title_layout.setSpacing(8)
 
         if self._title_icon:
-            icon_label = QLabel()
+            icon_label = QLabel(title_bar)
             icon_label.setStyleSheet("background: transparent; border: none;")
             
             if isinstance(self._title_icon, str):
@@ -108,7 +108,7 @@ class BaseDialog(QDialog):
                 icon_label.setFixedSize(24, 24)
                 title_layout.addWidget(icon_label)
 
-        title_label = QLabel(title)
+        title_label = QLabel(title, title_bar)
         title_label.setStyleSheet(
             f"""
             font-size: 16px;
@@ -118,7 +118,7 @@ class BaseDialog(QDialog):
             """
         )
 
-        close_button = QPushButton()
+        close_button = QPushButton(title_bar)
         close_button.setFixedSize(32, 32)
         close_button.setIcon(get_icon("ICON_CLOSE"))
         close_button.setIconSize(close_button.size() * 0.6)

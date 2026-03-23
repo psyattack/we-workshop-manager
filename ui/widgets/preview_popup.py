@@ -27,7 +27,7 @@ class PreviewPopup(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.container = QWidget()
+        self.container = QWidget(self)
         background = hex_to_rgba(self.theme.get_color("bg_secondary"), 230)
         self.container.setStyleSheet(
             f"""
@@ -40,7 +40,7 @@ class PreviewPopup(QWidget):
         container_layout = QVBoxLayout(self.container)
         container_layout.setContentsMargins(3, 3, 3, 3)
 
-        self.preview_label = QLabel()
+        self.preview_label = QLabel(self.container)
         self.preview_label.setFixedSize(150, 150)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setStyleSheet("background: transparent; border: none;")
@@ -134,11 +134,11 @@ class PreviewPopup(QWidget):
     def _play_gif_from_data(self, data: QByteArray) -> None:
         self._stop_current_movie()
 
-        self._current_buffer = QBuffer()
+        self._current_buffer = QBuffer(self)
         self._current_buffer.setData(data)
         self._current_buffer.open(QIODevice.OpenModeFlag.ReadOnly)
 
-        self._current_movie = QMovie()
+        self._current_movie = QMovie(self)
         self._current_movie.setDevice(self._current_buffer)
         self._current_movie.setScaledSize(self._calculate_scaled_size(self._current_movie))
 

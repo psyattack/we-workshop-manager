@@ -35,7 +35,7 @@ class FilterTagChip(QFrame):
         )
         layout.setSpacing(0)
 
-        self.label = QLabel(self._text)
+        self.label = QLabel(self._text, self)
         self.label.setWordWrap(False)
         self.label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.label.setStyleSheet("background: transparent; border: none;")
@@ -151,7 +151,8 @@ class CompactFlowLayout(QVBoxLayout):
             self._current_row.addStretch()
 
     def _start_new_row(self) -> None:
-        row_widget = QWidget()
+        parent_widget = self.parentWidget()
+        row_widget = QWidget(parent_widget)
         row_widget.setStyleSheet("background: transparent; border: none;")
         row_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
@@ -194,7 +195,7 @@ class FilterTagsFlowWidget(QWidget):
         flow = CompactFlowLayout()
         flow.set_max_width(self._max_width)
 
-        container = QWidget()
+        container = QWidget(self)
         container.setStyleSheet("background: transparent; border: none;")
         container.setLayout(flow)
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)

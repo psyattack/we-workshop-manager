@@ -18,7 +18,7 @@ class InfoDialog(BaseDialog):
         self.setMinimumSize(400, 330)
         self.adjustSize()
 
-        icon = QLabel()
+        icon = QLabel(self.content_layout.parentWidget())
         icon.setPixmap(get_pixmap("ICON_APP128", size=100))
         icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon.setStyleSheet("border: none; background: none;")
@@ -26,7 +26,8 @@ class InfoDialog(BaseDialog):
 
         top_text = QLabel(
             f"{APP_FULL_NAME}\n\n"
-            f"{self.tr.t('info.description')}"
+            f"{self.tr.t('info.description')}",
+            self.content_layout.parentWidget()
         )
         top_text.setStyleSheet(
             f"""
@@ -47,13 +48,14 @@ class InfoDialog(BaseDialog):
         github_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
         github_container.setSpacing(8)
 
-        github_icon = QLabel()
+        github_icon = QLabel(self.content_layout.parentWidget())
         github_icon.setPixmap(get_pixmap("ICON_GITHUB", size=28))
         github_icon.setStyleSheet("border: none; margin-right: -2px;")
 
         github_link = QLabel(
             f'<a href="https://github.com/psyattack/we-workshop-manager" '
-            f'style="color: {self.c_primary}; text-decoration: none;">GitHub</a>'
+            f'style="color: {self.c_primary}; text-decoration: none;">GitHub</a>',
+            self.content_layout.parentWidget()
         )
         github_link.setOpenExternalLinks(True)
         github_link.setStyleSheet("border: none; font-size: 14px; font-weight: bold;")
@@ -123,7 +125,7 @@ class InfoDialog(BaseDialog):
         self.content_layout.addLayout(buttons_layout)
 
     def _add_links_block(self, author: tuple[str, str], tools: list[tuple[str, str]]) -> None:
-        container = QWidget()
+        container = QWidget(self.content_layout.parentWidget())
         container.setStyleSheet(
             """
             QWidget {
@@ -142,7 +144,8 @@ class InfoDialog(BaseDialog):
         author_name, author_url = author
         author_label = QLabel(
             f'Author: <a href="{author_url}" '
-            f'style="color: {muted_color}; text-decoration: underline;">{author_name}</a>'
+            f'style="color: {muted_color}; text-decoration: underline;">{author_name}</a>',
+            container
         )
         author_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         author_label.setOpenExternalLinks(True)
@@ -161,7 +164,7 @@ class InfoDialog(BaseDialog):
             for name, url in tools
         )
 
-        tools_label = QLabel(f"Powered by: {tools_links}")
+        tools_label = QLabel(f"Powered by: {tools_links}", container)
         tools_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         tools_label.setOpenExternalLinks(True)
         tools_label.setWordWrap(True)
@@ -191,7 +194,7 @@ class InfoDialog(BaseDialog):
                 break
 
         if separator is None:
-            fallback = QLabel(text)
+            fallback = QLabel(text, self.content_layout.parentWidget())
             fallback.setStyleSheet(label_style)
             fallback.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.content_layout.addWidget(fallback)
@@ -204,18 +207,18 @@ class InfoDialog(BaseDialog):
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(4)
 
-        before_label = QLabel(parts[0].rstrip())
+        before_label = QLabel(parts[0].rstrip(), self.content_layout.parentWidget())
         before_label.setStyleSheet(label_style)
         row_layout.addWidget(before_label)
 
-        heart_icon = QLabel()
+        heart_icon = QLabel(self.content_layout.parentWidget())
         heart_icon.setPixmap(get_pixmap("ICON_HEART", size=16))
         heart_icon.setStyleSheet("border: none; background: transparent;")
         heart_icon.setFixedSize(16, 16)
         row_layout.addWidget(heart_icon)
 
         if len(parts) > 1 and parts[1].strip():
-            after_label = QLabel(parts[1].lstrip())
+            after_label = QLabel(parts[1].lstrip(), self.content_layout.parentWidget())
             after_label.setStyleSheet(label_style)
             row_layout.addWidget(after_label)
 

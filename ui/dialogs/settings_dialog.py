@@ -177,7 +177,7 @@ class SearchLineEdit(QFrame):
         lay.setContentsMargins(10, 0, 8, 0)
         lay.setSpacing(6)
 
-        icon = QLabel()
+        icon = QLabel(self)
         icon.setFixedSize(16, 16)
         pm = get_pixmap("ICON_SEARCH", 16)
         if not pm.isNull():
@@ -187,7 +187,7 @@ class SearchLineEdit(QFrame):
         icon.setStyleSheet("background:transparent;border:none;")
         lay.addWidget(icon)
 
-        self._input = QLineEdit()
+        self._input = QLineEdit(self)
         self._input.setPlaceholderText(placeholder)
         self._input.setStyleSheet(
             f"background:transparent;border:none;color:{txt};font-size:12px;padding:0;"
@@ -195,7 +195,7 @@ class SearchLineEdit(QFrame):
         self._input.textChanged.connect(self.textChanged.emit)
         lay.addWidget(self._input, 1)
 
-        self._badge = QLabel()
+        self._badge = QLabel(self)
         self._badge.setFixedHeight(18)
         self._badge.setStyleSheet(
             f"background:{primary};color:#fff;border-radius:9px;font-size:10px;"
@@ -204,7 +204,7 @@ class SearchLineEdit(QFrame):
         self._badge.hide()
         lay.addWidget(self._badge)
 
-        self._clear = QPushButton("✕")
+        self._clear = QPushButton("\u2715", self)
         self._clear.setFixedSize(18, 18)
         self._clear.setCursor(Qt.CursorShape.PointingHandCursor)
         self._clear.setStyleSheet(
@@ -245,13 +245,13 @@ class CategoryDivider(QWidget):
         lay.setSpacing(8)
         c = theme_manager.get_color("text_disabled") if theme_manager else "#6B6E7C"
         b = theme_manager.get_color("border") if theme_manager else "#2A2F42"
-        lbl = QLabel(title.upper())
+        lbl = QLabel(title.upper(), self)
         lbl.setStyleSheet(
             f"font-size:10px;font-weight:800;color:{c};letter-spacing:1.5px;"
             f"background:transparent;border:none;"
         )
         lay.addWidget(lbl)
-        line = QFrame()
+        line = QFrame(self)
         line.setFrameShape(QFrame.Shape.HLine)
         line.setStyleSheet(f"background:{b};border:none;max-height:1px;")
         lay.addWidget(line, 1)
@@ -270,7 +270,7 @@ class CollapsibleSection(QWidget):
         ml.setContentsMargins(0, 0, 0, 0)
         ml.setSpacing(0)
 
-        self._header = QPushButton()
+        self._header = QPushButton(self)
         self._header.setCheckable(True)
         self._header.setChecked(expanded)
         self._header.clicked.connect(self._toggle)
@@ -287,7 +287,7 @@ class CollapsibleSection(QWidget):
         )
         ml.addWidget(self._header)
 
-        self._body = QWidget()
+        self._body = QWidget(self)
         self._body.setStyleSheet(
             f"QWidget{{background:{self._bg1};border:1px solid {self._bd};border-top:none;"
             f"border-bottom-left-radius:6px;border-bottom-right-radius:6px;}}"
@@ -351,11 +351,11 @@ class SettingsField(QWidget):
             lay.setContentsMargins(0, 0, 0, 0)
             lay.setSpacing(2)
             if label_text:
-                l = QLabel(label_text)
+                l = QLabel(label_text, self)
                 l.setStyleSheet(f"font-size:11px;font-weight:600;color:{ts};background:transparent;border:none;")
                 lay.addWidget(l)
             if description:
-                d = QLabel(description)
+                d = QLabel(description, self)
                 d.setWordWrap(True)
                 d.setStyleSheet(f"font-size:10px;color:{td};background:transparent;border:none;")
                 lay.addWidget(d)
@@ -369,11 +369,11 @@ class SettingsField(QWidget):
         left = QVBoxLayout()
         left.setSpacing(0)
         if label_text:
-            l = QLabel(label_text)
+            l = QLabel(label_text, self)
             l.setStyleSheet(f"font-size:11px;font-weight:600;color:{ts};background:transparent;border:none;")
             left.addWidget(l)
         if description:
-            d = QLabel(description)
+            d = QLabel(description, self)
             d.setWordWrap(True)
             d.setStyleSheet(f"font-size:10px;color:{td};background:transparent;border:none;")
             left.addWidget(d)
@@ -469,7 +469,7 @@ class SettingsDialog(BaseDialog):
         self._search.textChanged.connect(self._on_search)
         self.content_layout.addWidget(self._search)
 
-        body = QWidget()
+        body = QWidget(self)
         body.setStyleSheet("background:transparent;border:none;")
         h = QHBoxLayout(body)
         h.setContentsMargins(0, 0, 0, 0)
@@ -477,7 +477,7 @@ class SettingsDialog(BaseDialog):
 
         h.addWidget(self._build_sidebar())
 
-        sep = QFrame()
+        sep = QFrame(body)
         sep.setFrameShape(QFrame.Shape.VLine)
         sep.setFixedWidth(1)
         sep.setStyleSheet(f"background:{self.c_border};border:none;")
@@ -490,7 +490,7 @@ class SettingsDialog(BaseDialog):
         self._nav_buttons[0].setChecked(True)
 
     def _build_sidebar(self) -> QWidget:
-        sb = QWidget()
+        sb = QWidget(self)
         sb.setFixedWidth(140)
         sb.setStyleSheet(f"background:{self.c_bg_secondary};border:none;")
         vl = QVBoxLayout(sb)
@@ -520,7 +520,7 @@ class SettingsDialog(BaseDialog):
 
         vl.addStretch()
 
-        ver = QLabel(APP_VERSION_DISPLAY)
+        ver = QLabel(APP_VERSION_DISPLAY, sb)
         ver.setStyleSheet(
             f"font-size:10px;color:{self.c_text_disabled};background:transparent;border:none;"
         )
@@ -544,7 +544,7 @@ class SettingsDialog(BaseDialog):
         """
 
     def _build_scroll(self) -> QScrollArea:
-        sa = QScrollArea()
+        sa = QScrollArea(self)
         sa.setWidgetResizable(True)
         sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         sa.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -573,7 +573,7 @@ class SettingsDialog(BaseDialog):
             }}
             """
         )
-        inner = QWidget()
+        inner = QWidget(self)
         inner.setStyleSheet("background:transparent;")
         self._inner = QVBoxLayout(inner)
         self._inner.setContentsMargins(12, 6, 8, 8)
@@ -702,14 +702,14 @@ class SettingsDialog(BaseDialog):
         self._category_groups[div].append(sec)
 
     def _build_no_results(self):
-        self._no_results = QWidget()
+        self._no_results = QWidget(self)
         self._no_results.setStyleSheet("background:transparent;border:none;")
         vl = QVBoxLayout(self._no_results)
         vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         vl.setSpacing(6)
         vl.setContentsMargins(0, 50, 0, 50)
 
-        ic = QLabel()
+        ic = QLabel(self._no_results)
         pm = get_pixmap("ICON_SEARCH", 28)
         if not pm.isNull():
             ic.setPixmap(pm)
@@ -717,14 +717,14 @@ class SettingsDialog(BaseDialog):
         ic.setStyleSheet("background:transparent;border:none;")
         vl.addWidget(ic)
 
-        t1 = QLabel(self._t("settings.no_results", "No settings found"))
+        t1 = QLabel(self._t("settings.no_results", "No settings found"), self._no_results)
         t1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         t1.setStyleSheet(
             f"font-size:13px;font-weight:600;color:{self.c_text_secondary};background:transparent;border:none;"
         )
         vl.addWidget(t1)
 
-        t2 = QLabel(self._t("settings.no_results_hint", "Try a different search term"))
+        t2 = QLabel(self._t("settings.no_results_hint", "Try a different search term"), self._no_results)
         t2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         t2.setStyleSheet(
             f"font-size:11px;color:{self.c_text_disabled};background:transparent;border:none;"
@@ -814,7 +814,7 @@ class SettingsDialog(BaseDialog):
             self._nav_buttons[active].setChecked(True)
 
     def _create_account_combo(self) -> QComboBox:
-        c = QComboBox()
+        c = QComboBox(self)
         last = 1
         for i in range(len(self.accounts.get_accounts()) - last):
             c.addItem(f"{self.tr.t('labels.account')} {i + 1}")
@@ -824,7 +824,7 @@ class SettingsDialog(BaseDialog):
         return c
 
     def _create_theme_combo(self) -> QComboBox:
-        c = QComboBox()
+        c = QComboBox(self)
         self._theme_keys = list(self.theme.get_available_themes())
         for k in self._theme_keys:
             tk = f"labels.theme_{k}"
@@ -837,7 +837,7 @@ class SettingsDialog(BaseDialog):
         return c
 
     def _create_language_combo(self) -> QComboBox:
-        c = QComboBox()
+        c = QComboBox(self)
         langs = list(self.tr.get_available_languages().values())
         c.addItems(langs)
         codes = list(self.tr.get_available_languages().keys())
@@ -884,26 +884,26 @@ class SettingsDialog(BaseDialog):
         return t
 
     def _create_steam_login_section(self) -> QWidget:
-        w = QWidget()
+        w = QWidget(self)
         w.setStyleSheet("background:transparent;border:none;")
         vl = QVBoxLayout(w)
         vl.setContentsMargins(0, 0, 0, 0)
         vl.setSpacing(6)
 
-        desc = QLabel(self._t("settings.login_description", "Enter your Steam credentials"))
+        desc = QLabel(self._t("settings.login_description", "Enter your Steam credentials"), w)
         desc.setWordWrap(True)
         desc.setStyleSheet(
             f"font-size:10px;color:{self.c_text_disabled};background:transparent;border:none;"
         )
         vl.addWidget(desc)
 
-        self.login_input = QLineEdit()
+        self.login_input = QLineEdit(w)
         self.login_input.setPlaceholderText(self.tr.t("settings.login_placeholder"))
         self.login_input.setFixedHeight(30)
         self.login_input.setStyleSheet(self._input_style())
         vl.addWidget(self.login_input)
 
-        self.password_input = QLineEdit()
+        self.password_input = QLineEdit(w)
         self.password_input.setPlaceholderText(self.tr.t("settings.password_placeholder"))
         self.password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.password_input.setFixedHeight(30)
@@ -943,19 +943,19 @@ class SettingsDialog(BaseDialog):
         sec.add_widget(f)
         self._reg(sec, f)
 
-        sc = QWidget()
+        sc = QWidget(self)
         sc.setStyleSheet("background:transparent;border:none;")
         sl = QHBoxLayout(sc)
         sl.setContentsMargins(2, 0, 2, 0)
         sl.setSpacing(6)
-        self._init_status_label = QLabel()
+        self._init_status_label = QLabel(sc)
         self._init_status_label.setStyleSheet(
             f"font-size:10px;color:{self.c_text_secondary};background:transparent;border:none;"
         )
-        self._init_spinner = SpinningIconLabel("ICON_REFRESH", 14)
+        self._init_spinner = SpinningIconLabel("ICON_REFRESH", 14, sc)
         self._init_spinner.hide()
 
-        init_btn = QPushButton(self._t("settings.initialize_now", "Initialize Now"))
+        init_btn = QPushButton(self._t("settings.initialize_now", "Initialize Now"), sc)
         init_btn.setFixedHeight(24)
         init_btn.setStyleSheet(self._compact_btn(True))
         init_btn.clicked.connect(self._on_manual_init_clicked)
@@ -1006,13 +1006,13 @@ class SettingsDialog(BaseDialog):
         return sec
 
     def _build_bg_area_row(self, area: str, label: str) -> QWidget:
-        w = QWidget()
+        w = QWidget(self)
         w.setStyleSheet("background:transparent;border:none;")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 1, 0, 1)
         hl.setSpacing(6)
 
-        preview = QLabel()
+        preview = QLabel(w)
         preview.setFixedSize(32, 32)
         preview.setStyleSheet(
             f"background:{self.c_bg_tertiary};border-radius:4px;border:1px solid {self.c_border};"
@@ -1024,7 +1024,7 @@ class SettingsDialog(BaseDialog):
         mid = QVBoxLayout()
         mid.setContentsMargins(0, 0, 0, 0)
         mid.setSpacing(1)
-        hdr = QLabel(label)
+        hdr = QLabel(label, w)
         hdr.setStyleSheet(
             f"font-size:10px;font-weight:700;color:{self.c_text_primary};background:transparent;border:none;"
         )
@@ -1061,17 +1061,17 @@ class SettingsDialog(BaseDialog):
         r = QHBoxLayout()
         r.setContentsMargins(0, 0, 0, 0)
         r.setSpacing(4)
-        l = QLabel(label)
+        l = QLabel(label, self)
         l.setFixedWidth(40)
         l.setStyleSheet(
             f"font-size:10px;color:{self.c_text_secondary};background:transparent;border:none;"
         )
-        s = QSlider(Qt.Orientation.Horizontal)
+        s = QSlider(Qt.Orientation.Horizontal, self)
         s.setRange(0, 100)
         s.setValue(val)
         s.setFixedHeight(16)
         s.setStyleSheet(self._slider_style())
-        vl = QLabel(f"{val}%")
+        vl = QLabel(f"{val}%", self)
         vl.setFixedWidth(28)
         vl.setStyleSheet(
             f"font-size:10px;color:{self.c_text_primary};background:transparent;border:none;"

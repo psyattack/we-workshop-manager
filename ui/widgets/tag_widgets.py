@@ -28,7 +28,7 @@ class TagChip(QFrame):
         layout.setContentsMargins(8, 2, 8, 2)
         layout.setSpacing(0)
 
-        label = QLabel(text)
+        label = QLabel(text, self)
         label.setStyleSheet(
             f"""
             color: {self.theme.get_color('text_primary')};
@@ -75,7 +75,7 @@ class TagGroupWidget(QWidget):
         self._setup_ui(key, values)
 
     def _create_row(self) -> tuple[QWidget, QHBoxLayout]:
-        row_widget = QWidget()
+        row_widget = QWidget(self)
         row_widget.setStyleSheet("background: transparent; border: none;")
 
         row_layout = QHBoxLayout(row_widget)
@@ -92,9 +92,9 @@ class TagGroupWidget(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(ROW_SPACING)
 
-        chips = [TagChip(key, self.theme, is_key=True)]
+        chips = [TagChip(key, self.theme, is_key=True, parent=self)]
         chips.extend(
-            TagChip(value.strip(), self.theme, is_key=False)
+            TagChip(value.strip(), self.theme, is_key=False, parent=self)
             for value in values
             if value.strip()
         )
@@ -156,5 +156,6 @@ class TagsContainer(QWidget):
             values=values,
             theme_manager=self.theme,
             max_width=MAX_ROW_WIDTH,
+            parent=self,
         )
         self._main_layout.addWidget(group)

@@ -65,8 +65,10 @@ class FlowLayout(QLayout):
 
         while self._items:
             item = self._items.pop()
-            if item.widget():
-                item.widget().setParent(None)
+            w = item.widget()
+            if w:
+                w.hide()
+                w.deleteLater()
 
         self._invalidate_cache()
 

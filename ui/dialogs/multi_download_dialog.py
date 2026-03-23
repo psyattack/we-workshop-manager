@@ -17,12 +17,12 @@ class BatchDownloadDialog(BaseDialog):
 
         self.setFixedSize(450, 350)
 
-        label = QLabel(self.tr.t("messages.batch_input_placeholder"))
+        label = QLabel(self.tr.t("messages.batch_input_placeholder"), self.content_layout.parentWidget())
         label.setStyleSheet(f"color: {self.c_text_primary}; background: transparent; border: none;")
         label.setWordWrap(True)
         self.content_layout.addWidget(label)
 
-        self.text_edit = QTextEdit()
+        self.text_edit = QTextEdit(self.content_layout.parentWidget())
         self.text_edit.setPlaceholderText(self.tr.t("labels.id_url_placeholder"))
         self.text_edit.setStyleSheet(
             f"""
@@ -44,7 +44,7 @@ class BatchDownloadDialog(BaseDialog):
 
         button_layout = QHBoxLayout()
 
-        download_btn = QPushButton(self.tr.t("buttons.install"))
+        download_btn = QPushButton(self.tr.t("buttons.install"), self.content_layout.parentWidget())
         download_btn.setIcon(get_icon("ICON_UPLOAD"))
         download_btn.setIconSize(QSize(24, 24))
         download_btn.setFixedHeight(40)

@@ -89,7 +89,7 @@ class BaseGridItem(QWidget):
         name_layout.setContentsMargins(5, 2, 5, 2)
         name_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.name_label = QLabel()
+        self.name_label = QLabel(self.name_container)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         font_size = max(6, min(12, int(self.item_size / 12)))
@@ -168,7 +168,7 @@ class BaseGridItem(QWidget):
         if self._loading_icon is not None:
             try:
                 self._loading_icon.stop_animation()
-                self._loading_icon.setParent(None)
+                self._loading_icon.hide()
                 self._loading_icon.deleteLater()
             except Exception:
                 pass
@@ -223,7 +223,7 @@ class BaseGridItem(QWidget):
             self._buffer = QBuffer(self._gif_buffer)
             self._buffer.open(QBuffer.OpenModeFlag.ReadOnly)
 
-            self._movie = QMovie()
+            self._movie = QMovie(self)
             self._movie.setDevice(self._buffer)
             self._movie.setScaledSize(QSize(self.item_size, self.item_size))
 
@@ -242,7 +242,7 @@ class BaseGridItem(QWidget):
             self._stop_loading_animation()
 
             self._is_gif = True
-            self._movie = QMovie(file_path)
+            self._movie = QMovie(file_path, QByteArray(), self)
             self._movie.setScaledSize(QSize(self.item_size, self.item_size))
             self.preview_label.setMovie(self._movie)
             self._movie.start()
@@ -540,7 +540,7 @@ class CollectionGridItem(BaseGridItem):
         badge_layout.setContentsMargins(4, 2, 6, 2)
         badge_layout.setSpacing(3)
 
-        folder_icon = QLabel()
+        folder_icon = QLabel(self.badge)
         folder_icon.setPixmap(get_pixmap("ICON_COLLECTION2", 24))
         folder_icon.setFixedSize(24, 28)
         folder_icon.setStyleSheet("background: transparent; border: none;")

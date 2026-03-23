@@ -46,13 +46,13 @@ class SearchPanel(QWidget):
         root.addWidget(self.info_primary_frame)
         root.addWidget(self.info_secondary_frame)
 
-        self.search_host = QWidget()
+        self.search_host = QWidget(self)
         self.search_host.setObjectName("searchPanelHost")
         search_host_layout = QHBoxLayout(self.search_host)
         search_host_layout.setContentsMargins(0, 0, 0, 0)
         search_host_layout.setSpacing(8)
 
-        self.main_frame = QFrame()
+        self.main_frame = QFrame(self.search_host)
         self.main_frame.setObjectName("searchPanelMainFrame")
         self.main_frame.setFixedHeight(36)
         self.main_frame.setFixedWidth(self.FIXED_SEARCH_WIDTH)
@@ -63,7 +63,7 @@ class SearchPanel(QWidget):
         frame_layout.setContentsMargins(6, 0, 0, 0)
         frame_layout.setSpacing(0)
 
-        self.search_button = QPushButton()
+        self.search_button = QPushButton(self.main_frame)
         self.search_button.setFixedSize(30, 30)
         self.search_button.setIcon(get_icon("ICON_SEARCH"))
         self.search_button.setIconSize(QSize(20, 20))
@@ -72,7 +72,7 @@ class SearchPanel(QWidget):
         self.search_button.setObjectName("searchPanelSearchButton")
         install_tooltip(self.search_button, self.tr.t("tooltips.search"), "bottom", self.theme)
 
-        self.search_input = QLineEdit()
+        self.search_input = QLineEdit(self.main_frame)
         self.search_input.setPlaceholderText(self.tr.t("labels.search_placeholder"))
         self.search_input.setFrame(False)
         self.search_input.setFixedHeight(30)
@@ -80,7 +80,7 @@ class SearchPanel(QWidget):
         self.search_input.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.search_input.installEventFilter(self)
 
-        self.filter_button = QPushButton()
+        self.filter_button = QPushButton(self.main_frame)
         self.filter_button.setFixedSize(36, 36)
         self.filter_button.setIcon(get_icon("ICON_FILTER"))
         self.filter_button.setIconSize(QSize(24, 24))
@@ -90,7 +90,7 @@ class SearchPanel(QWidget):
         self.filter_button.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.filter_button.installEventFilter(self)
 
-        self.actions_button = QPushButton()
+        self.actions_button = QPushButton(self.search_host)
         self.actions_button.setFixedSize(36, 36)
         self.actions_button.setIcon(get_icon("ICON_ELLIPSIS"))
         self.actions_button.setIconSize(QSize(15, 15))
@@ -112,18 +112,18 @@ class SearchPanel(QWidget):
         self._apply_styles()
 
     def _create_info_box(self) -> QFrame:
-        frame = QFrame()
+        frame = QFrame(self)
         frame.setObjectName("searchPanelInfoBox")
         frame.setFixedHeight(36)
         layout = QHBoxLayout(frame)
         layout.setContentsMargins(12, 0, 6, 0)
         layout.setSpacing(4)
 
-        label = QLabel("")
+        label = QLabel("", frame)
         label.setObjectName("searchPanelInfoLabel")
         layout.addWidget(label, 1)
 
-        close_btn = QPushButton()
+        close_btn = QPushButton(frame)
         close_btn.setFixedSize(20, 20)
         close_btn.setIcon(get_icon("ICON_CLOSE2"))
         close_btn.setIconSize(QSize(10, 10))

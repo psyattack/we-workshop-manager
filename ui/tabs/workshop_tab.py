@@ -184,7 +184,7 @@ class WorkshopTab(QWidget):
         details_outer_layout.setContentsMargins(0, 0, 0, 0)
         details_outer_layout.setSpacing(0)
 
-        self.details_card = QFrame()
+        self.details_card = QFrame(self.details_container)
         self.details_card.setObjectName("workshopDetailsCard")
         self.details_card.setStyleSheet(
             f"""
@@ -199,7 +199,7 @@ class WorkshopTab(QWidget):
         details_layout = QVBoxLayout(self.details_card)
         details_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.details_scroll = QScrollArea()
+        self.details_scroll = QScrollArea(self.details_card)
         self.details_scroll.setWidgetResizable(True)
         self.details_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.details_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
@@ -243,12 +243,12 @@ class WorkshopTab(QWidget):
         self._details_bg.lower()
 
     def _create_left_panel(self) -> QWidget:
-        widget = QWidget()
+        widget = QWidget(self)
         outer_layout = QVBoxLayout(widget)
         outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(0)
 
-        self.content_card = QFrame()
+        self.content_card = QFrame(widget)
         self.content_card.setObjectName("workshopContentCard")
         self.content_card.setStyleSheet(f"""
             QFrame#workshopContentCard {{
@@ -268,7 +268,7 @@ class WorkshopTab(QWidget):
         self.filter_bar.refresh_requested.connect(self._on_refresh_requested)
         layout.addWidget(self.filter_bar, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        self.scroll_area = QScrollArea()
+        self.scroll_area = QScrollArea(self.content_card)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -310,7 +310,7 @@ class WorkshopTab(QWidget):
         return widget
 
     def _create_pagination_bar(self) -> QWidget:
-        bar = QWidget()
+        bar = QWidget(self)
         bar.setFixedHeight(35)
         bar.setFixedWidth(500)
         bar.setStyleSheet(
@@ -348,7 +348,7 @@ class WorkshopTab(QWidget):
         )
         layout.addWidget(self.page_label1)
 
-        self.page_input = QLineEdit()
+        self.page_input = QLineEdit(bar)
         self.page_input.setFixedWidth(40)
         self.page_input.setPlaceholderText(self.tr.t("labels.page"))
         self.page_input.setStyleSheet(
@@ -395,7 +395,7 @@ class WorkshopTab(QWidget):
         return bar
 
     def _create_page_btn(self, icon_name: str) -> QPushButton:
-        button = QPushButton()
+        button = QPushButton(self)
         button.setIcon(get_icon(icon_name))
         button.setIconSize(QSize(18, 18))
         button.setFixedSize(32, 28)
@@ -457,9 +457,6 @@ class WorkshopTab(QWidget):
             NotificationLabel.show_notification(self.parent(), self.tr.t("messages.invalid_page_number"))
 
     def _go_to_page(self, page: int) -> None:
-        if self._is_loading_page:
-            return
-
         self.page_input.clearFocus()
         page = max(1, min(page, self.total_pages))
         if page == self.current_page:
@@ -557,16 +554,12 @@ class WorkshopTab(QWidget):
         self.parser.load_page(self.filter_bar.get_current_filters())
 
     def _on_refresh_requested(self, filters) -> None:
-        if self._is_loading_page:
-            return
         filters.page = self.current_page
         self.filter_bar.set_page(self.current_page)
         self.selected_pubfileid = None
         self._load_current_mode_page()
 
     def _on_filters_changed(self, filters) -> None:
-        if self._is_loading_page:
-            return
         self.current_page = 1
         filters.page = 1
         self.filter_bar.set_page(1)
@@ -920,7 +913,7 @@ class WorkshopTab(QWidget):
         for item in self.skeleton_items:
             try:
                 if item is not None:
-                    item.setParent(None)
+                    item.hide()
                     item.deleteLater()
             except RuntimeError:
                 pass
@@ -933,7 +926,7 @@ class WorkshopTab(QWidget):
             self.grid_widget.update_layout()
 
     def _show_empty_state(self, text: str) -> None:
-        container = QWidget()
+        container = QWidget(self)
         container.span_full_width = True
         container.setMinimumHeight(self.scroll_area.viewport().height())
         container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -945,7 +938,7 @@ class WorkshopTab(QWidget):
 
         layout.addStretch()
 
-        label = QLabel(text)
+        label = QLabel(text, container)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(
