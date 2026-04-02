@@ -541,8 +541,8 @@ class CollectionGridItem(BaseGridItem):
         badge_layout.setSpacing(3)
 
         folder_icon = QLabel(self.badge)
-        folder_icon.setPixmap(get_pixmap("ICON_COLLECTION2", 24))
-        folder_icon.setFixedSize(24, 28)
+        folder_icon.setPixmap(get_pixmap("ICON_COLLECTION2", 20))
+        folder_icon.setFixedSize(18, 24)
         folder_icon.setStyleSheet("background: transparent; border: none;")
         badge_layout.addWidget(folder_icon)
 

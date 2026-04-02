@@ -434,7 +434,7 @@ class SettingsDialog(BaseDialog):
         self.accounts = accounts
         self.tr = translator
         self.main_window = main_window
-        self.setFixedSize(900, 640)
+        self.setFixedSize(675, 525)
         self._apply_container_style()
         self._section_fields: dict[CollapsibleSection, list] = {}
         self._category_groups: dict[CategoryDivider, list] = {}
@@ -492,7 +492,7 @@ class SettingsDialog(BaseDialog):
     def _build_sidebar(self) -> QWidget:
         sb = QWidget(self)
         sb.setFixedWidth(140)
-        sb.setStyleSheet(f"background:{self.c_bg_secondary};border:none;")
+        sb.setStyleSheet(f"background:transparent;border:none;")
         vl = QVBoxLayout(sb)
         vl.setContentsMargins(6, 8, 6, 8)
         vl.setSpacing(2)
@@ -501,17 +501,17 @@ class SettingsDialog(BaseDialog):
         grp.setExclusive(True)
 
         entries = [
-            (self._t("settings.tab_general", "General"), "ICON_HOME"),
+            (self._t("settings.tab_general", "General"), "ICON_STAR"),
             (self._t("settings.tab_account", "Account"), "ICON_USER"),
-            (self._t("settings.tab_advanced", "Advanced"), "ICON_STAR"),
+            (self._t("settings.tab_advanced", "Advanced"), "ICON_WORLD"),
         ]
         for i, (label, icon_name) in enumerate(entries):
             btn = QPushButton(f"  {label}")
             btn.setCheckable(True)
             btn.setFixedHeight(34)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn.setIcon(self._make_nav_icon(icon_name, 14))
-            btn.setIconSize(QSize(14, 14))
+            btn.setIcon(self._make_nav_icon(icon_name, 16))
+            btn.setIconSize(QSize(16, 16))
             btn.setStyleSheet(self._nav_btn_style())
             btn.clicked.connect(lambda _, idx=i: self._scroll_to_cat(idx))
             grp.addButton(btn, i)

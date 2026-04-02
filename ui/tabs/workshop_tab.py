@@ -136,6 +136,7 @@ class WorkshopTab(QWidget):
         self._is_loading_page = False
         self._is_loading_details = False
         self._initial_load_done = False
+        self._first_item_auto_selected = False
         self._preview_url_cache: dict[str, str] = {}
         self._file_size_cache: dict[str, int] = {}
         self._details_panel_margin = 15
@@ -607,7 +608,9 @@ class WorkshopTab(QWidget):
                 and not self.selected_pubfileid
                 and self.details_container.is_panel_visible()
                 and not is_collection_mode
-                and not has_collection_items):
+                and not has_collection_items
+                and not self._first_item_auto_selected):
+            self._first_item_auto_selected = True
             self._select_item(page_data.items[0].pubfileid)
 
         self._try_preload_next_page()

@@ -148,9 +148,6 @@ class UnifiedActionsPanel(PopupPanel):
                 text-align: left;
                 padding: 0;
             }}
-            QPushButton:hover {{
-                background-color: {self.theme.get_color('bg_elevated')};
-            }}
             """
         )
         return button
