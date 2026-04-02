@@ -11,13 +11,15 @@
     <a href="#installation">
       <img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg" alt="Python 3.10+">
     </a>
+    <br>
+    <a href="README.md">
+      <img src="https://img.shields.io/badge/Русский-ru-white.svg" alt="Русский">
+    </a>
+    <a href="README.en.md">
+      <img src="https://img.shields.io/badge/English-en-white.svg" alt="English">
+    </a>
   </p>
 </h1>
-
-<p align="center">
-  <strong><a href="README.en.md">🇬🇧 English</a></strong> |
-  <a href="README.md">🇷🇺 Русский</a>
-</p>
 
 <p align="center">
   <img src="public/screen_main.png" alt="Main interface demonstration" width="700">
