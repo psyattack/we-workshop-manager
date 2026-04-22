@@ -46,6 +46,14 @@ WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that 
 - 🌍 Multilingual support
 - 🔰 Many other features
 
+---
+
+## 🔌 Related Project
+
+**[WE Installer Extension](https://github.com/psyattack/we-installer-extension)** — a browser extension that adds a quick install button directly on Steam Workshop pages.
+
+---
+
 > [!NOTE]  
 > - Wallpapers are downloaded to the default WE folder, **similar to a regular installation**  
 > - The first login may take a while, please wait while the system account is logging in
