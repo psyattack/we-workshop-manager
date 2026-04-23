@@ -9,7 +9,7 @@
       <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D6.svg" alt="Platform: Windows">
     </a>
     <a href="#installation">
-      <img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg" alt="Python 3.10+">
+      <img src="https://img.shields.io/badge/python-3.14%2B-3776AB.svg" alt="Python 3.14+">
     </a>
     <br>
     <a href="README.md">
