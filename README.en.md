@@ -48,7 +48,7 @@ WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that 
 
 ---
 
-## 🔌 Related Project
+## Related Project
 
 **[WE Installer Extension](https://github.com/psyattack/we-installer-extension)** — a browser extension that adds a quick install button directly on Steam Workshop pages.
 
@@ -71,11 +71,11 @@ WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that 
 
 > [!IMPORTANT]
 > **To run from source (Option 2):**
-> - Install [Python 3.10+](https://www.python.org/downloads) (tested on Python 3.14.2)
-> - Install [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) or [.NET 9](https://dotnet.microsoft.com/download/dotnet/9.0/runtime) Desktop Runtime
+> - Install [Python 3.14+](https://www.python.org/downloads)
+> - Install [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) Desktop Runtime
 >
 > **For packaged version (Option 1):**
-> - Only the .NET Runtime mentioned above
+> - Only the .NET 8 Runtime mentioned above
 
 ### 📦 Option 1: Packaged PyInstaller version
 
@@ -103,7 +103,7 @@ pip install -r requirements.txt
 
 | Component | Where to place |
 |-------------|----------------|
-| [DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod/releases) | `plugins/DepotDownloaderMod/` |
+| [DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases) | `plugins/DepotDownloader/` |
 | [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
 
 #### 4. Run the application
@@ -136,9 +136,9 @@ WEave/
 
 This project uses the following open resources and tools:
 
-- **[DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod)** — modified workshop downloader
+- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — modified workshop downloader
 - **[RePKG](https://github.com/notscuffed/repkg)** — .pkg file unpacker tool
-- **[WallpaperEngineWorkshopDownloader](https://github.com/SteamAutoCracks/WallpaperEngineWorkshopDownloader)** — for providing accounts to download from workshop
+- **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — for providing accounts to download from workshop
 - **[icons8](https://icons8.com)** — free icons for the interface
 
 ---

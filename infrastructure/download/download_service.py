@@ -40,7 +40,7 @@ class DownloadService(QObject):
         output_dir = self.we_directory / "projects" / "myprojects" / pubfileid
 
         command = [
-            "plugins/DepotDownloaderMod/DepotDownloaderMod.exe",
+            "plugins/DepotDownloader/DepotDownloader.exe",
             "-app",
             STEAM_APP_ID,
             "-pubfile",

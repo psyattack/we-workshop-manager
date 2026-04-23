@@ -2,6 +2,7 @@ from PyQt6.QtCore import (
     QEasingCurve,
     QParallelAnimationGroup,
     QRectF,
+    QSize,
     Qt,
     QVariantAnimation,
     QTimer,
@@ -28,7 +29,7 @@ class BrowseTabButton(QPushButton):
         self.setIconSize(self._get_icon_size())
         self._apply_style()
 
-    def _get_icon_size(self) -> Qt.QSize:
+    def _get_icon_size(self) -> QSize:
         return self.size() * 0.70
 
     def set_active(self, active: bool) -> None:
