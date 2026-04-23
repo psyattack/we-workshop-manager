@@ -68,7 +68,7 @@ class InfoDialog(BaseDialog):
             author=("psyattack", "https://github.com/psyattack"),
             tools=[
                 ("PyQt6", "https://www.riverbankcomputing.com/software/pyqt/"),
-                ("DepotDownloaderMod", "https://github.com/SteamAutoCracks/DepotDownloaderMod"),
+                ("DepotDownloader", "https://github.com/SteamRE/DepotDownloader/releases"),
                 ("RePKG", "https://github.com/notscuffed/repkg"),
                 ("icons8", "https://icons8.com/")
             ]
