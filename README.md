@@ -13,163 +13,163 @@
     </a>
     <br>
     <a href="README.md">
-      <img src="https://img.shields.io/badge/Русский-ru-white.svg" alt="Русский">
-    </a>
-    <a href="README.en.md">
       <img src="https://img.shields.io/badge/English-en-white.svg" alt="English">
+    </a>
+    <a href="README.ru.md">
+      <img src="https://img.shields.io/badge/Русский-ru-white.svg" alt="Русский">
     </a>
   </p>
 </h1>
 
 <p align="center">
-  <img src="public/screen_main.png" alt="Демонстрация основного интерфейса" width="700">
+  <img src="public/screen_main.png" alt="Main interface demonstration" width="700">
 </p>
 
 <p align="center">
-  <strong>Демонстрация основного интерфейса</strong>
+  <strong>Main interface demonstration</strong>
 </p>
 
 ---
 
-WEave (бывший WE Workshop Manager) — это десктопное приложение на Python/PyQt6, которое позволяет легко загружать, устанавливать и управлять обоями из Steam Workshop для Wallpaper Engine **без необходимости запускать клиент Steam**.
+WEave (formerly WE Workshop Manager) is a Python/PyQt6 desktop application that allows you to easily download, install, and manage wallpapers from Steam Workshop for Wallpaper Engine **without needing to run the Steam client**.
 
-### <strong>В разработке 3.0 - миграция на Tauri (React) + Rust или PyWebView</strong>
+### <strong>In development 3.0 - migration to Tauri (React) + Rust or PyWebView</strong>
 
-### 🔑 Основные возможности:
+### 🔑 Key Features:
 
-- 🌐 Просмотр мастерской WE Steam и загрузка обоев **в один клик**
-- 🗂️ Управление установленными обоями (применение, удаление, извлечение .pkg файлов и прочее)
-- 📊 Загрузка обоев по списку ID и\или URL
-- 🎯 Отслеживание статуса загрузки\извлечения обоев
-- ⚜️ Темы + Полная кастомизация бекграунда у основных элементов UI
-- 🔧 Загрузка страниц быстрее чем в браузере
-- 🌍 Мультиязычность
-- 🔰 Множество других функций
+- 🌐 Browse Steam Workshop and download wallpapers **with one click**
+- 🗂️ Manage installed wallpapers (apply, remove, extract .pkg files, etc.)
+- 📊 Download wallpapers by list of IDs and/or URLs
+- 🎯 Track download/extraction status of wallpapers
+- ⚜️ Themes + Full customization of the background of the main UI elements
+- 🔧 Pages load faster than in the browser
+- 🌍 Multilingual support
+- 🔰 Many other features
 
 ---
 
-## Дочерний проект
+## Related Project
 
-**[WE Installer Extension](https://github.com/psyattack/we-installer-extension)** — расширение для браузера, которое добавляет кнопку быстрой установки обоев прямо на страницах Steam Workshop.
+**[WE Installer Extension](https://github.com/psyattack/we-installer-extension)** — a browser extension that adds a quick install button directly on Steam Workshop pages.
 
 ---
 
 > [!NOTE]  
-> - Обои загружаются в папку по умолчанию для WE, **аналогично обычной установке**  
-> - Первый вход может быть долгим, пожалуйста, подождите пока производится вход в системный аккаунт  
-> - Скорось загрузки Workshop зависит от скорости вашего интернет соединения, а так же доступности серверов Steam  
-> - Если приложение не показывает "определённый" контент в Workshop, значит не произошёл вход в системный аккаунт, по той или иной причине. Вам нужно зайти в любой Steam аккаунт (без Steam Guard и с нужными вам настройками контента) в настройках приложения (General).  
-> - Если обои не закружаются - попробуйте выбрать другой аккаунт из списка в настройках (Account).
+> - Wallpapers are downloaded to the default WE folder, **similar to a regular installation**  
+> - The first login may take a while, please wait while the system account is logging in
+> - Workshop download speed depends on your internet connection speed, as well as Steam server availability
+> - If the app doesn't show "specific" content in Workshop, it means the system account hasn't logged in for some reason. You need to log into any Steam account (without Steam Guard and with the content settings you need) in the app settings (General).
+> - If wallpapers don't load - try selecting another account from the list in settings (Account).
 
 > [!WARNING]  
-> - Приложение использует **общедоступные аккаунты** для загрузки из мастерской  
-> - Приложение **не модифицирует** оригинальный клиент Wallpaper Engine или Steam 
+> - The app uses **public accounts** to download from the workshop  
+> - The app **does not modify** the original Wallpaper Engine or Steam client  
 
 ---
 
-## 🚀 Установка
+## 🚀 Installation
 
 > [!IMPORTANT]
-> **Для запуска из исходников (Вариант 2):**
-> - Установите [Python 3.14+](https://www.python.org/downloads)
-> - Установите [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) Desktop Runtime
+> **To run from source (Option 2):**
+> - Install [Python 3.14+](https://www.python.org/downloads)
+> - Install [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) Desktop Runtime
 >
-> **Для упакованной версии (Вариант 1):**
-> - Установите только .NET 8 Desktop Runtime указанный выше
+> **For packaged version (Option 1):**
+> - Only the .NET 8 Desktop Runtime mentioned above
 
-### 📦 Вариант 1: Упакованная через PyInstaller версия
+### 📦 Option 1: Packaged PyInstaller version
 
-Скачайте последнюю версию из раздела **[Releases](https://github.com/psyattack/WEave/releases)**  
-> Все зависимости уже встроены, просто распакуйте архив в удобное место и запустите `WEave.exe`
+Download the latest version from the **[Releases](https://github.com/psyattack/WEave/releases)** section  
+> All dependencies are already built in, just unzip the archive to a convenient location and run `WEave.exe`
 
 ---
 
-### 💻 Вариант 2: Запуск из исходного кода
+### 💻 Option 2: Running from source code
 
-#### 1. Клонирование репозитория
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/psyattack/WEave.git
 cd WEave
 ```
 
-#### 2. Установка зависимостей Python
+#### 2. Install Python dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-#### 3. Загрузка необходимых компонентов
+#### 3. Download required components
 
-| Компонент | Куда поместить |
+| Component | Where to place |
 |-------------|----------------|
 | [DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases) | `plugins/DepotDownloader/` |
 | [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
 
-#### 4. Запуск приложения
+#### 4. Run the application
 
 ```bash
 python main.py
 ```
 
-> **Запуск без окна консоли:**  
-> Используйте `run_without_console.bat` для запуска приложения без отображения окна консоли
+> **Running without console window:**  
+> Use `run_without_console.bat` to launch the application without displaying a console window
 
 ---
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 WEave/
-├── bootstrap/              # Инициализация приложения
-├── domain/                 # Модели и структуры данных
-├── services/               # Сервисы приложения
-├── infrastructure/         # Интеграции и внешняя логика
-├── ui/                     # Интерфейс
-├── shared/                 # Общие утилиты
-├── localization/           # Переводы
-├── plugins/                # Внешние инструменты (скачиваются отдельно)
-├── main.py                 # Точка входа
-└── requirements.txt        # Зависимости Python
+├── bootstrap/              # Application initialization
+├── domain/                 # Models and data structures
+├── services/               # Application services
+├── infrastructure/         # Integrations and external logic
+├── ui/                     # Interface
+├── shared/                 # Common utilities
+├── localization/           # Translations
+├── plugins/                # External tools (downloaded separately)
+├── main.py                 # Entry point
+└── requirements.txt        # Python dependencies
 ```
 
 ---
 
-## 🙏 Благодарности
+## 🙏 Acknowledgments
 
-Этот проект использует следующие открытые ресурсы и инструменты:
+This project uses the following open resources and tools:
 
-- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — загрузчик мастерской
-- **[RePKG](https://github.com/notscuffed/repkg)** — инструмент распаковки .pkg файлов
-- **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — идея и аккаунты для загрузки
-- **[icons8](https://icons8.com)** — бесплатные иконки для интерфейса
-
----
-
-## 📜 Лицензия
-
-Этот проект распространяется под лицензией **[MIT](LICENSE)**.
+- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — workshop downloader
+- **[RePKG](https://github.com/notscuffed/repkg)** — .pkg file unpacker tool
+- **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — for providing accounts to download from workshop
+- **[icons8](https://icons8.com)** — free icons for the interface
 
 ---
 
-## 👁️‍🗨️ Известные проблемы
+## 📜 License
 
-- [x] <strike>Некорректное возвращение состояния окна после предварительного сворачивания</strike>
-- [x] <strike>Белые диалоговые окна при очистке фильтров</strike>
-- [x] <strike>PyInstaller --onefile ломает перезапуск, если будете собирать из исходников собирайте в --onedir (~500мб)</strike>
+This project is licensed under the **[MIT](LICENSE)** license.
+
+---
+
+## 👁️‍🗨️ Known Issues
+
+- [x] <strike>Incorrect window state return after pre-minimizing</strike>
+- [x] <strike>White dialogs when clearing filters</strike>
+- [x] <strike>PyInstaller --onefile breaks restart, if building from source build in --onedir (~500mb)</strike>
 
 ---
 
 ## 📋 TODO & Support
 
-- [x] <strike>Темы</strike>
-- [x] <strike>Логин через личный Steam аккаунт (Для использования при Steam failed 50 и подобных)</strike>
-- [ ] Автозапуск
-- [ ] Трей + silent mode
-- [ ] Ряд оригинальных функций WE (Редактор пресетов, создание плейлистов, профили и тд.)
-- [ ] Автоматическое обновление
-- [x] <strike>Оптимизация интерфейса под разные размеры и форматы экранов + возможность resize окна</strike>
+- [x] <strike>Themes</strike>
+- [x] <strike>Login via personal Steam account (For use with Steam failed 50 and similar)</strike>
+- [ ] Autostart
+- [ ] Tray + silent mode
+- [ ] Original WE functions (Preset editor, creating playlists, profiles, etc.)
+- [ ] Automatic updates
+- [x] <strike>Interface optimization for different screen sizes and formats + window resize capability</strike>
 
-> Если у вас возникли проблемы или есть предложения по улучшению — создайте [Issue](https://github.com/psyattack/WEave/issues) в репозитории.
+> If you have any problems or suggestions for improvement — create an [Issue](https://github.com/psyattack/WEave/issues) in the repository.
 
 ---
