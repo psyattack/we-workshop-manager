@@ -136,7 +136,7 @@ WEave/
 
 Этот проект использует следующие открытые ресурсы и инструменты:
 
-- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — модифицированный загрузчик мастерской
+- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — загрузчик мастерской
 - **[RePKG](https://github.com/notscuffed/repkg)** — инструмент распаковки .pkg файлов
 - **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — идея и аккаунты для загрузки
 - **[icons8](https://icons8.com)** — бесплатные иконки для интерфейса

@@ -136,7 +136,7 @@ WEave/
 
 This project uses the following open resources and tools:
 
-- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — modified workshop downloader
+- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — workshop downloader
 - **[RePKG](https://github.com/notscuffed/repkg)** — .pkg file unpacker tool
 - **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — for providing accounts to download from workshop
 - **[icons8](https://icons8.com)** — free icons for the interface
