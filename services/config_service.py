@@ -204,3 +204,9 @@ class ConfigService:
 
     def set_auto_apply_last_downloaded(self, value: bool) -> None:
         self.set("settings.general.behavior.auto_apply_last_downloaded", value)
+
+    def get_alternative_tag_display(self) -> bool:
+        return self.get("settings.general.appearance.alternative_tag_display", False)
+
+    def set_alternative_tag_display(self, value: bool) -> None:
+        self.set("settings.general.appearance.alternative_tag_display", value)

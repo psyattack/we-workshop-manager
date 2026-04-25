@@ -310,6 +310,15 @@ class DetailsPanel(QWidget):
 
         self.id_widget.setVisible(show_id)
 
+    def _update_tags_display(self) -> None:
+        if self._mode == self.MODE_NONE:
+            return
+        
+        if self._mode == self.MODE_INSTALLED:
+            self._setup_installed_details()
+        elif self._mode == self.MODE_WORKSHOP:
+            self._setup_workshop_details()
+
     def _create_details_section(self, layout) -> None:
         self.details_container = QWidget(self)
         self.details_container.setObjectName("detailsContainer")
@@ -1507,22 +1516,91 @@ class DetailsPanel(QWidget):
         self._add_separator()
         self._add_section_title(self.tr.t("labels.tags"), "ICON_TAGS")
 
-        for key, value in tags.items():
-            translated_key = self._translate_tag_key(key)
-            clean_key = translated_key.rstrip(":")
+        alternative_display = self.config.get_alternative_tag_display() if self.config else False
 
-            if isinstance(value, bool):
-                values = []
-            elif isinstance(value, str) and value.strip():
-                if "," in value:
-                    values = [self._translate_single_tag_value(key, v.strip()) for v in value.split(",")]
+        if alternative_display:
+            all_values = []
+            for key, value in tags.items():
+                if isinstance(value, bool):
+                    continue
+                elif isinstance(value, str) and value.strip():
+                    if "," in value:
+                        all_values.extend([self._translate_single_tag_value(key, v.strip()) for v in value.split(",")])
+                    else:
+                        all_values.append(self._translate_single_tag_value(key, value))
+            
+            if all_values:
+                from ui.widgets.tag_widgets import TagChip
+                from PyQt6.QtWidgets import QWidget, QHBoxLayout
+                from PyQt6.QtCore import Qt
+                
+                container = QWidget(self)
+                container.setStyleSheet("background: transparent; border: none;")
+                main_layout = QVBoxLayout(container)
+                main_layout.setContentsMargins(0, 0, 0, 0)
+                main_layout.setSpacing(4)
+                
+                current_row_widget = None
+                current_row_layout = None
+                current_row_width = 0
+                max_width = 280
+                chip_spacing = 4
+                
+                for value in all_values:
+                    chip = TagChip(value, self.theme, is_key=False, parent=container)
+                    chip_width = chip.sizeHint().width()
+                    
+                    if current_row_layout is None:
+                        current_row_widget = QWidget(container)
+                        current_row_widget.setStyleSheet("background: transparent; border: none;")
+                        current_row_layout = QHBoxLayout(current_row_widget)
+                        current_row_layout.setContentsMargins(0, 0, 0, 0)
+                        current_row_layout.setSpacing(chip_spacing)
+                        current_row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                        main_layout.addWidget(current_row_widget)
+                        current_row_width = 0
+                    
+                    projected_width = chip_width if current_row_width == 0 else current_row_width + chip_spacing + chip_width
+                    
+                    if projected_width > max_width:
+                        current_row_layout.addStretch()
+                        current_row_widget = QWidget(container)
+                        current_row_widget.setStyleSheet("background: transparent; border: none;")
+                        current_row_layout = QHBoxLayout(current_row_widget)
+                        current_row_layout.setContentsMargins(0, 0, 0, 0)
+                        current_row_layout.setSpacing(chip_spacing)
+                        current_row_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                        main_layout.addWidget(current_row_widget)
+                        current_row_width = 0
+                    
+                    current_row_layout.addWidget(chip)
+                    
+                    if current_row_width == 0:
+                        current_row_width = chip_width
+                    else:
+                        current_row_width += chip_spacing + chip_width
+                
+                if current_row_layout is not None:
+                    current_row_layout.addStretch()
+                
+                self.details_layout.addWidget(container)
+        else:
+            for key, value in tags.items():
+                translated_key = self._translate_tag_key(key)
+                clean_key = translated_key.rstrip(":")
+
+                if isinstance(value, bool):
+                    values = []
+                elif isinstance(value, str) and value.strip():
+                    if "," in value:
+                        values = [self._translate_single_tag_value(key, v.strip()) for v in value.split(",")]
+                    else:
+                        values = [self._translate_single_tag_value(key, value)]
                 else:
-                    values = [self._translate_single_tag_value(key, value)]
-            else:
-                values = []
+                    values = []
 
-            tag_group = TagGroupWidget(clean_key, values, self.theme, max_width=280, parent=self)
-            self.details_layout.addWidget(tag_group)
+                tag_group = TagGroupWidget(clean_key, values, self.theme, max_width=280, parent=self)
+                self.details_layout.addWidget(tag_group)
 
     def _setup_installed_details(self) -> None:
         self._clear_details()

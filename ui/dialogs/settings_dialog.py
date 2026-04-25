@@ -622,6 +622,14 @@ class SettingsDialog(BaseDialog):
         sec.add_widget(f3)
         self._reg(sec, f3)
 
+        f4 = SettingsField(
+            self._t("settings.alternative_tag_display", "Alternative Tag Display"), self._create_alternative_tag_display_toggle(),
+            description=self._t("settings.alternative_tag_display_description", "Display all tags in a single row without section names"),
+            theme_manager=self.theme,
+        )
+        sec.add_widget(f4)
+        self._reg(sec, f4)
+
         self._inner.addWidget(sec)
         self._category_groups.setdefault(div, []).append(sec)
 
@@ -852,6 +860,12 @@ class SettingsDialog(BaseDialog):
         t = AnimatedToggle(theme_manager=self.theme)
         t.setChecked(self.config.get_show_id_section())
         t.toggled.connect(self._on_show_id_changed)
+        return t
+
+    def _create_alternative_tag_display_toggle(self):
+        t = AnimatedToggle(theme_manager=self.theme)
+        t.setChecked(self.config.get_alternative_tag_display())
+        t.toggled.connect(self._on_alternative_tag_display_changed)
         return t
 
     def _create_preload_toggle(self):
@@ -1097,6 +1111,14 @@ class SettingsDialog(BaseDialog):
                 t = getattr(self.main_window, tab, None)
                 if t and hasattr(t, "details_panel"):
                     t.details_panel._update_id_section_visibility()
+
+    def _on_alternative_tag_display_changed(self, checked: bool) -> None:
+        self.config.set_alternative_tag_display(checked)
+        if self.main_window:
+            for tab in ("wallpapers_tab", "workshop_tab"):
+                t = getattr(self.main_window, tab, None)
+                if t and hasattr(t, "details_panel"):
+                    t.details_panel._update_tags_display()
 
     def _on_preload_changed(self, c):
         self.config.set_preload_next_page(c)

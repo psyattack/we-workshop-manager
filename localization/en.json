@@ -164,6 +164,8 @@
     "debug_description": "Enable debug mode for webview testing",
     "show_id_section": "Show ID Section",
     "show_id_description": "Show or hide the ID section in details panel",
+    "alternative_tag_display": "Alternative Tag Display",
+    "alternative_tag_display_description": "Display all tags in a single row without section names",
     "backgrounds": "Backgrounds",
     "bg_main": "Main",
     "bg_tabs": "Tabs",

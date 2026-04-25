@@ -164,6 +164,8 @@
     "debug_description": "Включить режим отладки для тестирования веб-представления",
     "show_id_section": "Показать раздел ID",
     "show_id_description": "Показать или скрыть раздел ID на панели деталей",
+    "alternative_tag_display": "Альтернативное отображение тегов",
+    "alternative_tag_display_description": "Отображать все теги в одну строку без названий секций",
     "backgrounds": "Фоны",
     "bg_main": "Основной",
     "bg_tabs": "Вкладки",

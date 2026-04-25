@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
                 "language": "en",
                 "theme": "dark",
                 "show_id_section": False,
+                "alternative_tag_display": False,
             },
             "behavior": {
                 "minimize_on_apply": False,
