@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Default palette (dark) — applied to :root so variables are ALWAYS
+     defined, even before React mounts or localStorage is read. All other
+     themes are applied via `.theme-<name>` classes on <html> which have
+     higher specificity and override these values. */
+  :root {
+    color-scheme: dark;
+    --bg: 15 17 26;
+    --surface: 26 29 46;
+    --surface-raised: 37 41 56;
+    --surface-sunken: 12 14 22;
+    --border: 42 47 66;
+    --border-strong: 58 63 82;
+    --fg: 255 255 255;
+    --fg-muted: 180 183 195;
+    --fg-subtle: 107 110 124;
+    --primary: 99 127 217;
+    --primary-fg: 255 255 255;
+    --primary-muted: 58 111 201;
+    --success: 91 239 157;
+    --warning: 251 191 36;
+    --danger: 239 91 91;
+    --info: 99 165 250;
+    --titlebar: 17 19 30;
+    --titlebar-fg: 236 238 246;
+  }
+
+  /* Increase specificity of each theme class with `:root.theme-…` so it
+     always beats the default :root palette regardless of source order
+     or Tailwind preflight ordering. Specificity: (0, 2, 0) > (0, 1, 0). */
+  :root.theme-dark {
+    color-scheme: dark;
+    --bg: 15 17 26;
+    --surface: 26 29 46;
+    --surface-raised: 37 41 56;
+    --surface-sunken: 12 14 22;
+    --border: 42 47 66;
+    --border-strong: 58 63 82;
+    --fg: 255 255 255;
+    --fg-muted: 180 183 195;
+    --fg-subtle: 107 110 124;
+    --primary: 99 127 217;
+    --primary-fg: 255 255 255;
+    --primary-muted: 58 111 201;
+    --success: 91 239 157;
+    --warning: 251 191 36;
+    --danger: 239 91 91;
+    --info: 99 165 250;
+    --titlebar: 17 19 30;
+    --titlebar-fg: 236 238 246;
+  }
+
+  :root.theme-light {
+    color-scheme: light;
+    --bg: 255 255 255;
+    --surface: 248 250 252;
+    --surface-raised: 241 245 249;
+    --surface-sunken: 226 232 240;
+    --border: 226 232 240;
+    --border-strong: 203 213 225;
+    --fg: 30 41 59;
+    --fg-muted: 100 116 139;
+    --fg-subtle: 148 163 184;
+    --primary: 59 130 246;
+    --primary-fg: 255 255 255;
+    --primary-muted: 199 213 255;
+    --success: 34 197 94;
+    --warning: 202 138 4;
+    --danger: 239 68 68;
+    --info: 59 130 246;
+    --titlebar: 248 250 252;
+    --titlebar-fg: 30 41 59;
+  }
+
+  :root.theme-nord {
+    color-scheme: dark;
+    --bg: 46 52 64;
+    --surface: 59 66 82;
+    --surface-raised: 67 76 94;
+    --surface-sunken: 41 46 56;
+    --border: 76 86 106;
+    --border-strong: 90 101 122;
+    --fg: 236 239 244;
+    --fg-muted: 216 222 233;
+    --fg-subtle: 107 123 141;
+    --primary: 136 192 208;
+    --primary-fg: 46 52 64;
+    --primary-muted: 94 129 172;
+    --success: 163 190 140;
+    --warning: 235 203 139;
+    --danger: 191 97 106;
+    --info: 129 161 193;
+    --titlebar: 36 42 54;
+    --titlebar-fg: 236 239 244;
+  }
+
+  :root.theme-monokai {
+    color-scheme: dark;
+    --bg: 39 40 34;
+    --surface: 45 46 39;
+    --surface-raised: 62 61 50;
+    --surface-sunken: 30 31 25;
+    --border: 73 72 62;
+    --border-strong: 91 90 80;
+    --fg: 248 248 242;
+    --fg-muted: 207 207 194;
+    --fg-subtle: 117 113 94;
+    --primary: 166 226 46;
+    --primary-fg: 30 31 25;
+    --primary-muted: 134 194 14;
+    --success: 166 226 46;
+    --warning: 253 151 31;
+    --danger: 249 38 114;
+    --info: 102 217 239;
+    --titlebar: 30 31 25;
+    --titlebar-fg: 248 248 242;
+  }
+
+  :root.theme-solarized {
+    color-scheme: dark;
+    --bg: 0 43 54;
+    --surface: 7 54 66;
+    --surface-raised: 10 63 78;
+    --surface-sunken: 0 33 42;
+    --border: 17 80 95;
+    --border-strong: 26 96 112;
+    --fg: 253 246 227;
+    --fg-muted: 147 161 161;
+    --fg-subtle: 88 110 117;
+    --primary: 38 139 210;
+    --primary-fg: 253 246 227;
+    --primary-muted: 26 109 168;
+    --success: 133 153 0;
+    --warning: 181 137 0;
+    --danger: 220 50 47;
+    --info: 38 139 210;
+    --titlebar: 0 33 42;
+    --titlebar-fg: 253 246 227;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+  }
+
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+      "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    overflow: hidden;
+  }
+
+  * {
+    border-color: rgb(var(--border));
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--border-strong));
+    border-radius: 6px;
+    border: 2px solid rgb(var(--bg));
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--fg-subtle));
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* Drawer scroll area: completely hide the scrollbar but keep
+     scrolling functionality. The user explicitly asked for the
+     details panel to scroll without showing the bar. */
+  .drawer-scroll {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/old Edge */
+  }
+  .drawer-scroll::-webkit-scrollbar,
+  .drawer-scroll *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg bg-surface border border-border shadow-card;
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-card-hover hover:border-border-strong;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2
+      text-sm font-medium transition-colors outline-none focus-visible:ring-2
+      focus-visible:ring-primary/60 focus-visible:ring-offset-2
+      focus-visible:ring-offset-background disabled:opacity-50
+      disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-surface-raised text-foreground;
+  }
+
+  .btn-outline {
+    @apply btn border border-border-strong text-foreground hover:bg-surface-raised;
+  }
+
+  .btn-icon {
+    @apply btn h-9 w-9 p-0 text-muted hover:text-foreground hover:bg-surface-raised;
+  }
+
+  .input {
+    @apply w-full rounded-md bg-surface-sunken border border-border px-3 py-2 text-sm
+      text-foreground placeholder:text-subtle outline-none
+      focus:border-primary/70 focus:ring-2 focus:ring-primary/30;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-surface-raised
+      border border-border px-2.5 py-0.5 text-xs text-muted;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium
+      text-muted transition-colors hover:bg-surface-raised hover:text-foreground;
+  }
+
+  .nav-item-active {
+    @apply bg-primary/10 text-foreground shadow-[inset_0_0_0_1px_rgb(var(--primary)/0.35)];
+  }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.15) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  .titlebar {
+    background: rgb(var(--titlebar));
+    color: rgb(var(--titlebar-fg));
+  }
+
+  .titlebar-btn {
+    @apply inline-flex h-8 w-11 items-center justify-center transition-colors;
+  }
+
+  .titlebar-btn:hover {
+    background: rgb(var(--surface-raised));
+  }
+
+  .titlebar-btn-close:hover {
+    background: rgb(232 17 35);
+    color: white;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}

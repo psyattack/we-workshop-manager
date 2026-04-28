@@ -1,0 +1,52 @@
+[package]
+name = "weave"
+version = "3.0.0"
+description = "WEave"
+authors = ["psyattack"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "weave_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "protocol-asset"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "cookies", "gzip", "brotli", "rustls-tls"], default-features = false }
+scraper = "0.21"
+ego-tree = "0.9"
+url = "2"
+anyhow = "1"
+thiserror = "1"
+dirs = "5"
+sysinfo = "0.32"
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+uuid = { version = "1", features = ["v4"] }
+futures = "0.3"
+sha2 = "0.10"
+rand = "0.8"
+log = "0.4"
+env_logger = "0.11"
+regex = "1"
+parking_lot = "0.12"
+once_cell = "1"
+lru = "0.12"
+hmac = "0.12"
+pbkdf2 = "0.12"
+aes-gcm = "0.10"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+

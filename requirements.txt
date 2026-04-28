@@ -1,5 +1,0 @@
-PyQt6>=6.4
-PyQt6-WebEngine>=6.4
-psutil>=5.9
-tendo>=0.3
-deep_translator>=1.11

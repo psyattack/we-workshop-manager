@@ -1,176 +1,220 @@
-<h1 align="center">
-  <img src="public/icon_128.png" alt="WEave icon" width="100" height="100"><br>
-  WEave
-  <p align="center">
-    <a href="LICENSE">
-      <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT">
-    </a>
-    <a href="#installation">
-      <img src="https://img.shields.io/badge/platform-Windows_10%2F11-0078D6.svg" alt="Platform: Windows">
-    </a>
-    <a href="#installation">
-      <img src="https://img.shields.io/badge/python-3.14%2B-3776AB.svg" alt="Python 3.14+">
-    </a>
-    <br>
-    <a href="README.md">
-      <img src="https://img.shields.io/badge/English-en-white.svg" alt="English">
-    </a>
-    <a href="README.ru.md">
-      <img src="https://img.shields.io/badge/Русский-ru-white.svg" alt="Русский">
-    </a>
-  </p>
-</h1>
+<div align="center">
+  <img src="src/assets/icon.svg" alt="WEave Logo" width="128" height="128">
+  
+  # WEave
+  
+  > Современное десктопное приложение для просмотра, загрузки и управления обоями Steam Workshop для Wallpaper Engine
+  
+  [English version](README.md)
+</div>
 
-<p align="center">
-  <img src="public/screen_main.png" alt="Демонстрация основного интерфейса" width="700">
-</p>
+## Обзор
 
-<p align="center">
-  <strong>Демонстрация основного интерфейса</strong>
-</p>
+WEave — это мощный менеджер Steam Workshop для Wallpaper Engine, созданный на Tauri 2 и React. Приложение предоставляет удобный интерфейс для поиска, загрузки и управления тысячами обоев из Steam Workshop без необходимости открывать Steam или веб-браузер.
 
----
+## Возможности
 
-WEave (бывший WE Workshop Manager) — это десктопное приложение на Python/PyQt6, которое позволяет легко загружать, устанавливать и управлять обоями из Steam Workshop для Wallpaper Engine **без необходимости запускать клиент Steam**.
+### Браузер Workshop
+- Просмотр обоев Steam Workshop
+- Поиск по ключевым словам, сортировка по популярности/новизне
+- Фильтры по категориям, типам, возрастным рейтингам, разрешениям, тегам
+- Трёхстороннее фильтрование (включить/исключить/игнорировать)
+- Превью изображений с ленивой загрузкой
+- Просмотр деталей, рейтингов, описаний и информации об авторах
+- Поддержка коллекций и связанных коллекций
+- Предзагрузка страниц для быстрой навигации
 
-### <strong>Доступна версия 3.0.0-dev1 в релизах. Порт на Tauri + React (В разработке)</strong>
+### Управление загрузками
+- Многопоточная система загрузки через DepotDownloaderMod
+- Поддержка нескольких Steam аккаунтов (6 встроенных + пользовательские)
+- Отслеживание прогресса в реальном времени с возможностью отмены
+- Пакетная загрузка по ID/URL
+- Управление очередью
+- Автоматическое применение загруженных обоев (опционально)
 
-### 🔑 Основные возможности:
+### Установленные обои
+- Просмотр всех установленных обоев из Wallpaper Engine
+- Локальная фильтрация и сортировка (дата, название, размер, тип)
+- Фильтрация по тегам с трёхсторонней поддержкой
+- Применение обоев на конкретные мониторы
+- Удаление обоев с определением активных
+- Открытие папок обоев в Проводнике
+- Извлечение .pkg файлов
 
-- 🌐 Просмотр мастерской WE Steam и загрузка обоев **в один клик**
-- 🗂️ Управление установленными обоями (применение, удаление, извлечение .pkg файлов и прочее)
-- 📊 Загрузка обоев по списку ID и\или URL
-- 🎯 Отслеживание статуса загрузки\извлечения обоев
-- ⚜️ Темы + Полная кастомизация бекграунда у основных элементов UI
-- 🔧 Загрузка страниц быстрее чем в браузере
-- 🌍 Мультиязычность
-- 🔰 Множество других функций
+### Интеграция с Wallpaper Engine
+- Автоопределение установки Wallpaper Engine
+- Применение обоев на мониторы
+- Запуск Wallpaper Engine
+- Чтение текущей конфигурации обоев
+- Определение активных обоев на всех мониторах
 
----
+### Коллекции и авторы
+- Просмотр коллекций Steam Workshop
+- Просмотр содержимого и метаданных коллекций
+- Профили авторов с их работами и коллекциями
+- Поиск связанных коллекций
 
-## Дочерний проект
+### Персонализация
+- 5 встроенных тем (Dark, Light, Nord, Monokai, Solarized)
+- 10 акцентных цветов
+- Поддержка нескольких языков (английский, русский)
 
-**[WE Installer Extension](https://github.com/psyattack/we-installer-extension)** — расширение для браузера, которое добавляет кнопку быстрой установки обоев прямо на страницах Steam Workshop.
+### Дополнительные возможности
+- Аутентификация Steam с сохранением cookies
+- Шифрованное хранилище аккаунтов (PBKDF2 + AES-256-GCM)
+- Кэширование метаданных для офлайн-доступа
+- Автопроверка обновлений через GitHub releases
+- Управление задачами с историей
+- Система кэширования изображений
+- Запрет множественных экземпляров
 
----
+## Технологический стек
 
-> [!NOTE]  
-> - Обои загружаются в папку по умолчанию для WE, **аналогично обычной установке**  
-> - Первый вход может быть долгим, пожалуйста, подождите пока производится вход в системный аккаунт  
-> - Скорось загрузки Workshop зависит от скорости вашего интернет соединения, а так же доступности серверов Steam  
-> - Если приложение не показывает "определённый" контент в Workshop, значит не произошёл вход в системный аккаунт, по той или иной причине. Вам нужно зайти в любой Steam аккаунт (без Steam Guard и с нужными вам настройками контента) в настройках приложения (General).  
-> - Если обои не закружаются - попробуйте выбрать другой аккаунт из списка в настройках (Account).
+### Frontend
+- **React 18** с TypeScript
+- **Tauri 2** - Десктопный фреймворк
+- **Vite** - Сборщик
+- **TailwindCSS** - Стилизация
+- **Framer Motion** - Анимации
+- **Radix UI** - Доступные компоненты
+- **Zustand** - Управление состоянием
+- **i18next** - Интернационализация
+- **Lucide React** - Иконки
 
-> [!WARNING]  
-> - Приложение использует **общедоступные аккаунты** для загрузки из мастерской  
-> - Приложение **не модифицирует** оригинальный клиент Wallpaper Engine или Steam 
+### Backend
+- **Rust** - Tauri backend
+- **Tokio** - Асинхронная среда выполнения
+- **Reqwest** - HTTP клиент
+- **Scraper** - Парсинг HTML
+- **AES-GCM + PBKDF2** - Шифрование
+- **Serde** - Сериализация
 
----
+## Поддержка платформ
 
-## 🚀 Установка
+**Только Windows** - Это приложение разработано исключительно для Windows 10/11, так как требует:
+- Wallpaper Engine
+- Windows-специфичные исполняемые файлы
+- Интеграция с файловой системой Windows
 
-> [!IMPORTANT]
-> **Для запуска из исходников (Вариант 2):**
-> - Установите [Python 3.14+](https://www.python.org/downloads)
-> - Установите [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0/runtime) Desktop Runtime
->
-> **Для упакованной версии (Вариант 1):**
-> - Установите только .NET 8 Desktop Runtime указанный выше
+Linux и macOS не поддерживаются.
 
-### 📦 Вариант 1: Упакованная через PyInstaller версия
+## Установка
 
-Скачайте последнюю версию из раздела **[Releases](https://github.com/psyattack/WEave/releases)**  
-> Все зависимости уже встроены, просто распакуйте архив в удобное место и запустите `WEave.exe`
+### Для конечных пользователей
 
----
+#### Требования
+- [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) или [.NET 9 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
+- Wallpaper Engine
 
-### 💻 Вариант 2: Запуск из исходного кода
+#### Шаги установки
 
-#### 1. Клонирование репозитория
+1. Установите .NET 8 или .NET 9 Runtime, если ещё не установлен
+2. Скачайте последний релиз с [GitHub Releases](https://github.com/psyattack/weave-tauri/releases)
+3. Распакуйте архив (включает исполняемый файл WEave, DepotDownloaderMod и RePKG)
+4. Запустите `weave.exe`
 
+### Для разработчиков
+
+#### Требования
+- [Node.js](https://nodejs.org/) (v18 или выше)
+- [Rust](https://www.rust-lang.org/) (v1.77 или выше)
+- [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) или [.NET 9 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
+- Wallpaper Engine
+
+#### Настройка для разработки
+
+1. Клонируйте репозиторий:
 ```bash
-git clone https://github.com/psyattack/WEave.git
-cd WEave
+git clone https://github.com/psyattack/weave-tauri.git
+cd weave-tauri
 ```
 
-#### 2. Установка зависимостей Python
+2. Скачайте необходимые инструменты:
+   - [DepotDownloaderMod](https://github.com/mmvanheusden/DepotDownloaderMod/releases) - Поместите в директорию `plugins/`
+   - [RePKG](https://github.com/notscuffed/repkg/releases) - Поместите в директорию `plugins/`
 
+3. Установите зависимости:
 ```bash
-pip install -r requirements.txt
+npm install
 ```
 
-#### 3. Загрузка необходимых компонентов
-
-| Компонент | Куда поместить |
-|-------------|----------------|
-| [DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases) | `plugins/DepotDownloader/` |
-| [RePKG](https://github.com/notscuffed/repkg/releases) | `plugins/RePKG/` |
-
-#### 4. Запуск приложения
-
+4. Запустите в режиме разработки:
 ```bash
-python main.py
+npm run tauri dev
 ```
 
-> **Запуск без окна консоли:**  
-> Используйте `run_without_console.bat` для запуска приложения без отображения окна консоли
+#### Сборка
 
----
-
-## 📁 Структура проекта
-
-```
-WEave/
-├── bootstrap/              # Инициализация приложения
-├── domain/                 # Модели и структуры данных
-├── services/               # Сервисы приложения
-├── infrastructure/         # Интеграции и внешняя логика
-├── ui/                     # Интерфейс
-├── shared/                 # Общие утилиты
-├── localization/           # Переводы
-├── plugins/                # Внешние инструменты (скачиваются отдельно)
-├── main.py                 # Точка входа
-└── requirements.txt        # Зависимости Python
+Соберите приложение:
+```bash
+npm run tauri build
 ```
 
----
+Скомпилированное приложение будет в `src-tauri/target/release/`.
 
-## 🙏 Благодарности
+## Использование
 
-Этот проект использует следующие открытые ресурсы и инструменты:
+1. Запустите WEave
+2. Настройте путь к Wallpaper Engine в Настройках (определяется автоматически)
+3. Выберите Steam аккаунт для загрузок в Настройках
+4. Просматривайте вкладку Workshop для поиска обоев
+5. Нажмите Install для загрузки и извлечения обоев
+6. Просматривайте установленные обои во вкладке Installed
+7. Применяйте обои на ваши мониторы
 
-- **[DepotDownloader](https://github.com/SteamRE/DepotDownloader/releases)** — загрузчик мастерской
-- **[RePKG](https://github.com/notscuffed/repkg)** — инструмент распаковки .pkg файлов
-- **[WallpaperEngineWorkshopDownloader](https://gitlab.com/steamautocracks/wallpaperengineworkshopdownloader)** — идея и аккаунты для загрузки
-- **[icons8](https://icons8.com)** — бесплатные иконки для интерфейса
+## Конфигурация
 
----
+Конфигурация хранится в:  
+`%LOCALAPPDATA%\com.weave.app\`
 
-## 📜 Лицензия
+## Структура проекта
 
-Этот проект распространяется под лицензией **[MIT](LICENSE)**.
+```
+weave-tauri/
+├── src/                     # React frontend
+│   ├── components/          # React компоненты
+│   │   ├── common/          # Переиспользуемые компоненты
+│   │   ├── dialogs/         # Модальные окна
+│   │   ├── drawers/         # Боковые панели
+│   │   └── workshop/        # Компоненты Workshop
+│   ├── views/               # Основные компоненты представлений
+│   ├── stores/              # Zustand хранилища состояний
+│   ├── lib/                 # Утилиты и хелперы
+│   ├── locales/             # Переводы frontend
+│   └── styles/              # Глобальные стили
+└── src-tauri/               # Rust backend
+    ├── src/
+    │   ├── commands/        # Tauri команды
+    │   ├── workshop/        # Парсер Workshop
+    │   ├── wallpaper/       # Интеграция с Wallpaper Engine
+    │   ├── download/        # Менеджер загрузок
+    │   ├── config/          # Управление конфигурацией
+    │   └── utils/           # Rust утилиты
+    └── locales/             # Переводы backend
+```
 
----
+## Участие в разработке
 
-## 👁️‍🗨️ Известные проблемы
+Приветствуются любые вклады! Не стесняйтесь отправлять Pull Request.
 
-- [x] <strike>Некорректное возвращение состояния окна после предварительного сворачивания</strike>
-- [x] <strike>Белые диалоговые окна при очистке фильтров</strike>
-- [x] <strike>PyInstaller --onefile ломает перезапуск, если будете собирать из исходников собирайте в --onedir (~500мб)</strike>
+## Лицензия
 
----
+Этот проект лицензирован под MIT License.
 
-## 📋 TODO & Support
+## Благодарности
 
-- [x] <strike>Темы</strike>
-- [x] <strike>Логин через личный Steam аккаунт (Для использования при Steam failed 50 и подобных)</strike>
-- [x] <strike>Оптимизация интерфейса под разные размеры и форматы экранов + возможность resize окна</strike>
-- [ ] Автозапуск
-- [ ] Трей + silent mode
-- [ ] Ряд оригинальных функций WE (Редактор пресетов, создание плейлистов, профили и тд.)
-- [ ] Автоматическое обновление
-- [ ] Возможность использовать аккаунты Steam со Steam Guard
+- **Создано с помощью**: [Tauri](https://tauri.app/), [React](https://react.dev/), [Rust](https://www.rust-lang.org/)
+- **Иконки**: [Lucide](https://lucide.dev/)
+- **UI компоненты**: [Radix UI](https://www.radix-ui.com/)
+- **Инструмент загрузки**: [DepotDownloaderMod](https://gitlab.com/steamautocracks/DepotDownloaderMod)
+- **Распаковщик пакетов**: [RePKG](https://github.com/notscuffed/repkg)
 
-> Если у вас возникли проблемы или есть предложения по улучшению — создайте [Issue](https://github.com/psyattack/WEave/issues) в репозитории.
+## Отказ от ответственности
+
+Это приложение не связано и не одобрено Valve Corporation или Wallpaper Engine. Steam и Wallpaper Engine являются торговыми марками их соответствующих владельцев.
+
+## Поддержка
+
+По вопросам, проблемам или запросам функций открывайте issue на [GitHub](https://github.com/psyattack/weave-tauri/issues).
 
 ---

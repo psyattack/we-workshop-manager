@@ -1,8 +1,0 @@
-# Application metadata
-APP_NAME = "WEave"
-APP_VERSION = "2.6.0"
-APP_VERSION_DISPLAY = f"v{APP_VERSION}"
-APP_FULL_NAME = f"{APP_NAME} {APP_VERSION_DISPLAY}"
-
-# Steam Workshop configuration
-STEAM_APP_ID = "431960"

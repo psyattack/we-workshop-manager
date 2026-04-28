@@ -1,78 +1,23 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-build/
-dist/
-
-# Environments
-.venv/
-venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.project
-.pydevproject
-.settings/
-
-# OS
+# Node
+node_modules
+dist
+dist-ssr
+*.local
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-Desktop.ini
 
-# Logs and cache
+# Logs
+logs
 *.log
-*.tmp
-*.temp
-logs/
+npm-debug.log*
 
-# Application runtime files
-*.exe
-*.dll
-*.pdb
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
 
-# Misc
-.spgignore
-assets/
+# Rust / Tauri
+src-tauri/target
+src-tauri/gen
 
-# Large binaries
+# Bundled plugins
 plugins/
-
-# Backup files
-*~
-*.bak
-*.backup

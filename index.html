@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="theme-dark dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="src/assets/icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WEave</title>
+    <script>
+      // Apply the persisted theme class as early as possible so the app never
+      // flashes the light default before React mounts and
+      // `useApplyTheme` runs.
+      (function () {
+        try {
+          var t = localStorage.getItem("weave.theme") || "dark";
+          var root = document.documentElement;
+          ["dark", "light", "nord", "monokai", "solarized"].forEach(function (
+            name,
+          ) {
+            root.classList.remove("theme-" + name);
+          });
+          root.classList.add("theme-" + t);
+          if (t === "light") {
+            root.classList.remove("dark");
+          } else {
+            root.classList.add("dark");
+          }
+          root.dataset.theme = t;
+        } catch (e) {
+          /* noop */
+        }
+      })();
+    </script>
+  </head>
+  <body class="bg-background text-foreground antialiased">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
