@@ -25,13 +25,3 @@ export function formatTimestamp(unix: number): string {
     return "—";
   }
 }
-
-export function extractWorkshopIds(input: string): string[] {
-  const ids = new Set<string>();
-  const tokens = input.split(/[\s,;]+/).filter(Boolean);
-  for (const token of tokens) {
-    const match = token.match(/(?:id=)?(\d{6,})/);
-    if (match) ids.add(match[1]);
-  }
-  return [...ids];
-}

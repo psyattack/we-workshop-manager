@@ -1,12 +1,15 @@
-//! Account management. Ports the Python `AccountService` 1:1 including the
-//! same built-in public accounts and preserving the custom-account behaviour.
-//! User-added accounts are stored encrypted on disk via `user_accounts::UserAccountsStore`.
+//! Account management. Built-in public accounts are embedded as an encrypted
+//! bundle; user-added accounts are stored encrypted on disk via
+//! `user_accounts::UserAccountsStore`.
 
 use std::sync::Arc;
 
+use aes_gcm::aead::{Aead, KeyInit};
+use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::{engine::general_purpose, Engine as _};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 pub mod user_accounts;
 
@@ -26,21 +29,20 @@ pub struct AccountManager {
     user_store: Arc<UserAccountsStore>,
 }
 
-const DEFAULT_ACCOUNTS: &[(&str, &str)] = &[
-    ("ruiiixx", "UzY3R0JUQjgzRDNZ"),
-    ("premexilmenledgconis", "M3BYYkhaSmxEYg=="),
-    ("vAbuDy", "Qm9vbHE4dmlw"),
-    ("adgjl1182", "UUVUVU85OTk5OQ=="),
-    ("gobjj16182", "enVvYmlhbzgyMjI="),
-    ("787109690", "SHVjVXhZTVFpZzE1"),
-];
+const BUILTIN_ACCOUNT_BUNDLE_KEY: &[u8] = b"WEave built-in Steam accounts bundle v1";
+const BUILTIN_ACCOUNT_BUNDLE: &str = concat!(
+    "V0VhdmVBY2N0MDAxI0OedwXdnRGyKIzyG9DqJSrCmfP5uvje40DeXiI+e/CWZkK/vhYFQWSUK+FllLld",
+    "zU8ObfmvORQ7UECAQdOJxA/w5DkB+q/BkoTLEk0YxGj8edkVFFxBYr5UtsyzMjq1GDAqPZUNcnOFTEbA",
+    "Q/6pD73e0cspsie/HYO1p+amZoib7ShOkZDQZlcnMEewaX9qPWk1maT6njM87zCsMdPkGcOR8EGFdLuW",
+    "SZ90UOPX14J2BzzPyKfOJlUzk3Nzphr2D9eMGQcMq3UYH6rV7cP1CdSreikcGY4iuPkpCog9Msy3TKuZ",
+    "YgDdb7aJbu7eqzxESdDPPg/4h5y2yQ=="
+);
 
-/// Dedicated account used exclusively for the hidden Steam webview that
-/// drives the Workshop parser. It is intentionally NOT part of
-/// `DEFAULT_ACCOUNTS`, so it never appears in the "Download account"
-/// selector — mirroring the way the original Python app separated
-/// "parser login" from "download account".
-const PARSER_ACCOUNT: (&str, &str) = ("weworkshopmanager2", "a2Fpem9rdV9vX2h5b3U=");
+#[derive(Debug, Deserialize)]
+struct BuiltinAccountsBundle {
+    download: Vec<(String, String)>,
+    parser: (String, String),
+}
 
 impl AccountManager {
     pub fn from_runtime(app_data_dir: &std::path::Path) -> Self {
@@ -123,33 +125,52 @@ impl AccountManager {
     /// in under this identity regardless of the user's Download Account
     /// selection.
     pub fn parser_credentials(&self) -> AccountCredentials {
-        let password = general_purpose::STANDARD
-            .decode(PARSER_ACCOUNT.1)
-            .ok()
-            .and_then(|bytes| String::from_utf8(bytes).ok())
-            .unwrap_or_default();
+        let bundle = load_builtin_bundle().unwrap_or_default();
         AccountCredentials {
-            username: PARSER_ACCOUNT.0.into(),
-            password,
+            username: bundle.parser.0,
+            password: bundle.parser.1,
             is_custom: false,
         }
     }
 }
 
 fn build_default() -> Vec<AccountCredentials> {
-    DEFAULT_ACCOUNTS
-        .iter()
-        .map(|(user, encoded)| {
-            let password = general_purpose::STANDARD
-                .decode(encoded)
-                .ok()
-                .and_then(|bytes| String::from_utf8(bytes).ok())
-                .unwrap_or_default();
-            AccountCredentials {
-                username: (*user).into(),
-                password,
-                is_custom: false,
-            }
+    load_builtin_bundle()
+        .map(|bundle| {
+            bundle
+                .download
+                .into_iter()
+                .map(|(username, password)| AccountCredentials {
+                    username,
+                    password,
+                    is_custom: false,
+                })
+                .collect()
         })
-        .collect()
+        .unwrap_or_default()
+}
+
+fn load_builtin_bundle() -> Result<BuiltinAccountsBundle, String> {
+    let raw = general_purpose::STANDARD
+        .decode(BUILTIN_ACCOUNT_BUNDLE)
+        .map_err(|e| e.to_string())?;
+    if raw.len() < 12 {
+        return Err("Built-in account bundle is malformed".into());
+    }
+    let (nonce, ciphertext) = raw.split_at(12);
+    let key = Sha256::digest(BUILTIN_ACCOUNT_BUNDLE_KEY);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
+    let plaintext = cipher
+        .decrypt(Nonce::from_slice(nonce), ciphertext)
+        .map_err(|e| e.to_string())?;
+    serde_json::from_slice(&plaintext).map_err(|e| e.to_string())
+}
+
+impl Default for BuiltinAccountsBundle {
+    fn default() -> Self {
+        Self {
+            download: Vec::new(),
+            parser: (String::new(), String::new()),
+        }
+    }
 }

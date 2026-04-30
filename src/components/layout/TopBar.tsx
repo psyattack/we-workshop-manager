@@ -15,11 +15,11 @@ import {
   Sun,
 } from "lucide-react";
 
-import { useAppStore, ThemeCode, THEME_CODES } from "@/stores/app";
+import { useAppStore, ThemeCode } from "@/stores/app";
 import { useTasksStore } from "@/stores/tasks";
 import { useFiltersStore } from "@/stores/filters";
 import { triggerGlobalRefresh } from "@/stores/refresh";
-import { persistTheme } from "@/hooks/useTheme";
+import { persistTheme, THEME_CODES } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 import { Tooltip } from "@/components/common/Tooltip";
 
@@ -80,7 +80,10 @@ export default function TopBar({
             <RefreshCw className="h-5 w-5" />
           </button>
         </Tooltip>
-        <Tooltip content={t(collapsed ? "labels.show_filters" : "labels.hide_filters")} side="bottom">
+        <Tooltip
+          content={t(collapsed ? "labels.show_filters" : "labels.hide_filters")}
+          side="bottom"
+        >
           <button
             className="btn-icon"
             onClick={toggleCollapsed}
@@ -115,26 +118,17 @@ export default function TopBar({
           </button>
         </Tooltip>
         <Tooltip content={t("tooltips.multi_download")} side="bottom">
-          <button
-            className="btn-icon"
-            onClick={onOpenMulti}
-          >
+          <button className="btn-icon" onClick={onOpenMulti}>
             <Layers className="h-5 w-5" />
           </button>
         </Tooltip>
         <Tooltip content={t("tooltips.info")} side="bottom">
-          <button
-            className="btn-icon"
-            onClick={onOpenInfo}
-          >
+          <button className="btn-icon" onClick={onOpenInfo}>
             <Info className="h-5 w-5" />
           </button>
         </Tooltip>
         <Tooltip content={t("tooltips.settings")} side="bottom">
-          <button
-            className="btn-icon"
-            onClick={onOpenSettings}
-          >
+          <button className="btn-icon" onClick={onOpenSettings}>
             <Settings className="h-5 w-5" />
           </button>
         </Tooltip>

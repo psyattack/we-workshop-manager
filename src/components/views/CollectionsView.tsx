@@ -28,7 +28,7 @@ export interface CollectionInfo {
   total_favorited?: string;
   posted_date?: string;
   updated_date?: string;
-  [key: string]: any; // For tag groups like Miscellaneous, Genre, etc.
+  [key: string]: string | number | undefined;
 }
 
 export interface CollectionContents {
@@ -60,9 +60,9 @@ export default function CollectionsView() {
 
   const requestedCollectionId =
     sub.kind === "collection" ? sub.collectionId : null;
-  
+
   // Get the saved page for this collection or main collections view
-  const currentPage = requestedCollectionId 
+  const currentPage = requestedCollectionId
     ? getViewPage("collection", requestedCollectionId)
     : getViewPage("collections");
 
@@ -86,7 +86,7 @@ export default function CollectionsView() {
         if (!inTauri) {
           setOpened({
             collection_id: requestedCollectionId,
-            title: sub.kind === "collection" ? sub.title ?? "Collection" : "",
+            title: sub.kind === "collection" ? (sub.title ?? "Collection") : "",
             description: "",
             preview_url: "",
             author: "",
@@ -117,7 +117,7 @@ export default function CollectionsView() {
   useEffect(() => {
     // Reset scroll to top when page changes
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [filters.page]);
 
@@ -297,7 +297,7 @@ export default function CollectionsView() {
       <div ref={scrollContainerRef} className="flex-1 overflow-auto px-4 py-3">
         {loading ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {Array.from({ length: 30 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>
@@ -354,9 +354,9 @@ export default function CollectionsView() {
 }
 
 function makeMockPage(page: number): WorkshopPage {
-  const items: WorkshopItem[] = Array.from({ length: 12 }, (_, i) => ({
-    pubfileid: `${500000 + (page - 1) * 12 + i}`,
-    title: `Mock Collection #${(page - 1) * 12 + i + 1}`,
+  const items: WorkshopItem[] = Array.from({ length: 30 }, (_, i) => ({
+    pubfileid: `${500000 + (page - 1) * 30 + i}`,
+    title: `Mock Collection #${(page - 1) * 30 + i + 1}`,
     preview_url: "",
     author: "Author",
     author_url: "",

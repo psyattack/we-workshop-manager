@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import Dialog from "@/components/common/Dialog";
 import { inTauri, tryInvokeOk } from "@/lib/tauri";
-import { extractWorkshopIds } from "@/lib/utils";
+import { extractWorkshopIds } from "@/lib/workshop";
 import { pushToast } from "@/stores/toasts";
 import { useAppStore } from "@/stores/app";
 

@@ -1,6 +1,6 @@
 {
   "productName": "WEave",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "identifier": "com.weave.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -25,7 +25,7 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://steamuserimages-a.akamaihd.net https://images.steamusercontent.com https://shared.fastly.steamstatic.com https://steamcommunity.com data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost https://steamcommunity.com https://api.github.com https://translate.googleapis.com; font-src 'self' data:",
       "assetProtocol": {
         "enable": true,
         "scope": ["**"]
@@ -35,9 +35,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/icon.ico"
-    ],
+    "icon": ["icons/icon.ico"],
     "resources": []
   }
 }

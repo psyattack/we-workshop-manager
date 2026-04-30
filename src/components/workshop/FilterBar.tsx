@@ -1,30 +1,36 @@
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  ChevronDown,
-  ChevronUp,
-  Search,
-  SortAsc,
-  X,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Search, SortAsc, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import Select from "@/components/common/Select";
 import {
+  AGE_RATING_KEYS,
   AGE_RATINGS,
+  ASSET_GENRE_KEYS,
   ASSET_GENRES,
+  ASSET_TYPE_KEYS,
   ASSET_TYPES,
+  CATEGORY_KEYS,
   CATEGORIES,
   GENRE_TAGS,
   MISC_TAGS,
+  RESOLUTION_KEYS,
   RESOLUTIONS,
+  SCRIPT_TYPE_KEYS,
   SCRIPT_TYPES,
+  SORT_KEYS,
   SORT_OPTIONS,
+  TIME_PERIOD_KEYS,
   TIME_PERIODS,
+  TYPE_KEYS,
   TYPES,
-} from "@/lib/filter-options";
+  toSelectOptions,
+} from "@/lib/filterConfig";
 import { cn } from "@/lib/utils";
 import { DEFAULT_FILTERS, useFiltersStore } from "@/stores/filters";
+
+type TagListKey = "misc_tags" | "genre_tags";
 
 export default function FilterBar() {
   const { t } = useTranslation();
@@ -55,6 +61,15 @@ export default function FilterBar() {
     filters.required_flags.length > 0;
 
   const [searchValue, setSearchValue] = useState(filters.search);
+  const sortOptions = toSelectOptions(SORT_KEYS, SORT_OPTIONS);
+  const timePeriodOptions = toSelectOptions(TIME_PERIOD_KEYS, TIME_PERIODS);
+  const categoryOptions = toSelectOptions(CATEGORY_KEYS, CATEGORIES);
+  const typeOptions = toSelectOptions(TYPE_KEYS, TYPES);
+  const ageRatingOptions = toSelectOptions(AGE_RATING_KEYS, AGE_RATINGS);
+  const resolutionOptions = toSelectOptions(RESOLUTION_KEYS, RESOLUTIONS);
+  const assetTypeOptions = toSelectOptions(ASSET_TYPE_KEYS, ASSET_TYPES);
+  const assetGenreOptions = toSelectOptions(ASSET_GENRE_KEYS, ASSET_GENRES);
+  const scriptTypeOptions = toSelectOptions(SCRIPT_TYPE_KEYS, SCRIPT_TYPES);
 
   useEffect(() => {
     setSearchValue(filters.search);
@@ -69,12 +84,16 @@ export default function FilterBar() {
     return () => clearTimeout(t);
   }, [searchValue, filters.search, setFilters]);
 
-  const toggleTag = (list: "misc_tags" | "genre_tags", tag: string) => {
+  const toggleTag = (list: TagListKey, tag: string) => {
     const current = filters[list];
     const next = current.includes(tag)
       ? current.filter((t) => t !== tag)
       : [...current, tag];
-    setFilters({ [list]: next, page: 1 } as any);
+    setFilters(
+      list === "misc_tags"
+        ? { misc_tags: next, page: 1 }
+        : { genre_tags: next, page: 1 },
+    );
   };
 
   return (
@@ -87,10 +106,12 @@ export default function FilterBar() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
-            <div className={cn(
-              "flex flex-col gap-2 bg-surface/60 px-4 py-3",
-              !showAdvanced && "border-b border-border"
-            )}>
+            <div
+              className={cn(
+                "flex flex-col gap-2 bg-surface/60 px-4 py-3",
+                !showAdvanced && "border-b border-border",
+              )}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative flex-1 min-w-[200px]">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
@@ -104,58 +125,66 @@ export default function FilterBar() {
                 <Select
                   value={filters.sort}
                   onValueChange={(v) => setFilters({ sort: v, page: 1 })}
-                  options={SORT_OPTIONS}
+                  options={sortOptions}
                   icon={<SortAsc className="h-4 w-4 text-muted" />}
                 />
                 {filters.sort === "trend" && (
                   <Select
                     value={filters.days}
                     onValueChange={(v) => setFilters({ days: v, page: 1 })}
-                    options={TIME_PERIODS}
+                    options={timePeriodOptions}
                   />
                 )}
                 <Select
                   value={filters.category}
                   onValueChange={(v) => setFilters({ category: v, page: 1 })}
-                  options={CATEGORIES}
+                  options={categoryOptions}
                 />
                 {filters.category !== "Asset" && (
                   <Select
                     value={filters.type_tag}
                     onValueChange={(v) => setFilters({ type_tag: v, page: 1 })}
-                    options={TYPES}
+                    options={typeOptions}
                   />
                 )}
                 {filters.category === "Wallpaper" && (
                   <Select
                     value={filters.resolution}
-                    onValueChange={(v) => setFilters({ resolution: v, page: 1 })}
-                    options={RESOLUTIONS}
+                    onValueChange={(v) =>
+                      setFilters({ resolution: v, page: 1 })
+                    }
+                    options={resolutionOptions}
                   />
                 )}
                 {filters.category === "Asset" && (
                   <>
                     <Select
                       value={filters.asset_type}
-                      onValueChange={(v) => setFilters({ asset_type: v, page: 1 })}
-                      options={ASSET_TYPES}
+                      onValueChange={(v) =>
+                        setFilters({ asset_type: v, page: 1 })
+                      }
+                      options={assetTypeOptions}
                     />
                     <Select
                       value={filters.asset_genre}
-                      onValueChange={(v) => setFilters({ asset_genre: v, page: 1 })}
-                      options={ASSET_GENRES}
+                      onValueChange={(v) =>
+                        setFilters({ asset_genre: v, page: 1 })
+                      }
+                      options={assetGenreOptions}
                     />
                     <Select
                       value={filters.script_type}
-                      onValueChange={(v) => setFilters({ script_type: v, page: 1 })}
-                      options={SCRIPT_TYPES}
+                      onValueChange={(v) =>
+                        setFilters({ script_type: v, page: 1 })
+                      }
+                      options={scriptTypeOptions}
                     />
                   </>
                 )}
                 <Select
                   value={filters.age_rating}
                   onValueChange={(v) => setFilters({ age_rating: v, page: 1 })}
-                  options={AGE_RATINGS}
+                  options={ageRatingOptions}
                 />
                 <button
                   onClick={toggleAdvanced}
@@ -167,7 +196,11 @@ export default function FilterBar() {
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
-                  {t(showAdvanced ? "labels.less_filters" : "labels.more_filters")}
+                  {t(
+                    showAdvanced
+                      ? "labels.less_filters"
+                      : "labels.more_filters",
+                  )}
                 </button>
                 {hasActiveFilters && (
                   <button onClick={resetFilters} className="btn-ghost text-xs">
@@ -206,7 +239,11 @@ export default function FilterBar() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut", delay: 0.05 }}
+                    transition={{
+                      duration: 0.2,
+                      ease: "easeInOut",
+                      delay: 0.05,
+                    }}
                   >
                     <TagBlock
                       title={t("labels.genre")}
@@ -255,11 +292,13 @@ function TagBlock({
   isLast?: boolean;
 }) {
   return (
-    <div className={cn(
-      "flex flex-wrap items-center gap-1.5 bg-surface/60 px-4 py-1",
-      isFirst && "pt-1",
-      isLast && "pb-2 border-b border-border"
-    )}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 bg-surface/60 px-4 py-1",
+        isFirst && "pt-1",
+        isLast && "pb-2 border-b border-border",
+      )}
+    >
       <span className="text-[11px] uppercase tracking-wide text-subtle">
         {title}
       </span>
@@ -282,8 +321,7 @@ function TagBlock({
             className={cn(
               "chip cursor-pointer select-none text-[11px] transition-colors",
               !isIncluded && !isExcluded && "hover:bg-surface",
-              isIncluded &&
-                "border-primary/60 bg-primary/15 text-foreground",
+              isIncluded && "border-primary/60 bg-primary/15 text-foreground",
               isExcluded &&
                 "border-danger/60 bg-danger/10 text-danger line-through",
             )}

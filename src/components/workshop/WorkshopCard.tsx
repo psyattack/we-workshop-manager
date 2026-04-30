@@ -159,6 +159,7 @@ export default function WorkshopCard({
         onClick={() => onOpen(item)}
       >
         <PreviewImage
+          key={item.preview_url}
           src={item.preview_url}
           alt={item.title}
           className={cn(

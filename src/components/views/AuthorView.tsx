@@ -158,7 +158,7 @@ export default function AuthorView() {
       <div ref={scrollContainerRef} className="flex-1 overflow-auto px-4 py-3">
         {loading ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {Array.from({ length: 9 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>

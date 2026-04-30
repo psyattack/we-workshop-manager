@@ -4,6 +4,8 @@ export interface CollectionRef {
   item_count: number;
 }
 
+export type RawTag = string | { tag?: string; category?: string };
+
 export interface WorkshopItem {
   pubfileid: string;
   title: string;
@@ -14,7 +16,7 @@ export interface WorkshopItem {
   file_size: string;
   posted_date: string;
   updated_date: string;
-  tags: unknown;
+  tags: RawTag[];
   rating_star_file: string;
   num_ratings: string;
   is_collection: boolean;

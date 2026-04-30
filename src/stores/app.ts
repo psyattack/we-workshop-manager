@@ -1,15 +1,9 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
-export type ThemeCode = "dark" | "light" | "nord" | "monokai" | "solarized";
+import { applyThemeClass } from "@/hooks/useTheme";
 
-export const THEME_CODES: ThemeCode[] = [
-  "dark",
-  "light",
-  "nord",
-  "monokai",
-  "solarized",
-];
+export type ThemeCode = "dark" | "light" | "nord" | "monokai" | "solarized";
 
 interface AppState {
   ready: boolean;
@@ -54,33 +48,14 @@ export const useAppStore = create<AppState>()(
       setLanguage: (language) => set({ language }),
       setTheme: (theme) => {
         set({ theme });
-        // Apply right now in addition to whatever React effects do.
-        // The user reported many previous attempts still left the
-        // theme not switching — going aggressive here as a "crutch":
-        // every code path that mutates theme is forced to flip the
-        // CSS class + dataset attribute synchronously.
         if (typeof document !== "undefined") {
-          const root = document.documentElement;
-          THEME_CODES.forEach((c) => {
-            root.classList.remove(`theme-${c}`);
-            document.body?.classList.remove(`theme-${c}`);
-          });
-          root.classList.add(`theme-${theme}`);
-          document.body?.classList.add(`theme-${theme}`);
-          if (theme === "light") {
-            root.classList.remove("dark");
-            document.body?.classList.remove("dark");
-          } else {
-            root.classList.add("dark");
-            document.body?.classList.add("dark");
-          }
-          root.dataset.theme = theme;
-          root.style.colorScheme = theme === "light" ? "light" : "dark";
+          applyThemeClass(theme);
         }
       },
       setAccent: (accent) => set({ accent }),
       setWeDirectory: (weDirectory) => set({ weDirectory }),
-      setAvailableLanguages: (availableLanguages) => set({ availableLanguages }),
+      setAvailableLanguages: (availableLanguages) =>
+        set({ availableLanguages }),
       setAccountIndex: (accountIndex) => set({ accountIndex }),
       setAccounts: (accounts) => set({ accounts }),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),

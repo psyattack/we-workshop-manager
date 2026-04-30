@@ -51,10 +51,7 @@ export default function WorkshopView() {
   }, [refreshCounter]);
 
   useEffect(() => {
-    // Reset scroll to top when page changes
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [filters.page]);
 
   useEffect(() => {
@@ -113,7 +110,7 @@ export default function WorkshopView() {
     return () => {
       active = false;
     };
-  }, [filtersKey, refreshCounter]);
+  }, [filters, filtersKey, refreshCounter]);
 
   const items = page?.items ?? [];
   const total = page?.total_items ?? 0;
@@ -133,9 +130,7 @@ export default function WorkshopView() {
       accountIndex,
     });
     pushToast(
-      ok
-        ? t("messages.download_started")
-        : t("messages.error"),
+      ok ? t("messages.download_started") : t("messages.error"),
       ok ? "success" : "error",
     );
   };
@@ -146,7 +141,7 @@ export default function WorkshopView() {
       <div ref={scrollContainerRef} className="flex-1 overflow-auto px-4 py-3">
         {loading ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(190px,1fr))] gap-3">
-            {Array.from({ length: 12 }).map((_, i) => (
+            {Array.from({ length: 30 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
           </div>

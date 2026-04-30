@@ -19,6 +19,7 @@ import PreviewImage from "@/components/common/PreviewImage";
 import {
   CollectionRef,
   InstalledWallpaper,
+  RawTag,
   WorkshopItem,
 } from "@/types/workshop";
 import { inTauri, tryInvoke, tryInvokeOk } from "@/lib/tauri";
@@ -29,6 +30,7 @@ import { formatBytes, formatTimestamp } from "@/lib/utils";
 import { maybeMinimize } from "@/lib/window";
 import { useConfirm } from "@/hooks/useConfirm";
 import { Tooltip } from "@/components/common/Tooltip";
+import { groupTags, parseRatingStars, workshopUrl } from "@/lib/workshop";
 
 /**
  * One unified details drawer used by both the Workshop view and the
@@ -72,23 +74,10 @@ interface InstalledProps extends CommonProps {
 
 type Props = WorkshopProps | InstalledProps;
 
-type RawTag = string | { tag?: string; category?: string };
-
 /** Row in the two-column info grid. Optional 3rd slot tints the value. */
-type MetaRow = [string, string | React.ReactNode] | [string, string | React.ReactNode, "warning"];
-
-/**
- * Extract star rating (0-5) from Steam's rating filename.
- */
-function getRatingStars(ratingStarFile: string | undefined): number {
-  if (!ratingStarFile) return 0;
-  const m = ratingStarFile.match(/(\d+)/);
-  if (!m) return 0;
-  const n = parseInt(m[1], 10);
-  return Number.isFinite(n) ? Math.max(0, Math.min(5, n)) : 0;
-}
-
-
+type MetaRow =
+  | [string, string | React.ReactNode]
+  | [string, string | React.ReactNode, "warning"];
 
 interface Meta {
   pubfileid: string;
@@ -112,6 +101,63 @@ interface Meta {
   is_collection?: boolean;
 }
 
+function hasMergeValue(value: Meta[keyof Meta] | undefined): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  return true;
+}
+
+function mergeMeta(root: Meta, fresh: Partial<Meta>): Meta {
+  return {
+    ...root,
+    pubfileid: hasMergeValue(fresh.pubfileid)
+      ? fresh.pubfileid!
+      : root.pubfileid,
+    title: hasMergeValue(fresh.title) ? fresh.title! : root.title,
+    preview: hasMergeValue(fresh.preview) ? fresh.preview! : root.preview,
+    description: hasMergeValue(fresh.description)
+      ? fresh.description!
+      : root.description,
+    author: hasMergeValue(fresh.author) ? fresh.author : root.author,
+    author_url: hasMergeValue(fresh.author_url)
+      ? fresh.author_url
+      : root.author_url,
+    posted_date: hasMergeValue(fresh.posted_date)
+      ? fresh.posted_date
+      : root.posted_date,
+    updated_date: hasMergeValue(fresh.updated_date)
+      ? fresh.updated_date
+      : root.updated_date,
+    num_ratings: hasMergeValue(fresh.num_ratings)
+      ? fresh.num_ratings
+      : root.num_ratings,
+    rating_star_file: hasMergeValue(fresh.rating_star_file)
+      ? fresh.rating_star_file
+      : root.rating_star_file,
+    file_size: hasMergeValue(fresh.file_size)
+      ? fresh.file_size
+      : root.file_size,
+    tags: hasMergeValue(fresh.tags) ? fresh.tags : root.tags,
+    collections: hasMergeValue(fresh.collections)
+      ? fresh.collections
+      : root.collections,
+    file_type: hasMergeValue(fresh.file_type)
+      ? fresh.file_type
+      : root.file_type,
+    size_bytes: hasMergeValue(fresh.size_bytes)
+      ? fresh.size_bytes
+      : root.size_bytes,
+    installed_ts: hasMergeValue(fresh.installed_ts)
+      ? fresh.installed_ts
+      : root.installed_ts,
+    has_pkg: hasMergeValue(fresh.has_pkg) ? fresh.has_pkg : root.has_pkg,
+    is_collection: hasMergeValue(fresh.is_collection)
+      ? fresh.is_collection
+      : root.is_collection,
+  };
+}
+
 function workshopToMeta(w: WorkshopItem): Meta {
   return {
     pubfileid: w.pubfileid,
@@ -125,7 +171,7 @@ function workshopToMeta(w: WorkshopItem): Meta {
     num_ratings: w.num_ratings,
     rating_star_file: w.rating_star_file,
     file_size: w.file_size,
-    tags: Array.isArray(w.tags) ? (w.tags as RawTag[]) : [],
+    tags: Array.isArray(w.tags) ? w.tags : [],
     collections: w.collections,
     is_collection: w.is_collection,
   };
@@ -226,49 +272,20 @@ export default function DetailsPanel(props: Props) {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pubfileid]);
+  }, [pubfileid, props.kind]);
 
   // Merge base + fresh; non-empty fresh values win.
   const meta: Meta | null = useMemo(() => {
     const root = augmentedBase;
     if (!root) return null;
     if (!fresh) return root;
-    const merged: Meta = { ...root };
-    for (const k of Object.keys(fresh) as (keyof Meta)[]) {
-      const v = fresh[k];
-      if (v === undefined || v === null) continue;
-      if (typeof v === "string" && v.length === 0) continue;
-      if (Array.isArray(v) && v.length === 0) continue;
-      // @ts-expect-error generic merge across union fields
-      merged[k] = v;
-    }
-    return merged;
+    return mergeMeta(root, fresh);
   }, [augmentedBase, fresh]);
 
-  const groupedTags = useMemo(() => {
-    if (!meta?.tags) return [] as { category: string; values: string[] }[];
-    const groups = new Map<string, string[]>();
-    const fallbackKey = t("labels.tags") || "Tags";
-    for (const r of meta.tags) {
-      const label = typeof r === "string" ? r : r.tag ?? "";
-      const rawCat = typeof r === "string" ? "" : r.category ?? "";
-      // Skip values that are purely punctuation (".", "·") so we never
-      // render a bogus "·" / "." chip the user reported seeing.
-      if (!label || /^\W*$/.test(label)) continue;
-      // Same defensive sanitization for the category label — if Steam
-      // produced a category that is pure punctuation, drop it.
-      const cat =
-        rawCat && /\w/.test(rawCat) ? rawCat : fallbackKey;
-      const arr = groups.get(cat) ?? [];
-      arr.push(label);
-      groups.set(cat, arr);
-    }
-    return Array.from(groups.entries()).map(([category, values]) => ({
-      category,
-      values,
-    }));
-  }, [meta, t]);
+  const groupedTags = useMemo(
+    () => groupTags(meta?.tags, t("labels.tags") || "Tags"),
+    [meta?.tags, t],
+  );
 
   const description = meta?.description ?? "";
   const displayedDescription =
@@ -276,7 +293,7 @@ export default function DetailsPanel(props: Props) {
 
   const openWorkshopPage = async () => {
     if (!meta) return;
-    const url = `https://steamcommunity.com/sharedfiles/filedetails/?id=${meta.pubfileid}`;
+    const url = workshopUrl(meta.pubfileid);
     if (inTauri) await openExternal(url);
     else window.open(url, "_blank");
   };
@@ -306,7 +323,6 @@ export default function DetailsPanel(props: Props) {
     }
   };
 
-
   const goToAuthor = () => {
     if (!meta?.author_url) return;
     openAuthor(meta.author_url, meta.author || "");
@@ -323,9 +339,7 @@ export default function DetailsPanel(props: Props) {
     if (showInstalledActions) {
       datesAndStats.push([
         t("labels.size", { size: "" }).replace(/:$/, ""),
-        meta.size_bytes
-          ? formatBytes(meta.size_bytes)
-          : meta.file_size || "—",
+        meta.size_bytes ? formatBytes(meta.size_bytes) : meta.file_size || "—",
       ]);
       if (meta.installed_ts) {
         datesAndStats.push([
@@ -354,20 +368,18 @@ export default function DetailsPanel(props: Props) {
     // Rating lives inside the info grid so it sits alongside the other
     // metadata rather than hanging off the action row. Unicode stars +
     // vote count, rendered in the same warning-yellow as before.
-    const ratingStars = getRatingStars(meta.rating_star_file);
+    const ratingStars = parseRatingStars(meta.rating_star_file);
     const votes = (meta.num_ratings || "").trim();
     if (ratingStars > 0 || votes) {
       const filled = "★".repeat(ratingStars);
       const empty = "☆".repeat(Math.max(0, 5 - ratingStars));
       datesAndStats.push([
         t("labels.rating") || "Rating",
-        (
-          <span className="flex items-center">
-            <span className="text-warning">{filled}</span>
-            <span className="text-warning/30">{empty}</span>
-            {votes && <span className="ml-1 text-foreground">({votes})</span>}
-          </span>
-        ),
+        <span className="flex items-center">
+          <span className="text-warning">{filled}</span>
+          <span className="text-warning/30">{empty}</span>
+          {votes && <span className="ml-1 text-foreground">({votes})</span>}
+        </span>,
         "warning",
       ]);
     }
@@ -384,6 +396,7 @@ export default function DetailsPanel(props: Props) {
         <div className="flex flex-col gap-2.5 p-3 text-[13px]">
           <div className="overflow-hidden rounded-md border border-border bg-surface-sunken">
             <PreviewImage
+              key={meta.preview}
               src={meta.preview}
               alt={meta.title}
               className="aspect-square w-full object-cover"
@@ -505,10 +518,10 @@ function MetaGrid({ rows }: { rows: MetaRow[] }) {
     <div className="grid grid-cols-2 gap-1 text-[11px]">
       {rows.map((row) => {
         const [label, value, tone] = row;
-        const isReactNode = typeof value !== 'string';
+        const isReactNode = typeof value !== "string";
         return (
           <div
-            key={label + (typeof value === 'string' ? value : '')}
+            key={label + (typeof value === "string" ? value : "")}
             className="flex flex-col gap-0.5 rounded-md bg-surface-sunken/50 px-2 py-1"
           >
             <span className="text-[9px] uppercase tracking-wide text-subtle">
@@ -617,7 +630,9 @@ function ActionRow(
     }
     const confirmed = await confirm({
       title: t("tooltips.delete_wallpaper") || "Delete Wallpaper",
-      message: t("messages.confirm_delete") || "Delete this wallpaper?\n\nThe wallpaper folder will be removed from your Wallpaper Engine library permanently. This action cannot be undone.",
+      message:
+        t("messages.confirm_delete") ||
+        "Delete this wallpaper?\n\nThe wallpaper folder will be removed from your Wallpaper Engine library permanently. This action cannot be undone.",
       confirmLabel: t("buttons.delete") || "Delete",
       cancelLabel: t("buttons.cancel") || "Cancel",
       variant: "danger",
@@ -639,7 +654,6 @@ function ActionRow(
       );
     }
   };
-
 
   if (props.showInstalledActions && installedHandle) {
     buttons.push({
@@ -732,7 +746,8 @@ function ActionRow(
   });
 
   // Copy ID button - show for both installed and workshop items
-  const copyIdHandle = installedHandle || (props.kind === "workshop" ? props.item : null);
+  const copyIdHandle =
+    installedHandle || (props.kind === "workshop" ? props.item : null);
   if (copyIdHandle) {
     buttons.push({
       key: "id",
@@ -784,7 +799,7 @@ function ActionBtn({
       : variant === "danger"
         ? "text-danger hover:bg-danger/10"
         : "border border-border-strong hover:bg-surface-raised";
-  
+
   const button = (
     <button
       type="button"

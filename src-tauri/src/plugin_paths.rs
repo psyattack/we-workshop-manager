@@ -7,7 +7,7 @@
 //! `src-tauri/target/<profile>/` during `tauri dev`. We therefore try a
 //! handful of reasonable candidates before giving up.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn candidate_roots() -> Vec<PathBuf> {
     let mut out = Vec::new();
@@ -47,10 +47,7 @@ fn candidate_roots() -> Vec<PathBuf> {
 
 fn find_plugin_binary(plugin_folder: &str, binary_name: &str) -> Option<PathBuf> {
     for root in candidate_roots() {
-        let candidate = root
-            .join("plugins")
-            .join(plugin_folder)
-            .join(binary_name);
+        let candidate = root.join("plugins").join(plugin_folder).join(binary_name);
         if candidate.is_file() {
             return Some(candidate);
         }
@@ -78,9 +75,4 @@ pub fn repkg() -> Result<PathBuf, String> {
             "RePKG not found. Place the plugin at `plugins/RePKG/{name}` next to the app or in the repository root."
         )
     })
-}
-
-#[allow(dead_code)]
-pub fn exists(path: &Path) -> bool {
-    path.is_file()
 }

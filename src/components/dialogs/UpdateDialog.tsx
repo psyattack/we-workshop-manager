@@ -36,8 +36,8 @@ export default function UpdateDialog({ open, onOpenChange }: Props) {
       if (data) useUpdaterStore.getState().show(data);
     } else {
       setInfo({
-        current_version: "3.0.0",
-        latest_version: "3.0.0",
+        current_version: "3.1.0",
+        latest_version: "3.1.0",
         update_available: false,
         release_notes: "(mock) You are up to date.",
         html_url: "",

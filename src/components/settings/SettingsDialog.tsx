@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { open as openPath } from "@tauri-apps/plugin-dialog";
 import { Trash2 } from "lucide-react";
@@ -41,14 +41,17 @@ const ACCENTS: { value: string; label: string; color: string }[] = [
   { value: "teal", label: "Teal", color: "#14b8a6" },
   { value: "cyan", label: "Cyan", color: "#06b6d4" },
 ];
-
-
-
 export default function SettingsDialog({ open, onOpenChange }: Props) {
   const { t } = useTranslation();
   const state = useAppStore();
+  const setAccounts = useAppStore((s) => s.setAccounts);
   const [tab, setTab] = useState("general");
   const [debugOpen, setDebugOpen] = useState(false);
+
+  const persist = async (path: string, value: unknown) => {
+    if (!inTauri) return;
+    await invoke("config_set", { path, value }).catch(() => undefined);
+  };
 
   useEffect(() => {
     if (!open || !inTauri) return;
@@ -57,14 +60,9 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
       undefined,
       [],
     ).then((list) => {
-      if (list) state.setAccounts(list);
+      if (list) setAccounts(list);
     });
-  }, [open]);
-
-  const persist = async (path: string, value: unknown) => {
-    if (!inTauri) return;
-    await invoke("config_set", { path, value }).catch(() => undefined);
-  };
+  }, [open, setAccounts]);
 
   return (
     <Dialog
@@ -331,10 +329,7 @@ export default function SettingsDialog({ open, onOpenChange }: Props) {
           },
         ]}
       />
-      <ParserDebugDialog
-        open={debugOpen}
-        onClose={() => setDebugOpen(false)}
-      />
+      <ParserDebugDialog open={debugOpen} onClose={() => setDebugOpen(false)} />
     </Dialog>
   );
 }
@@ -384,9 +379,7 @@ function Section({
         <span>{title}</span>
         <span className="transition-transform group-open:rotate-90">›</span>
       </summary>
-      <div className="divide-y divide-border/40 px-3 pb-2 pt-1">
-        {children}
-      </div>
+      <div className="divide-y divide-border/40 px-3 pb-2 pt-1">{children}</div>
     </details>
   );
 }
@@ -453,7 +446,10 @@ function SteamSessionRow() {
           await invoke<number>("steam_sync_cookies").catch(() => 0);
           await invoke<void>("steam_login_hide").catch(() => undefined);
           setLoggedIn(true);
-          pushToast(t("messages.signed_in_to_steam") || "Signed in to Steam", "success");
+          pushToast(
+            t("messages.signed_in_to_steam") || "Signed in to Steam",
+            "success",
+          );
           break;
         }
       }
@@ -522,13 +518,13 @@ function SteamSessionRow() {
 function CustomAccountsSection() {
   const { t } = useTranslation();
   const { confirm: showConfirm, ConfirmDialog } = useConfirm();
-  const state = useAppStore();
+  const setAccounts = useAppStore((s) => s.setAccounts);
   const [list, setList] = useState<string[]>([]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const refreshAccounts = async () => {
+  const refreshAccounts = useCallback(async () => {
     if (!inTauri) return;
     const custom = await tryInvoke<string[]>(
       "accounts_list_custom",
@@ -539,12 +535,12 @@ function CustomAccountsSection() {
     const all = await tryInvoke<
       { index: number; username: string; is_custom: boolean }[]
     >("accounts_list", undefined, []);
-    if (all) state.setAccounts(all);
-  };
+    if (all) setAccounts(all);
+  }, [setAccounts]);
 
   useEffect(() => {
     void refreshAccounts();
-  }, []);
+  }, [refreshAccounts]);
 
   const add = async () => {
     if (!inTauri) return;
@@ -578,7 +574,8 @@ function CustomAccountsSection() {
     if (!inTauri) return;
     const confirmed = await showConfirm({
       title: t("labels.remove_account") || "Remove Account",
-      message: t("settings.confirm_remove_account") ||
+      message:
+        t("settings.confirm_remove_account") ||
         t("labels.remove_account_question", { user: u }),
       confirmLabel: t("buttons.remove") || "Remove",
       cancelLabel: t("buttons.cancel") || "Cancel",
@@ -623,7 +620,11 @@ function CustomAccountsSection() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </div>
-        <button className="btn-primary" onClick={add} disabled={busy || !inTauri}>
+        <button
+          className="btn-primary"
+          onClick={add}
+          disabled={busy || !inTauri}
+        >
           {t("settings.add_account_button") || "Add"}
         </button>
       </div>
@@ -635,10 +636,7 @@ function CustomAccountsSection() {
       ) : (
         <ul className="divide-y divide-border rounded-md border border-border bg-surface-sunken">
           {list.map((u) => (
-            <li
-              key={u}
-              className="flex items-center gap-3 p-2.5 text-sm"
-            >
+            <li key={u} className="flex items-center gap-3 p-2.5 text-sm">
               <span className="flex-1">{u}</span>
               <button
                 className="btn-ghost text-error"
@@ -699,7 +697,7 @@ function SettingSwitch({
     void tryInvoke<boolean>("config_get", { path }, fallback).then((v) => {
       if (typeof v === "boolean") setValue(v);
     });
-  }, [path]);
+  }, [path, fallback]);
   return (
     <Switch
       checked={value}

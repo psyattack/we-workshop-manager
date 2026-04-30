@@ -27,6 +27,7 @@ import { pushToast } from "@/stores/toasts";
 import { useRefreshStore } from "@/stores/refresh";
 import { InstalledWallpaper } from "@/types/workshop";
 import { cn, formatBytes } from "@/lib/utils";
+import { extractTagLabel, parseRatingStars } from "@/lib/workshop";
 import {
   LOCAL_SORT_KEYS,
   LOCAL_SORT_OPTIONS,
@@ -46,6 +47,13 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { Tooltip } from "@/components/common/Tooltip";
 import { useFiltersStore } from "@/stores/filters";
 
+interface InstalledMetadata {
+  tags?: unknown[];
+  rating_star_file?: string;
+  posted_date?: string;
+  updated_date?: string;
+}
+
 export default function InstalledView() {
   const { t } = useTranslation();
   const { confirm, ConfirmDialog } = useConfirm();
@@ -63,9 +71,7 @@ export default function InstalledView() {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selected, setSelected] = useState<InstalledWallpaper | null>(null);
-  const [metaMap, setMetaMap] = useState<Record<string, { tags?: unknown[] }>>(
-    {},
-  );
+  const [metaMap, setMetaMap] = useState<Record<string, InstalledMetadata>>({});
   const collapsed = useFiltersStore((s) => s.collapsed);
 
   const refresh = async () => {
@@ -81,7 +87,7 @@ export default function InstalledView() {
       [],
     );
     setItems(list ?? []);
-    const meta = await tryInvoke<Record<string, { tags?: unknown[] }>>(
+    const meta = await tryInvoke<Record<string, InstalledMetadata>>(
       "metadata_get_all",
       undefined,
       {},
@@ -98,8 +104,7 @@ export default function InstalledView() {
   useEffect(() => {
     if (refreshCounter === 0) return;
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshCounter]);
+  }, [refreshCounter, weDirectory]);
 
   // Re-fetch cached metadata (without re-scanning disk) whenever the
   // details drawer closes — so tags pulled via workshop_get_item while the
@@ -107,7 +112,7 @@ export default function InstalledView() {
   useEffect(() => {
     if (!inTauri || selected !== null) return;
     void (async () => {
-      const meta = await tryInvoke<Record<string, { tags?: unknown[] }>>(
+      const meta = await tryInvoke<Record<string, InstalledMetadata>>(
         "metadata_get_all",
         undefined,
         {},
@@ -116,27 +121,31 @@ export default function InstalledView() {
     })();
   }, [selected]);
 
-  const tagsFor = (item: InstalledWallpaper): Set<string> => {
-    const set = new Set<string>(item.tags);
-    const raw = metaMap[item.pubfileid]?.tags;
-    if (Array.isArray(raw)) {
-      for (const t of raw) {
-        const label =
-          typeof t === "string"
-            ? t
-            : typeof t === "object" && t && "tag" in t
-              ? String((t as { tag?: unknown }).tag ?? "")
-              : "";
-        if (label) set.add(label);
-      }
-    }
-    return set;
-  };
+  const tagsFor = useMemo(
+    () =>
+      (item: InstalledWallpaper): Set<string> => {
+        const set = new Set<string>(item.tags);
+        const raw = metaMap[item.pubfileid]?.tags;
+        if (Array.isArray(raw)) {
+          for (const tag of raw) {
+            const label =
+              typeof tag === "string"
+                ? tag
+                : typeof tag === "object" && tag && "tag" in tag
+                  ? extractTagLabel(tag as { tag?: string })
+                  : "";
+            if (label) set.add(label);
+          }
+        }
+        return set;
+      },
+    [metaMap],
+  );
 
-  const metaFor = (item: InstalledWallpaper) =>
-    metaMap[item.pubfileid] as
-      | { rating_star_file?: string; posted_date?: string; updated_date?: string }
-      | undefined;
+  const metaFor = useMemo(
+    () => (item: InstalledWallpaper) => metaMap[item.pubfileid],
+    [metaMap],
+  );
 
   // Collapse every tag actually present on the local wallpapers (both from
   // `project.json` and the Workshop metadata cache) into a single Set. This
@@ -149,8 +158,7 @@ export default function InstalledView() {
       for (const tag of tagsFor(it)) set.add(tag);
     }
     return set;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, metaMap]);
+  }, [items, tagsFor]);
 
   const visibleMiscTags = useMemo(
     () => MISC_TAG_KEYS.filter((k) => presentTags.has(k)),
@@ -191,8 +199,7 @@ export default function InstalledView() {
     const dir = sortOrder === "asc" ? 1 : -1;
     const ratingScore = (it: InstalledWallpaper) => {
       const star = metaFor(it)?.rating_star_file ?? "";
-      const m = star.match(/(\d+)/);
-      return m ? parseInt(m[1], 10) : 0;
+      return parseRatingStars(star);
     };
     const dateMs = (s?: string) => {
       if (!s) return 0;
@@ -213,9 +220,17 @@ export default function InstalledView() {
         case "size":
           return (a.size_bytes - b.size_bytes) * dir;
         case "posted_date":
-          return (dateMs(metaFor(a)?.posted_date) - dateMs(metaFor(b)?.posted_date)) * dir;
+          return (
+            (dateMs(metaFor(a)?.posted_date) -
+              dateMs(metaFor(b)?.posted_date)) *
+            dir
+          );
         case "updated_date":
-          return (dateMs(metaFor(a)?.updated_date) - dateMs(metaFor(b)?.updated_date)) * dir;
+          return (
+            (dateMs(metaFor(a)?.updated_date) -
+              dateMs(metaFor(b)?.updated_date)) *
+            dir
+          );
       }
     });
     return result;
@@ -229,8 +244,9 @@ export default function InstalledView() {
     tagFilters,
     sort,
     sortOrder,
-    metaMap,
     excludedTagFilters,
+    tagsFor,
+    metaFor,
   ]);
 
   const handleApply = async (item: InstalledWallpaper) => {
@@ -272,7 +288,9 @@ export default function InstalledView() {
     }
     const confirmed = await confirm({
       title: t("tooltips.delete_wallpaper") || "Delete Wallpaper",
-      message: t("messages.confirm_delete") || "Delete this wallpaper?\n\nThe wallpaper folder will be removed from your Wallpaper Engine library permanently. This action cannot be undone.",
+      message:
+        t("messages.confirm_delete") ||
+        "Delete this wallpaper?\n\nThe wallpaper folder will be removed from your Wallpaper Engine library permanently. This action cannot be undone.",
       confirmLabel: t("buttons.delete") || "Delete",
       cancelLabel: t("buttons.cancel") || "Cancel",
       variant: "danger",
@@ -331,7 +349,6 @@ export default function InstalledView() {
     await navigator.clipboard.writeText(item.pubfileid);
     pushToast(t("messages.id_copied"), "success");
   };
-
 
   // Tristate cycle — idle → include → exclude → idle — matches the
   // Workshop / Collections FilterBar, so clicking a chip twice switches it
@@ -401,10 +418,12 @@ export default function InstalledView() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2, ease: "easeInOut" }}
           >
-            <div className={cn(
-              "flex flex-col gap-2 bg-surface/60 px-4 py-3",
-              !showAdvanced && "border-b border-border"
-            )}>
+            <div
+              className={cn(
+                "flex flex-col gap-2 bg-surface/60 px-4 py-3",
+                !showAdvanced && "border-b border-border",
+              )}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative min-w-[220px] flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-subtle" />
@@ -425,7 +444,9 @@ export default function InstalledView() {
                 >
                   <button
                     type="button"
-                    onClick={() => setSortOrder((o) => (o === "asc" ? "desc" : "asc"))}
+                    onClick={() =>
+                      setSortOrder((o) => (o === "asc" ? "desc" : "asc"))
+                    }
                     className={cn(
                       "flex h-[38px] items-center gap-2 rounded-md bg-surface-sunken border border-border px-3 py-2 text-sm outline-none hover:border-border-strong transition-colors",
                     )}
@@ -483,7 +504,11 @@ export default function InstalledView() {
                   ) : (
                     <ChevronDown className="h-4 w-4" />
                   )}
-                  {t(showAdvanced ? "labels.less_filters" : "labels.more_filters")}
+                  {t(
+                    showAdvanced
+                      ? "labels.less_filters"
+                      : "labels.more_filters",
+                  )}
                 </button>
                 {hasActiveFilters && (
                   <button
@@ -530,7 +555,11 @@ export default function InstalledView() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2, ease: "easeInOut", delay: 0.05 }}
+                    transition={{
+                      duration: 0.2,
+                      ease: "easeInOut",
+                      delay: 0.05,
+                    }}
                   >
                     {visibleGenreTags.length > 0 && (
                       <FilterChipsRow
@@ -581,6 +610,7 @@ export default function InstalledView() {
                 >
                   <div className="relative aspect-square overflow-hidden bg-surface-sunken">
                     <PreviewImage
+                      key={item.preview}
                       src={item.preview}
                       alt={item.title}
                       className="h-full w-full scale-[1.02] object-cover transition-transform duration-500 ease-out group-hover:scale-110"
@@ -645,16 +675,23 @@ export default function InstalledView() {
                     <div className="flex items-center justify-between text-[11px] text-muted">
                       {(() => {
                         const author =
-                          (metaMap[item.pubfileid] as
-                            | { author?: string }
-                            | undefined)?.author || "";
+                          (
+                            metaMap[item.pubfileid] as
+                              | { author?: string }
+                              | undefined
+                          )?.author || "";
                         return (
-                          <span className="truncate" title={author || undefined}>
+                          <span
+                            className="truncate"
+                            title={author || undefined}
+                          >
                             {author || "—"}
                           </span>
                         );
                       })()}
-                      <span className="shrink-0">{formatBytes(item.size_bytes)}</span>
+                      <span className="shrink-0">
+                        {formatBytes(item.size_bytes)}
+                      </span>
                     </div>
                   </div>
                 </motion.article>
@@ -707,11 +744,13 @@ function FilterChipsRow({
   isLast?: boolean;
 }) {
   return (
-    <div className={cn(
-      "flex flex-wrap items-center gap-1.5 bg-surface/60 px-4 py-1",
-      isFirst && "pt-1",
-      isLast && "pb-2 border-b border-border"
-    )}>
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 bg-surface/60 px-4 py-1",
+        isFirst && "pt-1",
+        isLast && "pb-2 border-b border-border",
+      )}
+    >
       <span className="text-[11px] uppercase tracking-wide text-subtle">
         {title}
       </span>
@@ -725,8 +764,7 @@ function FilterChipsRow({
             onClick={() => toggle(k)}
             className={cn(
               "chip cursor-pointer select-none text-[11px] transition-colors",
-              isIncluded &&
-                "border-primary/60 bg-primary/15 text-foreground",
+              isIncluded && "border-primary/60 bg-primary/15 text-foreground",
               isExcluded &&
                 "border-danger/60 bg-danger/10 text-danger line-through",
             )}

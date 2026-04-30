@@ -200,6 +200,7 @@ function TaskPreview({
     >
       {src ? (
         <PreviewImage
+          key={src}
           src={src}
           alt={pubfileid}
           className="h-full w-full object-cover"

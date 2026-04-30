@@ -1,5 +1,15 @@
 import { useTranslation } from "react-i18next";
-import { ExternalLink, User, Calendar, RefreshCw, Heart, Eye, Users, Star, Package } from "lucide-react";
+import {
+  ExternalLink,
+  User,
+  Calendar,
+  RefreshCw,
+  Heart,
+  Eye,
+  Users,
+  Star,
+  Package,
+} from "lucide-react";
 import { openUrl as openExternal } from "@tauri-apps/plugin-opener";
 
 import Dialog from "@/components/common/Dialog";
@@ -43,7 +53,9 @@ export default function CollectionInfoDialog({
   };
 
   const info = collection.info || {};
-  const ratingStars = info.rating_star_file ? parseInt(info.rating_star_file.replace(/\D/g, '')) : 0;
+  const ratingStars = info.rating_star_file
+    ? parseInt(info.rating_star_file.replace(/\D/g, ""))
+    : 0;
 
   return (
     <Dialog
@@ -57,6 +69,7 @@ export default function CollectionInfoDialog({
         {collection.preview_url && (
           <div className="overflow-hidden rounded-lg border border-border bg-surface-sunken">
             <PreviewImage
+              key={collection.preview_url}
               src={collection.preview_url}
               alt={collection.title}
               className="aspect-[16/9] w-full object-cover"
@@ -79,14 +92,18 @@ export default function CollectionInfoDialog({
           {/* ID */}
           <div className="col-span-2 flex items-center gap-2 border-b border-border pb-2">
             <span className="text-subtle">ID:</span>
-            <span className="font-mono text-foreground">{collection.collection_id}</span>
+            <span className="font-mono text-foreground">
+              {collection.collection_id}
+            </span>
           </div>
 
           {/* Author */}
           {collection.author && (
             <div className="col-span-2 flex items-center gap-2">
               <User className="h-3.5 w-3.5 text-subtle" />
-              <span className="text-subtle">{t("labels.author", { author: "" })}</span>
+              <span className="text-subtle">
+                {t("labels.author", { author: "" })}
+              </span>
               <button
                 type="button"
                 className="font-semibold text-primary hover:underline disabled:opacity-60 disabled:no-underline"
@@ -125,7 +142,9 @@ export default function CollectionInfoDialog({
           <div className="flex items-center gap-2">
             <Package className="h-3.5 w-3.5 text-subtle" />
             <span className="text-subtle">Items:</span>
-            <span className="font-semibold text-foreground">{collection.items.length}</span>
+            <span className="font-semibold text-foreground">
+              {collection.items.length}
+            </span>
           </div>
 
           {/* Statistics Row 1 */}
@@ -181,31 +200,54 @@ export default function CollectionInfoDialog({
         </div>
 
         {/* Tags Section */}
-        {info && Object.keys(info).some(key => 
-          ['Miscellaneous', 'Genre', 'Category', 'Age Rating', 'Type', 'Resolution', 'Content Descriptors'].includes(key)
-        ) && (
-          <div className="space-y-1.5 rounded-lg border border-border bg-surface-sunken/50 p-3 text-xs">
-            {['Genre', 'Category', 'Type', 'Resolution', 'Age Rating', 'Miscellaneous', 'Content Descriptors'].map(tagKey => {
-              if (!info[tagKey]) return null;
-              const values = info[tagKey].split(',').map((v: string) => v.trim());
-              return (
-                <div key={tagKey} className="flex flex-wrap items-center gap-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
-                    {tagKey}:
-                  </span>
-                  {values.map((v: string, i: number) => (
-                    <span
-                      key={`${v}-${i}`}
-                      className="chip !py-0 text-[11px]"
-                    >
-                      {v}
+        {info &&
+          Object.keys(info).some((key) =>
+            [
+              "Miscellaneous",
+              "Genre",
+              "Category",
+              "Age Rating",
+              "Type",
+              "Resolution",
+              "Content Descriptors",
+            ].includes(key),
+          ) && (
+            <div className="space-y-1.5 rounded-lg border border-border bg-surface-sunken/50 p-3 text-xs">
+              {[
+                "Genre",
+                "Category",
+                "Type",
+                "Resolution",
+                "Age Rating",
+                "Miscellaneous",
+                "Content Descriptors",
+              ].map((tagKey) => {
+                const rawValue = info[tagKey];
+                if (!rawValue) return null;
+                const values = String(rawValue)
+                  .split(",")
+                  .map((v) => v.trim());
+                return (
+                  <div
+                    key={tagKey}
+                    className="flex flex-wrap items-center gap-1"
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-subtle">
+                      {tagKey}:
                     </span>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    {values.map((v, i) => (
+                      <span
+                        key={`${v}-${i}`}
+                        className="chip !py-0 text-[11px]"
+                      >
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
         {/* Description */}
         {collection.description ? (

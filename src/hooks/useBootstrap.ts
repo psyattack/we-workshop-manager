@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { loadTranslations } from "@/lib/i18n";
 import { invoke, inTauri, tryInvoke, tryInvokeOk } from "@/lib/tauri";
 import { useAppStore, ThemeCode } from "@/stores/app";
-import { useTasksStore } from "@/stores/tasks";
+import { TaskPhase, useTasksStore } from "@/stores/tasks";
 import { useInstalledStore } from "@/stores/installed";
 import { triggerGlobalRefresh } from "@/stores/refresh";
 import i18n from "@/lib/i18n";
@@ -23,14 +23,10 @@ export function useBootstrap() {
         undefined,
         {},
       );
-      const config = await tryInvoke<Record<string, unknown>>(
-        "config_get_all",
-      );
-      const availableLanguages = await tryInvoke<{ code: string; label: string }[]>(
-        "i18n_get_available_languages",
-        undefined,
-        [],
-      );
+      const config = await tryInvoke<Record<string, unknown>>("config_get_all");
+      const availableLanguages = await tryInvoke<
+        { code: string; label: string }[]
+      >("i18n_get_available_languages", undefined, []);
       const weDirectory = await tryInvoke<string | null>(
         "we_get_directory",
         undefined,
@@ -46,14 +42,20 @@ export function useBootstrap() {
       >("accounts_list", undefined, []);
 
       if (translations) {
-        const language =
-          (config as any)?.settings?.general?.appearance?.language ?? "en";
+        const language = getConfigValue<string>(
+          config,
+          ["settings", "general", "appearance", "language"],
+          "en",
+        );
         loadTranslations(translations, language);
         useAppStore.setState({ language });
       }
 
-      const appearance =
-        (config as any)?.settings?.general?.appearance ?? {};
+      const appearance = getConfigValue<Record<string, unknown>>(
+        config,
+        ["settings", "general", "appearance"],
+        {},
+      );
       const patch: Record<string, unknown> = {
         weDirectory: weDirectory ?? "",
         availableLanguages: availableLanguages ?? [],
@@ -106,7 +108,7 @@ export function useBootstrap() {
           useTasksStore.getState().upsert({
             ...event.payload,
             kind: "download",
-            phase: event.payload.phase as any,
+            phase: normalizeTaskPhase(event.payload.phase),
           });
           if (event.payload.phase === "failed") {
             void import("@/stores/toasts").then(({ pushToast }) => {
@@ -148,7 +150,7 @@ export function useBootstrap() {
           useTasksStore.getState().upsert({
             ...event.payload,
             kind: "extract",
-            phase: event.payload.phase as any,
+            phase: normalizeTaskPhase(event.payload.phase),
           });
           if (event.payload.phase === "failed") {
             void import("@/stores/toasts").then(({ pushToast }) => {
@@ -169,6 +171,38 @@ export function useBootstrap() {
       ]);
     })();
   }, []);
+}
+
+function getConfigValue<T>(
+  config: Record<string, unknown> | null | undefined,
+  path: string[],
+  fallback: T,
+): T {
+  let current: unknown = config;
+  for (const key of path) {
+    if (
+      typeof current !== "object" ||
+      current === null ||
+      !Object.prototype.hasOwnProperty.call(current, key)
+    ) {
+      return fallback;
+    }
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current === undefined || current === null ? fallback : (current as T);
+}
+
+function normalizeTaskPhase(value: string): TaskPhase {
+  if (
+    value === "starting" ||
+    value === "running" ||
+    value === "completed" ||
+    value === "failed" ||
+    value === "cancelled"
+  ) {
+    return value;
+  }
+  return "running";
 }
 
 export async function changeLanguageTo(code: string) {
@@ -219,11 +253,7 @@ async function maybeAutoInitMetadata() {
   // filter chips in sync with whatever tags the batch just persisted.
   setTimeout(() => {
     void (async () => {
-      const count = await tryInvoke<number>(
-        "app_init_metadata",
-        undefined,
-        0,
-      );
+      const count = await tryInvoke<number>("app_init_metadata", undefined, 0);
       if ((count ?? 0) > 0) triggerGlobalRefresh();
     })();
   }, 5000);

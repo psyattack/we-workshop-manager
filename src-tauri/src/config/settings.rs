@@ -50,13 +50,13 @@ impl SettingsService {
     }
 
     pub fn get(&self, path: &str) -> Option<Value> {
-        resolve_value(&self.data.lock(), path).cloned()
+        resolve_value(&self.data.lock(), normalize_settings_path(path)).cloned()
     }
 
     pub fn set(&self, path: &str, value: Value) -> anyhow::Result<()> {
         {
             let mut guard = self.data.lock();
-            set_value(&mut guard, path, value);
+            set_value(&mut guard, normalize_settings_path(path), value);
         }
         self.save()
     }
@@ -64,7 +64,7 @@ impl SettingsService {
     pub fn remove(&self, path: &str) -> anyhow::Result<()> {
         {
             let mut guard = self.data.lock();
-            remove_value(&mut guard, path);
+            remove_value(&mut guard, normalize_settings_path(path));
         }
         self.save()
     }
@@ -136,6 +136,10 @@ impl SettingsService {
             .and_then(|v| v.as_str().map(ToString::to_string))
             .unwrap_or_default()
     }
+}
+
+fn normalize_settings_path(path: &str) -> &str {
+    path.strip_prefix("settings.").unwrap_or(path)
 }
 
 fn default_settings() -> Value {
